@@ -27,10 +27,10 @@ import javax.ws.rs.core.SecurityContext;
 import org.apache.shiro.SecurityUtils;
 
 @Path("/database/{id}")
-public class DatabaseResource {
+public class Database {
 
 
-	public DatabaseResource() {
+	public Database() {
 	}
 
     @GET
@@ -39,7 +39,7 @@ public class DatabaseResource {
 			@PathParam("id") final int id, 
             @Context SecurityContext securityContext
 			) {   
-    	if (SecurityUtils.getSubject().isPermitted("database:read:"+id)){
+    	if (SecurityUtils.getSubject().isPermitted("database:view:"+id)){
     		return Response.status(Response.Status.OK).entity("Success").build();
     	} else {
     		return Response.status(Response.Status.FORBIDDEN).entity("Unauthorized").build();
