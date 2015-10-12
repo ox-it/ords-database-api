@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationToken;
+import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.config.IniSecurityManagerFactory;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.util.Factory;
@@ -37,17 +38,17 @@ public class DatabasePermissionTest extends AbstractShiroTest{
 
 	@BeforeClass
 	public static void setup() {
-		Factory<SecurityManager> factory = new IniSecurityManagerFactory("classpath:shiro.ini");
+		Factory<SecurityManager> factory = new IniSecurityManagerFactory("classpath:test.shiro.ini");
 		SecurityManager securityManager = factory.getInstance();
 		SecurityUtils.setSecurityManager(securityManager);
 	}
 
 	@Test
-	public void checkPermission(){
+	public void ownerRole(){
 		Subject subjectUnderTest = new Subject.Builder(getSecurityManager()).buildSubject();
 		setSubject(subjectUnderTest);
 
-		AuthenticationToken token = new RemoteUserToken("scott.wilson@shibboleth.ox.ac.uk", "member@ox.ac.uk");
+		AuthenticationToken token = new UsernamePasswordToken("scott.wilson@shibboleth.ox.ac.uk", "test1");
 		subjectUnderTest.login(token);	
 
 		assertEquals("scott.wilson@shibboleth.ox.ac.uk",SecurityUtils.getSubject().getPrincipal().toString());
@@ -55,20 +56,37 @@ public class DatabasePermissionTest extends AbstractShiroTest{
 
 		// Is owner
 		assertTrue(SecurityUtils.getSubject().isPermitted("database:modify:2"));
-		assertTrue(SecurityUtils.getSubject().isPermitted("project:delete:2"));
 
 		// Is not owner
 		assertFalse(SecurityUtils.getSubject().isPermitted("database:modify:3"));
-		assertFalse(SecurityUtils.getSubject().isPermitted("project:delete:3"));
+
+	}
+	
+	@Test
+	public void viewerRoles(){
+		Subject subjectUnderTest = new Subject.Builder(getSecurityManager()).buildSubject();
+		setSubject(subjectUnderTest);
 
 		//
-		//  user with view only permissions
+		// Pingu has viewer_1 and viewer_2
 		//
-		token = new RemoteUserToken("pingu", "");
+		AuthenticationToken token = new UsernamePasswordToken("pingu", "pingu");
 		subjectUnderTest.login(token);	
 		assertFalse(SecurityUtils.getSubject().isPermitted("database:modify:1"));
 		assertTrue(SecurityUtils.getSubject().isPermitted("database:view:1"));
+		
 		assertTrue(SecurityUtils.getSubject().isPermitted("database:view:2"));
+		assertFalse(SecurityUtils.getSubject().isPermitted("database:delete:2"));
+		
+		//
+		// Pinga has viewer_1 only
+		//
+		token = new UsernamePasswordToken("pinga", "pinga");
+		subjectUnderTest.login(token);	
+		assertFalse(SecurityUtils.getSubject().isPermitted("database:modify:1"));
+		assertTrue(SecurityUtils.getSubject().isPermitted("database:view:1"));
+		
+		assertFalse(SecurityUtils.getSubject().isPermitted("database:view:2"));
 		assertFalse(SecurityUtils.getSubject().isPermitted("database:delete:2"));
 	}
 
