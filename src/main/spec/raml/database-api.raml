@@ -1,0 +1,184 @@
+#%RAML 0.8
+title: Database API
+version: v0.1
+baseUri: http://database-api/{version}
+securitySchemes:
+  - SSO:
+      description: WebAuth single-sign on is used to secure this API. A user must have already authenticated to the client application using SSO before the client can make calls to the API.
+      type: x-SSO
+traits:
+  - sortable:
+      queryParameters:
+        sort:
+          type: string
+          description: The name of the column to sort the data by
+        direction:
+          type: string
+          enum: [asc, desc]
+          description: The direction to sort in
+  - pageable:
+      queryParameters:
+        startindex: 
+          type: number
+          description: The starting index of the record set to return
+        limit:
+          type: number
+          description: The number of records to return in the response
+  - filterable:
+      queryParameters:
+        filter: 
+          description: The filtering query
+        filterparams: 
+          type: string 
+          description: The arrayparameters to apply to the filter
+
+/database:
+  displayName: Database
+  description: API for managing database structures and data.
+  securedBy: 
+    - SSO
+    - null
+  get:
+    description: Gets the list of databases associated with the current user, or the list of public databases if not authenticated.
+  post:
+    description: Creates a new empty database with no schema or data. Once the database is created, you can import existing data or build a schema. If called with no data, this will create a new MAIN database. If called with the identifier of an existing database and an instance type, this will make a clone of that database with that instance type. 
+    
+    body:
+      application/x-www-form-urlencoded:
+        formParameters:
+          databaseId:
+            description: The identifier for an existing database.
+            type: number
+          instance:
+            description: The type of instance to create
+            type: string
+            enum: ["MILESTONE", "TEST", "STAGING"]
+        
+    responses:
+      400:
+        description: The interface was called with incorrect parameters.
+      403:
+        description: The user is not authenticated, or not permitted to create a database.
+      201:
+        body:
+          application/json:
+            example: |
+              {
+                database: {
+                  "id": "11017"
+                }
+              }
+  /{databaseid}:
+    displayName: logical database
+    get:
+      description: Get the instances for this logical database
+      responses:
+        404:
+          description: The database doesn't exist.
+        403:
+          description: You are not authorized to view the database specified.
+        200:
+          body:
+            application/json:
+              example: | 
+                {
+                database: {
+                  "id" : "11017"
+                  instances [
+                    "MAIN",
+                    "MILESTONE",
+                    "TEST"
+                  ]
+                }
+              
+    /{instance}:
+      displayName: logical database instance
+      get:
+        description: get the database metadata
+        responses:                   
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                    database: {
+                    "name" : "mydatabase",
+                    "description" "test database"
+                  }
+      delete:
+        description: drop the database
+      put:
+        description: modify database properties
+      /data:
+        displayName: Database data
+        get:
+          description: export the database
+        post:
+          description: import data from file
+        put:
+          description: import CSV data as a new table in the database
+      /staging:
+        displayName: staging database
+        get:
+          description: Get the staging database metadata
+        post:
+          description: Create a staging database for this database instance, if one doesn't already exist
+        put:
+          description: Merge changes in the staging database into the database its derived from
+        delete:
+          description: Abandon the changes made in the staging database and drop the staging database.
+      /table:
+        displayName: table
+        post:
+          securedBy: [SSO]
+          description: Create a new table in this database instance
+          body:
+            application/json:
+              example: |
+                {
+                  table: {
+                    "name" : "things"
+                    "columns : 
+                    [
+                      "id" : "number",
+                      "description" : "string"
+                    ]
+                    "indexes" : 
+                    [
+                    ]
+                    "relationships" :
+                    [
+                    ]
+                  }
+                }
+                
+                
+        /{tablename}:
+          displayName: table
+          get:
+            description: Get the table metadata
+          put:
+            description: Alter the table
+          delete:
+            description: Drop the table
+          /data:
+            securedBy: 
+              - SSO
+            displayName: table data
+            description: Access or change the data in a database table. For public data, use the dataset API instead.
+            get:
+              is: 
+              - pageable 
+              - filterable
+              - sortable
+              queryParameters:
+              description: Get rows of data from this table
+            post:
+              description: Append rows of data to the table
+            put:
+              description: Alter data in the table
+            delete:
+              description: Delete data from the table
+          
+    
+    
