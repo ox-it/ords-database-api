@@ -40,6 +40,26 @@ public class DatabaseTest extends AbstractResourceTest{
 		client.path("database/2");
 		client.get(String.class);
 	}
+	
+	@Test (expected=ForbiddenException.class)
+	public void getDatabaseAnonPrivate() {
+		WebClient client = WebClient.create(ENDPOINT_ADDRESS);
+		WebClient.getConfig(client).getRequestContext().put(LocalConduit.DIRECT_DISPATCH, Boolean.TRUE); 
+		client.accept("application/json");
+		client.path("database/2");
+		client.get(String.class);
+	}
+	
+	@Test
+	public void getDatabaseAnonPublic() {
+		// TODO this is really tricky to test properly...
+		login("anonymous", "anonymous");
+		WebClient client = WebClient.create(ENDPOINT_ADDRESS);
+		WebClient.getConfig(client).getRequestContext().put(LocalConduit.DIRECT_DISPATCH, Boolean.TRUE); 
+		client.accept("application/json");
+		client.path("database/3");
+		client.get(String.class);
+	}
 
 
 }
