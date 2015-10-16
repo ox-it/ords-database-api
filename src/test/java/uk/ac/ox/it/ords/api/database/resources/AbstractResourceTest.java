@@ -41,19 +41,6 @@ public class AbstractResourceTest extends AbstractShiroTest {
 	}
 
 	/**
-	 * Simulate a logged-in user for when calling the REST API
-	 * 
-	 * @param user
-	 * @param password
-	 */
-	protected void login(String user, String password){
-		Subject subjectUnderTest = new Subject.Builder(getSecurityManager()).buildSubject();
-		setSubject(subjectUnderTest);
-		AuthenticationToken token = new UsernamePasswordToken(user, password);
-		subjectUnderTest.login(token);
-	}
-
-	/**
 	 * Configure Shiro and start the server
 	 * @throws Exception
 	 */
