@@ -15,9 +15,14 @@
  */
 package uk.ac.ox.it.ords.api.database.resources;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.cxf.endpoint.Server;
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
+import org.apache.cxf.jaxrs.client.WebClient;
 import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
+import org.apache.cxf.transport.local.LocalConduit;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.authc.UsernamePasswordToken;
@@ -29,6 +34,8 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
+import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
+
 import uk.ac.ox.it.ords.security.AbstractShiroTest;
 
 public class AbstractResourceTest extends AbstractShiroTest {
@@ -38,6 +45,15 @@ public class AbstractResourceTest extends AbstractShiroTest {
 
 	protected static void startServer() throws Exception {
 
+	}
+	
+	public WebClient getClient(){
+		List<Object> providers = new ArrayList<Object>();
+		providers.add(new JacksonJsonProvider());
+		WebClient client = WebClient.create(ENDPOINT_ADDRESS, providers);
+		client.accept("application/json");
+		WebClient.getConfig(client).getRequestContext().put(LocalConduit.DIRECT_DISPATCH, Boolean.TRUE);
+		return client;
 	}
 
 	/**
@@ -58,6 +74,7 @@ public class AbstractResourceTest extends AbstractShiroTest {
 		//
 		JAXRSServerFactoryBean sf = new JAXRSServerFactoryBean();
 		sf.setResourceClasses(Database.class);
+		sf.setProvider(new JacksonJsonProvider());
 		sf.setResourceProvider(Database.class, new SingletonResourceProvider(new Database(), true));
 		sf.setAddress(ENDPOINT_ADDRESS);
 		server = sf.create(); 
