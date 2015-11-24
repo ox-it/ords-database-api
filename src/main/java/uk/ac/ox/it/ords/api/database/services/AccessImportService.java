@@ -18,7 +18,9 @@ package uk.ac.ox.it.ords.api.database.services;
 
 import java.io.File;
 import java.util.Map;
+import java.util.ServiceLoader;
 
+import uk.ac.ox.it.ords.api.database.services.impl.hibernate.PostgresAccessDatabaseServiceImpl;
 
 public interface AccessImportService {
 
@@ -27,7 +29,7 @@ public interface AccessImportService {
 	 * @param database
 	 * @return true if we are confident that an import can be performed
 	 */
-	public abstract boolean preflightImport(File database);
+	public abstract boolean preflightImport(File database) throws Exception;
 	
 	/**
 	 * Create a schema from the supplied Access database file
@@ -36,7 +38,7 @@ public interface AccessImportService {
 	 * @param database
 	 * @return a map of results for each table; true if the table was successfully created
 	 */
-	public abstract Map<String, TableImportResult> createSchema(String databaseServer, String databaseName, File database, String user);
+	public abstract Map<String, TableImportResult> createSchema(String databaseServer, String databaseName, File database, String user) throws Exception;
 	
 	/**
 	 * Import data from supplied Access database file. This method must only be called after creating a schema.
@@ -45,6 +47,34 @@ public interface AccessImportService {
 	 * @param database
 	 * @return a map of results for each table; true if the data is successfully imported for that table
 	 */
-	public abstract Map<String, TableImportResult> importData(String databaseServer, String databaseName, File database, String user);
+	public abstract Map<String, TableImportResult> importData(String databaseServer, String databaseName, File database, String user) throws Exception;
+
 	
+    public static class Factory {
+		private static AccessImportService provider;
+	    public static AccessImportService getInstance() {
+	    	//
+	    	// Use the service loader to load an implementation if one is available
+	    	// Place a file called uk.ac.ox.it.ords.api.structure.service.CommentService in src/main/resources/META-INF/services
+	    	// containing the classname to load as the CommentService implementation. 
+	    	// By default we load the Hibernate/Postgresql implementation.
+	    	//
+	    	if (provider == null){
+	    		ServiceLoader<AccessImportService> ldr = ServiceLoader.load(AccessImportService.class);
+	    		for (AccessImportService service : ldr) {
+	    			// We are only expecting one
+	    			provider = service;
+	    		}
+	    	}
+	    	//
+	    	// If no service provider is found, use the default
+	    	//
+	    	if (provider == null){
+	    		provider = new PostgresAccessDatabaseServiceImpl();
+	    	}
+	    	
+	    	return provider;
+	    }
+	}
+
 }

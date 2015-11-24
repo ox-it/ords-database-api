@@ -2,6 +2,7 @@ package uk.ac.ox.it.ords.api.database.services;
 
 import java.util.ArrayList;
 
+
 /**
  * Basic reporting class for import result statistics.
  *
@@ -20,6 +21,7 @@ public class TableImportResult {
 	private int rowsReceived;
 	private int rowsImported;
 	private int rowsVerified;
+	private int constraintsAdded;
 	
 	private ArrayList<Exception> exceptions;
 
@@ -28,6 +30,7 @@ public class TableImportResult {
 		rowsReceived = -1;
 		rowsImported = -1;	
 		rowsVerified = -1;
+		constraintsAdded = 0;
 		tableCreateResult = NOT_STARTED;
 		tableConstraintResult = NOT_STARTED;
 		dataImportResult = NOT_STARTED;
@@ -126,6 +129,7 @@ public class TableImportResult {
 		if (result.rowsReceived > -1) this.rowsReceived = result.rowsReceived;
 		if (result.rowsImported > -1) this.rowsImported = result.rowsImported;
 		if (result.rowsVerified > -1) this.rowsVerified = result.rowsVerified;
+		if (result.constraintsAdded > 0) this.constraintsAdded = result.constraintsAdded;
 		exceptions.addAll(result.getExceptions());
 	}
 	
@@ -133,7 +137,7 @@ public class TableImportResult {
 		String out = "";
 		
 		out += "Table Created: " + getResultString(this.tableCreateResult);
-		out += "\nConstraints Added: " + getResultString(this.tableConstraintResult);
+		out += "\nConstraints Added: " + this.getConstraintsAdded() + " " + getResultString(this.tableConstraintResult);
 		out += "\nData Imported: " + getResultString(this.dataImportResult); 
 		out += "\nRows Received: " + this.rowsReceived;
 		out += "\nRows Imported: " + this.rowsImported;
@@ -148,6 +152,18 @@ public class TableImportResult {
 		if (status == SUCCESSFUL) return "successful";
 		if (status == PARTIAL) return "partial success";
 		return "unknown";
+	}
+
+
+
+	public int getConstraintsAdded() {
+		return constraintsAdded;
+	}
+
+
+
+	public void setConstraintsAdded(int constraintsAdded) {
+		this.constraintsAdded = constraintsAdded;
 	}
 
 }

@@ -14,10 +14,17 @@
  * limitations under the License.
  */
 
-// TODO move database package in common services accross to here
+package uk.ac.ox.it.ords.api.database.exceptions;
 
-package uk.ac.ox.it.ords.api.database.structure;
+public class BadParameterException extends Exception {
 
-public interface TableData {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
+	public BadParameterException(String message) {
+		super(message);
+	}
 
 }
