@@ -17,9 +17,10 @@
 package uk.ac.ox.it.ords.api.database.services;
 
 import java.io.File;
+import java.util.ServiceLoader;
 
-
-import uk.ac.ox.it.ords.api.database.structure.TableData;
+import uk.ac.ox.it.ords.api.database.data.TableData;
+import uk.ac.ox.it.ords.api.database.services.impl.hibernate.PostgresCsvServiceImpl;
 
 public interface CSVService {
 	/**
@@ -111,5 +112,33 @@ public interface CSVService {
 	 * @param headerRow true if the first row of data is to be interpreted as a header row
 	 */
 	public abstract void appendDataFromFile(String server, String database, String tableName, File file, boolean headerRow, String user, String password)  throws Exception;
+
+	
+    public static class Factory {
+		private static CSVService provider;
+	    public static CSVService getInstance() {
+	    	//
+	    	// Use the service loader to load an implementation if one is available
+	    	// Place a file called uk.ac.ox.it.ords.api.structure.service.CommentService in src/main/resources/META-INF/services
+	    	// containing the classname to load as the CommentService implementation. 
+	    	// By default we load the Hibernate/Postgresql implementation.
+	    	//
+	    	if (provider == null){
+	    		ServiceLoader<CSVService> ldr = ServiceLoader.load(CSVService.class);
+	    		for (CSVService service : ldr) {
+	    			// We are only expecting one
+	    			provider = service;
+	    		}
+	    	}
+	    	//
+	    	// If no service provider is found, use the default
+	    	//
+	    	if (provider == null){
+	    		provider = new PostgresCsvServiceImpl();
+	    	}
+	    	
+	    	return provider;
+	    }
+	}
 
 }
