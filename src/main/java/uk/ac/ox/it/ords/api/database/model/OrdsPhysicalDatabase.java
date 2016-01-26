@@ -15,12 +15,21 @@
  */
 
 package uk.ac.ox.it.ords.api.database.model;
-
 import java.io.File;
 import java.util.UUID;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.validation.constraints.NotNull;
 
 
+@Entity
+@Table(name = "ordsPhysicalDatabase")
 public class OrdsPhysicalDatabase implements Cloneable {
 
     public enum EntityType {
@@ -32,17 +41,22 @@ public class OrdsPhysicalDatabase implements Cloneable {
 
         QUEUED, SECONDARY_CSV_QUEUED, SECONDARY_CSV_IN_PROGRESS, IN_PROGRESS, FINISHED;
     }
-
+    @Id
+    @GeneratedValue
     private int physicalDatabaseId;
     private int logicalDatabaseId;
     private long fileSize;
+    @Enumerated(EnumType.ORDINAL)
     private EntityType entityType;
     private String uploadedHost = null; // The host where the upload took place
+    @NotNull
     private String fullPathToDirectory;
+    @NotNull
     private String fileName;
     protected String databaseType;
     private int actorId;
 
+    @Enumerated(EnumType.ORDINAL)
     private ImportType importProgress;
 
     /**
@@ -51,8 +65,12 @@ public class OrdsPhysicalDatabase implements Cloneable {
      */
     private boolean representationExists;
     private boolean dbConsumed;
+    @Column(name = "dbconsumedname", unique = true)
     private String dbConsumedName;
-
+    
+    private String databaseServer;
+    
+    @NotNull
     private String uuid;
 
     public OrdsPhysicalDatabase() {
@@ -228,12 +246,12 @@ public class OrdsPhysicalDatabase implements Cloneable {
         /*
          * FIXME
          * A getter should not alter the data - needs to be sorted out
-         * TODO Move this to services
          */
-//        if (dbConsumedName == null) {
-//            setDbConsumedName(GeneralWebServicesUtils.calculateDatabaseName(getEntityType().toString(),
-//                getPhysicalDatabaseId(), getLogicalDatabaseId()));
- //       }
+        if (dbConsumedName == null) {
+            String name = (getEntityType().toString() + "_" + getPhysicalDatabaseId() + "_" + getLogicalDatabaseId()).toLowerCase();
+
+            setDbConsumedName(name);
+        }
         return dbConsumedName;
     }
 
@@ -243,18 +261,17 @@ public class OrdsPhysicalDatabase implements Cloneable {
 
     /**
      * Set the consumed name based on the current entity type
-
-	TODO move this to service
+     */
     public void resetConsumedName() {
         if (dbConsumedName == null) {
-            setDbConsumedName(GeneralUtils.calculateWebappDatabaseName(this));
+            //setDbConsumedName(GeneralUtils.calculateWebappDatabaseName(this));
+        	// bodge
+        	getDbConsumedName();
         }
         String[] nameTokens = dbConsumedName.split("_");
         dbConsumedName = entityType.toString().toLowerCase() + "_" + nameTokens[1] + "_" + nameTokens[2];
     }
-     */
-    
-    
+
     public String getUploadedHost() {
         return uploadedHost;
     }
@@ -262,4 +279,13 @@ public class OrdsPhysicalDatabase implements Cloneable {
     public void setUploadedHost(String uploadedHost) {
         this.uploadedHost = uploadedHost;
     }
+
+	public String getDatabaseServer() {
+		return databaseServer;
+	}
+
+	public void setDatabaseServer(String databaseServer) {
+		this.databaseServer = databaseServer;
+	}
+    
 }

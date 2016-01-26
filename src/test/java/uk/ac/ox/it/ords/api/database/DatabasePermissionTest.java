@@ -35,7 +35,7 @@ import uk.ac.ox.it.ords.security.RemoteUserToken;
 
 
 public class DatabasePermissionTest extends AbstractShiroTest{
-
+/*
 	@BeforeClass
 	public static void setup() {
 		Factory<SecurityManager> factory = new IniSecurityManagerFactory("classpath:test.shiro.ini");
@@ -106,5 +106,5 @@ public class DatabasePermissionTest extends AbstractShiroTest{
 		subjectUnderTest.login(token);	
 	}
 
-
+*/
 }

@@ -44,10 +44,10 @@ public class TableData implements Serializable {
     private Logger log = LoggerFactory.getLogger(TableData.class);
     public String tableName;
     public List<String> primaryKeys = new ArrayList<String>();
-    public Map<String, OrdsTableColumn> columns = new ConcurrentHashMap<String, OrdsTableColumn>();
-    //public List<OrdsTableColumn> columns = new ArrayList<OrdsTableColumn>();
+    //public Map<String, OrdsTableColumn> columns = new ConcurrentHashMap<String, OrdsTableColumn>();
+    public List<OrdsTableColumn> columns = new ArrayList<OrdsTableColumn>();
     public Map<Integer, DataRow> rows = new ConcurrentHashMap<Integer, DataRow>();
-    //public List<DataRow>rows = new ArrayList<DataRow>
+    //public List<DataRow>rows = new ArrayList<DataRow>();
     public List<String> sequences = new ArrayList<String>();
     public String comment;
     private int numberOfRowsInEntireTable = 0;
@@ -66,7 +66,7 @@ public class TableData implements Serializable {
 
         List<OrdsTableColumn> result = new ArrayList<OrdsTableColumn>();
         for (int index = 1; index <= columns.size(); index++) {
-            for (OrdsTableColumn c : columns.values()) {
+            for (OrdsTableColumn c : columns) {
                 if (c.orderIndex == index) {
                     result.add(c);
                     break;
@@ -104,7 +104,7 @@ public class TableData implements Serializable {
      * @throws ClassNotFoundException
      * @throws SQLException
      */
-    @Deprecated
+/*    @Deprecated
     public void merge(String dbName, String tableNameToBeOverlayed, String colToBeChanged, String changedRefCol, int projectId, String user, String password) {
         if ((colToBeChanged == null) || (changedRefCol == null) || (tableNameToBeOverlayed == null)) {
             log.debug("No changes here");
@@ -123,16 +123,16 @@ public class TableData implements Serializable {
             otc.referencedColumnIndex = otc.referencedColumn;
         }
 
-        /*
+        
          * Check is we have an existance of the referenced column in the data to be merged
-         */
+         
         String referencedTable = otc.referencedTable;
         if (referencedTable.equals(tableNameToBeOverlayed)) {
             log.debug("The tables are the same - processing");
 
-            /*
+            
              * Quick sanity check
-             */
+             
             boolean found = false;
             for (String column : otc.alternateColumns) {
                 if (column.equals(changedRefCol)) {
@@ -143,9 +143,9 @@ public class TableData implements Serializable {
             if (found) {
                 otc.referencedColumn = changedRefCol;
                 try {
-                    /*
+                    
                      * Now we have the changed ref column we need to populate the relevant data
-                     */
+                     
                     for (DataRow localDataRow : rows.values()) {
                         DataCell localCell = localDataRow.cell.get(colToBeChanged);
                         DataCell targetCell = null;
@@ -197,11 +197,11 @@ public class TableData implements Serializable {
         }
     }
 
-    /**
+    *//**
      * Used when table reference data is to be overlayed with the current data
      *
      * @param freshData
-     */
+     *//*
     @Deprecated
     public void merge2(TableData freshData, String colToBeChanged, String changedRefCol) {
         if ((colToBeChanged == null) || (changedRefCol == null) || (freshData == null)) {
@@ -221,16 +221,16 @@ public class TableData implements Serializable {
             otc.referencedColumnIndex = otc.referencedColumn;
         }
 
-        /*
+        
          * Check is we have an existance of the referenced column in the data to be merged
-         */
+         
         String referencedTable = otc.referencedTable;
         if (referencedTable.equals(freshData.tableName)) {
             log.debug("The tables are the same - processing");
 
-            /*
+            
              * Quick sanity check
-             */
+             
             boolean found = false;
             for (String column : otc.alternateColumns) {
                 if (column.equals(changedRefCol)) {
@@ -241,9 +241,9 @@ public class TableData implements Serializable {
             if (found) {
                 otc.referencedColumn = changedRefCol;
 
-                /*
+                
                  * Now we have the changed ref column we need to populate the relevant data
-                 */
+                 
                 for (DataRow localDataRow : rows.values()) {
                     DataCell localCell = localDataRow.cell.get(colToBeChanged);
                     DataCell targetCell;
@@ -277,7 +277,7 @@ public class TableData implements Serializable {
             log.error(String.format("Likely coding error. Input table name of %s is not the same as local table %s", otc.referencedTable, tableName));
         }
     }
-
+*/
     public void logData() {
         logData(false);
     }
@@ -297,7 +297,7 @@ public class TableData implements Serializable {
                 log.debug(String.format("\tKey: %s", s));
             }
             log.debug(String.format("Columns ..."));
-            for (OrdsTableColumn otc : columns.values()) {
+            for (OrdsTableColumn otc : columns) {
                 //OrdsTableColumn otc = columns.get(counter);
                 log.debug(String.format("\tColumn: %s", otc.columnName));
                 log.debug(String.format("\t\tColumn type is ", otc.columnType.toString()));
@@ -355,12 +355,12 @@ public class TableData implements Serializable {
         return originalDbType;
     }
 
-    public void setOriginalDbType(DataTypesSupported originalDbType) {
-        if (originalDbType == null) {
-            return;
-        }
-        this.originalDbType = originalDbType;
-    }
+//    public void setOriginalDbType(DataTypesSupported originalDbType) {
+//        if (originalDbType == null) {
+//            return;
+//        }
+//        this.originalDbType = originalDbType;
+//    }
 
     public void setOriginalDbType(String originalDbType) {
         if (originalDbType == null) {

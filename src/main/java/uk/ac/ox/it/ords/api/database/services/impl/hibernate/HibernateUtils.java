@@ -15,6 +15,8 @@
  */
 package uk.ac.ox.it.ords.api.database.services.impl.hibernate;
 
+import java.io.File;
+
 import org.hibernate.HibernateException;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
@@ -36,14 +38,8 @@ public class HibernateUtils {
 
 	private static SessionFactory sessionFactory;
 	private static ServiceRegistry serviceRegistry;
-
-	private static SessionFactory userDBSessionFactory;
-	private static ServiceRegistry userDBServiceRegistry;
-
-	private static String currentUser;
 	
 	protected static String HIBERNATE_CONFIGURATION_PROPERTY = "ords.hibernate.configuration";
-	protected static String HIBERNATE_USER_CONFIGURATION_PROPERTY="ords.hibernate.user.configuration";
 
 	protected static void addMappings(Configuration configuration){
 		configuration.addAnnotatedClass(OrdsDB.class);
@@ -62,7 +58,7 @@ public class HibernateUtils {
 			if (hibernateConfigLocation == null) {
 				configuration.configure();
 			} else {
-				configuration.configure(hibernateConfigLocation);
+				configuration.configure(new File(hibernateConfigLocation));
 			}
 			
 			addMappings(configuration);
@@ -77,54 +73,6 @@ public class HibernateUtils {
 		}
 	}
 
-	private static void initUserDBSessionFactory(String odbcUser,
-			String odbcPassword, String databaseName) {
-		try {
-			Configuration userDBConfiguration = new Configuration();
-			String hibernateConfigLocation = MetaConfiguration.getConfiguration().getString(HIBERNATE_USER_CONFIGURATION_PROPERTY);
-
-			if (hibernateConfigLocation == null) {
-				userDBConfiguration.configure();
-			} else {
-				userDBConfiguration.configure(hibernateConfigLocation);
-			}
-			userDBConfiguration.setProperty("hibernate.connection.url",
-					"jdbc:postgresql://localhost/" + databaseName);
-			userDBConfiguration.setProperty("hibernate.connection.username",
-					odbcUser);
-			userDBConfiguration.setProperty("hibernate.connection.password",
-					odbcPassword);
-
-			addMappings(userDBConfiguration);
-
-			userDBServiceRegistry = new ServiceRegistryBuilder().applySettings(
-					userDBConfiguration.getProperties()).buildServiceRegistry();
-
-			userDBSessionFactory = userDBConfiguration
-					.buildSessionFactory(userDBServiceRegistry);
-		} catch (HibernateException he) {
-			System.err.println("Error creating Session: " + he);
-			throw new ExceptionInInitializerError(he);
-		}
-	}
-	
-	
-	
-
-	public static SessionFactory getUserDBSessionFactory(String databaseName,
-			String username, String password) {
-		if (!username.equals(currentUser)) {
-			if (userDBSessionFactory != null) {
-				userDBSessionFactory.close();
-			}
-			initUserDBSessionFactory(username, password, databaseName);
-			currentUser = username;
-		}
-		return userDBSessionFactory;
-	}
-	
-	
-	
 
 	public static SessionFactory getSessionFactory() {
 		if (sessionFactory == null)
@@ -135,4 +83,5 @@ public class HibernateUtils {
 	public static void closeSession() {
 		sessionFactory.getCurrentSession().close();
 	}
+
 }

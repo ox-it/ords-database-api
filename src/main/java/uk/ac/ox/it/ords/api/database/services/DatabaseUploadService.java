@@ -19,8 +19,6 @@ package uk.ac.ox.it.ords.api.database.services;
 import java.io.File;
 import java.util.ServiceLoader;
 
-import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
-import uk.ac.ox.it.ords.api.database.services.impl.hibernate.DatabaseRoleServiceImpl;
 import uk.ac.ox.it.ords.api.database.services.impl.hibernate.DatabaseUploadServiceImpl;
 
 
@@ -29,9 +27,11 @@ import uk.ac.ox.it.ords.api.database.services.impl.hibernate.DatabaseUploadServi
 public interface DatabaseUploadService {
 	
 	
-	public int createNewDatabaseFromFile(int physicalDBId, File dbFile, String type) throws Exception;
+	public int createNewDatabaseFromFile(int logicalDatabaseId, File dbFile, String type, String server) throws Exception;
 	
-	
+		public void init() throws Exception;
+		
+		public void testDeleteDatabase ( int dbId, String instance, boolean staging ) throws Exception;
 
 	   public static class Factory {
 			private static DatabaseUploadService provider;

@@ -2,10 +2,10 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>uk.ac.ox.it.ords</groupId>
-  <artifactId>ords-database-structure-api</artifactId>
+  <artifactId>ords-database-api</artifactId>
   <packaging>war</packaging>
   <version>0.0.1-SNAPSHOT</version>
-  <name>ords-database-structure-api</name>
+  <name>ords-database-api</name>
   <url>http://maven.apache.org</url>
 	<reporting>
 		<plugins>
@@ -120,7 +120,6 @@
 			<artifactId>xercesImpl</artifactId>
 			<version>2.11.0</version>
 		</dependency>
-
 		<!-- Security -->
 		<dependency>
 			<groupId>uk.ac.ox.it.ords</groupId>
