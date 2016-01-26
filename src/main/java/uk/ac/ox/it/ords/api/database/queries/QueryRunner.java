@@ -296,7 +296,7 @@ public class QueryRunner {
 	                            OrdsTableColumn otc = new OrdsTableColumn();
 	                            otc.columnName = md.getColumnName(colNum);
 	                            otc.columnType = getDataType(md.getColumnType(colNum));
-	                            tableData.columns.put(otc.columnName, otc);
+	                            tableData.columns.add(otc);
 	                            otc.orderIndex = colNum;
 	                        }
 	                    }
@@ -333,7 +333,7 @@ public class QueryRunner {
 	            dbErrorMessage = "" + ex;
 	            log.error("SQLState: " + ex.getSQLState());
 	            log.error("VendorError: " + ex.getErrorCode());
-	            tableData = null;
+	            throw ex;
 	        }
 	        finally {
 	            if (rs != null) {
@@ -630,7 +630,7 @@ public class QueryRunner {
 	                            OrdsTableColumn otc = new OrdsTableColumn();
 	                            otc.columnName = md.getColumnName(colNum);
 	                            otc.columnType = getDataType(md.getColumnType(colNum));
-	                            tableData.columns.put(otc.columnName, otc);
+	                            tableData.columns.add(otc);
 	                            otc.orderIndex = colNum;
 	                        }
 	                    }

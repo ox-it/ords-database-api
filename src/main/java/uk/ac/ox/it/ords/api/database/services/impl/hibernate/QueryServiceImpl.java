@@ -20,6 +20,8 @@ import java.util.List;
 
 import uk.ac.ox.it.ords.api.database.data.ColumnReference;
 import uk.ac.ox.it.ords.api.database.data.TableData;
+import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
+import uk.ac.ox.it.ords.api.database.queries.QueryRunner;
 import uk.ac.ox.it.ords.api.database.services.QueryService;
 
 public class QueryServiceImpl extends DatabaseServiceImpl
@@ -38,8 +40,15 @@ public class QueryServiceImpl extends DatabaseServiceImpl
 	public TableData performQuery(int dbId, String instance, String q,
 			int startIndex, int rowsPerPage, String filter, String order)
 			throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		OrdsPhysicalDatabase db = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String dbName = db.getDbConsumedName();
+		String server = db.getDatabaseServer();
+		String userName = this.getODBCUser();
+		String password = this.getODBCPassword();
+		
+		QueryRunner qr = new QueryRunner(server,dbName,userName, password);
+		qr.runDBQuery(q, startIndex, rowsPerPage);
+		return qr.getTableData();
 	}
 
 }

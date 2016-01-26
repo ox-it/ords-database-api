@@ -23,6 +23,7 @@ import uk.ac.ox.it.ords.api.database.conf.AuthenticationDetails;
 import uk.ac.ox.it.ords.api.database.data.DataCell;
 import uk.ac.ox.it.ords.api.database.data.DataRow;
 import uk.ac.ox.it.ords.api.database.data.DataTypeMap;
+import uk.ac.ox.it.ords.api.database.data.OrdsTableColumn;
 import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.exceptions.DBEnvironmentException;
@@ -547,19 +548,20 @@ public class GeneralSQLQueries extends ORDSPostgresDB {
 		String whereString = "";
 		int counter = tableData.columns.size() - 1;
 
-		for (String s : tableData.columns.keySet()) {
+		for (OrdsTableColumn column : tableData.columns) {
+			String s = column.columnName;
 			if (originalData.get(s).getValue() == null) {
-				sqlFragment = String.format("\"%s\" is null ", tableData.columns.get(s).columnName);
+				sqlFragment = String.format("\"%s\" is null ", s);
 			}
 			else {
-				sqlFragment = String.format("\"%s\"='%s' ", tableData.columns.get(s).columnName,
+				sqlFragment = String.format("\"%s\"='%s' ", s,
 						this.replaceSpecialCharacters(originalData.get(s).getValue()));
 			}
 			whereString += sqlFragment;
 
 			if (log.isDebugEnabled()) {
 				log.debug(String.format("Sql Fragment is <%s>. Thus adding: %s='%s'", sqlFragment,
-						tableData.columns.get(s).columnName, originalData.get(s).getValue()));
+						s, originalData.get(s).getValue()));
 			}
 			if (counter > 0) {
 				whereString += " and ";
@@ -610,20 +612,21 @@ public class GeneralSQLQueries extends ORDSPostgresDB {
 		command = String.format("update \"%s\" set ", tableData.tableName);
 		counter = tableData.columns.size() - 1;
 
-		for (String s : tableData.columns.keySet()) {
+		for (OrdsTableColumn column : tableData.columns) {
+			String s = column.columnName;
 			String columnToReplace = this.replaceSpecialCharacters(newData.get(s));
 			if (columnToReplace == null) {
-				sqlFragment = String.format("\"%s\"=null", tableData.columns.get(s).columnName);
+				sqlFragment = String.format("\"%s\"=null", s);
 			}
 			else {
-				sqlFragment = String.format("\"%s\"='%s'", tableData.columns.get(s).columnName, columnToReplace);
+				sqlFragment = String.format("\"%s\"='%s'", s, columnToReplace);
 			}
 
 			command += sqlFragment;
 
 			if (log.isDebugEnabled()) {
 				log.debug(String.format("Fragment is <%s>. Thus adding: %s='%s'", sqlFragment,
-						tableData.columns.get(s).columnName, newData.get(s)));// index
+						s, newData.get(s)));// index
 																				// +
 																				// dataOffset
 			}

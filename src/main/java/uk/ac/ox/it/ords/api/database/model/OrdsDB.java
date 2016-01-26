@@ -16,19 +16,32 @@
 
 package uk.ac.ox.it.ords.api.database.model;
 
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 
 
 
 
+@Entity
+@Table(name="ordsdb")
 public class OrdsDB {
 	private int logicalDatabaseId;
 	private int databaseProjectId;
 	private int numberOfPhysicalDatabases;
 
+	@NotNull
 	private String databaseType;
 
+	@NotNull
+	@Size(min = 2, max = 100)
 	private String dbName = "";
 
+	@NotNull
+	@Size(min = 2, max = 65000)
 	private String dbDescription = "";
 	private String creationDate = "";
 	private String dataSources = "";
@@ -39,9 +52,12 @@ public class OrdsDB {
 	}
 
 
+	@Id
+	@GeneratedValue
 	public int getLogicalDatabaseId() {
 		return logicalDatabaseId;
 	}
+
 
 	public void setLogicalDatabaseId(int logicalDatabaseId) {
 		this.logicalDatabaseId = logicalDatabaseId;

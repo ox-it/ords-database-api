@@ -326,7 +326,7 @@ public class ORDSPostgresDB extends QueryRunner {
                     
                     otc.comment = getColumnComment(tableName, otc.columnName);
 
-                    tableData.columns.put(otc.columnName, otc);
+                    tableData.columns.add(otc);
                 }
 
                 tableData.rows = new ConcurrentHashMap<Integer, DataRow>();
@@ -411,7 +411,7 @@ public class ORDSPostgresDB extends QueryRunner {
 
         // Look at each column in our current data
         log.debug("About to loop through columns");
-        for (OrdsTableColumn column : td.columns.values()) {
+        for (OrdsTableColumn column : td.columns) {
             if (td2 != null && !td2.rows.isEmpty()) {
                 column = addReferencesToColumn(column, td2);
             }
@@ -621,8 +621,14 @@ public class ORDSPostgresDB extends QueryRunner {
                         log.debug(String.format("Req ref table is %s", requiredReferencedTable));
                         log.debug(String.format("Req ref table index is %s", requiredReferencingTableIndex));
                     }
-
-                    OrdsTableColumn col = baseTableData.columns.get(referencingColumn);
+                    // find the reference column
+                    OrdsTableColumn col = null;
+                    for (OrdsTableColumn column: baseTableData.columns) {
+                    	if ( column.columnName.equals(referencingColumn)) {
+                    		col = column;
+                    		break;
+                    	}
+                    }
                     if (col == null) {
                         log.error("Null column information for " + referencingColumn);
                         continue;
@@ -674,7 +680,7 @@ public class ORDSPostgresDB extends QueryRunner {
                             }
 
                             log.debug("Looping through columns");
-                            for (OrdsTableColumn otc : baseTableData.columns.values()) {
+                            for (OrdsTableColumn otc : baseTableData.columns) {
                                 if (otc.columnName.equals(referencingColumn)) {
                                     otc.alternativeOptions = alternativeOptions;
                                     otc.alternateColumns = alternateColumns;

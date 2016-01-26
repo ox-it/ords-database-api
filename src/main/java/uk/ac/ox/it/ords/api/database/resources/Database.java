@@ -30,6 +30,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
@@ -42,6 +43,8 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
+import javax.ws.rs.core.UriInfo;
 
 import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.cxf.jaxrs.ext.multipart.Multipart;
@@ -52,6 +55,7 @@ import uk.ac.ox.it.ords.api.database.data.DataRow;
 import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
+import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.permissions.DatabasePermissionSets;
 import uk.ac.ox.it.ords.api.database.permissions.DatabasePermissions;
 import uk.ac.ox.it.ords.api.database.services.DatabaseUploadService;
@@ -61,12 +65,12 @@ import uk.ac.ox.it.ords.api.database.services.TableViewService;
 import uk.ac.ox.it.ords.security.model.Permission;
 import uk.ac.ox.it.ords.security.services.PermissionsService;
 
-@Path("/database/{id}/{instance}")
+@Path("/{id}/{instance}")
 public class Database {
 
 	@PostConstruct
 	public void init() throws Exception {
-		initializePermissions();
+		DatabaseUploadService.Factory.getInstance().init();
 	}
 
 	@GET
@@ -188,21 +192,31 @@ public class Database {
 	 */
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("table/{tablename}/data")
+	@Path("tabledata/{tablename}/{startIndex}/{rowsPerPage}/{filter}/{sort}/{direction}")
 	public Response getTableData(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
-			@QueryParam("startIndex") int startIndex,
-			@QueryParam("rowsperpage") int rowsPerPage,
-			@QueryParam("filter") String filter,
-			@QueryParam("sort") String sort,
-			@QueryParam("direction") String direction) {
-		if (!SecurityUtils.getSubject().isPermitted("database:view" + id)) {
+			@PathParam("startIndex") int startIndex,
+			@PathParam("rowsPerPage") int rowsPerPage,
+			@PathParam("filter") String filter,
+			@PathParam("sort") String sort,
+			@PathParam("direction") String direction
+			) {
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(id))) {
 			return Response.status(Response.Status.FORBIDDEN)
 					.entity("Unauthorized").build();
 		}
 		TableData tableData = null;
 		try {
+			if ( "none".equalsIgnoreCase(filter)) {
+				filter = null;
+			}
+			if ( "none".equalsIgnoreCase(sort)) {
+				sort = null;
+			}
+			if ( "none".equalsIgnoreCase(direction)) {
+				direction = null;
+			}
 			tableData = tableViewService().getDatabaseRows(id, instance, tableName, startIndex, rowsPerPage, filter, sort, direction);
 		}
 		catch (BadParameterException ex) {
@@ -220,7 +234,7 @@ public class Database {
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Path("table/{tablename}/data")
+	@Path("tabledata/{tablename}")
 	public Response appendTableData(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName, Row newData) {
@@ -246,7 +260,7 @@ public class Database {
 	@PUT
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Path("table/{tablename}/data/{lookupCol}/{lookupValue}")
+	@Path("tabledata/{tablename}/{lookupCol}/{lookupValue}")
 	public Response updateTableRow(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
@@ -274,7 +288,7 @@ public class Database {
 	@DELETE
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Path("table/{tablename}/data")
+	@Path("tabledata/{tablename}")
 	public Response deleteTableRow(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName, Row rowToRemove) {
@@ -360,17 +374,15 @@ public class Database {
 	public Response doQuery(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@QueryParam("q") String theQuery,
-			@QueryParam("startindex") int startIndex,
-			@QueryParam("rowsperpage") int rowsPerPage,
-			@QueryParam("filter") String filter,
-			@QueryParam("order") String order) {
-		if (!SecurityUtils.getSubject().isPermitted("database:modify" + id)) {
+			@DefaultValue("0") @QueryParam("startindex") int startIndex,
+			@DefaultValue("50") @QueryParam("rowsperpage") int rowsPerPage) {
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(id))) {
 			return Response.status(Response.Status.FORBIDDEN)
 					.entity("Unauthorized").build();
 		}
 		TableData data = null;
 		try {
-			data = queryService().performQuery(id, instance, theQuery, startIndex, rowsPerPage, filter, order);
+			data = queryService().performQuery(id, instance, theQuery, startIndex, rowsPerPage, null, null);
 		}
 		catch (BadParameterException ex) {
 			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
@@ -380,7 +392,6 @@ public class Database {
 			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
 					.entity(e.getMessage()).build();
 		}
-
 		return Response.status(Response.Status.OK).entity(data).build();
 
 	}
@@ -412,19 +423,22 @@ public class Database {
 	
 
 	@POST
-	@Path("data")
+	@Path("data/{server}")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	public Response handleFileUpload(
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance, 
+			@PathParam("instance") String instance,
+			@PathParam("server") String server,
 			@Multipart("databaseFile") Attachment fileAttachment,
-			@Context HttpServletRequest request) {
+			@Context ServletContext context,
+			@Context UriInfo uriInfo) {
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_CREATE)) {
 			return Response.status(Response.Status.FORBIDDEN)
 					.entity("Unauthorized").build();
 		}
 		//MediaType contentType = fileAttachment.getContentType();
 		//contentType.
+		int newDbId = 0;
 		MultivaluedMap<String, String> map = fileAttachment.getHeaders();
 		String fileName = getFileName(map);
 		String extension = getFileExtension(fileName);
@@ -433,8 +447,13 @@ public class Database {
 				!extension.equalsIgnoreCase("accdb"))) {
 			return Response.status(Response.Status.UNSUPPORTED_MEDIA_TYPE).build();
 		}
-		ServletContext context = request.getSession().getServletContext();
-		File tempDirectory = (File)context.getAttribute("javax.servlet.context.tmpdir");
+		File tempDirectory;
+		if ( context == null ) {
+			tempDirectory = new File("/tmp");
+		}
+		else {
+			tempDirectory = (File)context.getAttribute("javax.servlet.context.tmpdir");
+		}
 		if (tempDirectory == null ) {
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("temp directory not set on server").build();
 		}
@@ -444,11 +463,40 @@ public class Database {
 		try {
 			InputStream stream = handler.getInputStream();
 			saveFile(dbFile, stream);
-			DatabaseUploadService.Factory.getInstance().createNewDatabaseFromFile(dbId, dbFile, extension);		}
+			newDbId = DatabaseUploadService.Factory.getInstance().createNewDatabaseFromFile(dbId, dbFile, extension, server);		}
 		catch (Exception e ) {
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
 		}
-		return Response.ok().build();
+	    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+	    builder.path(Integer.toString(newDbId));
+	    return Response.created(builder.build()).build();
+	}
+	
+	
+	// convenience function to remove database for tests, this will go when the relationship between this
+	// microservice and database structure api microservice is properly configured
+	
+	@DELETE
+	@Path("/test/delete/{staging}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response testDeleteDatabase(
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("staging") BooleanCheck staging) {
+		if (!SecurityUtils.getSubject().isPermitted(
+				DatabasePermissions.DATABASE_DELETE(dbId))) {
+			return Response.status(Response.Status.FORBIDDEN)
+					.entity("Unauthorized").build();
+		}
+		try {
+			DatabaseUploadService.Factory.getInstance().testDeleteDatabase(dbId, instance, staging.value);
+			return Response.ok().build();
+		}
+		catch (Exception e ) {
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+		}
+
+				
 	}
 
 	private QueryService queryService() {
@@ -497,50 +545,34 @@ public class Database {
 
     }
     
-    
-    private void initializePermissions() throws Exception {
-		PermissionsService service = PermissionsService.Factory.getInstance();
-		//
-		// Anyone with the "User" role can contribute to projects
-		//
-		for (String permission : DatabasePermissionSets.getPermissionsForUser()){
-			Permission permissionObject = new Permission();
-			permissionObject.setRole("user");
-			permissionObject.setPermission(permission);
-			service.createPermission(permissionObject);
-		}
-		
-		//
-		// Anyone with the "LocalUser" role can create new trial projects
-		//
-		for (String permission : DatabasePermissionSets.getPermissionsForLocalUser()){
-			Permission permissionObject = new Permission();
-			permissionObject.setRole("localuser");
-			permissionObject.setPermission(permission);
-			service.createPermission(permissionObject);
-		}
-		
-		//
-		// Anyone with the "Administrator" role can create new full
-		// projects and upgrade projects to full, and update any
-		// user projects
-		//
-		for (String permission : DatabasePermissionSets.getPermissionsForSysadmin()){
-			Permission permissionObject = new Permission();
-			permissionObject.setRole("administrator");
-			permissionObject.setPermission(permission);
-			service.createPermission(permissionObject);
+ 
+	// checks for a number of possible permutations for the staging part of the resource path
+	public static class BooleanCheck {
+		private static final BooleanCheck FALSE = new BooleanCheck(false);
+		private static final BooleanCheck TRUE = new BooleanCheck(true);
+		private boolean value;
+
+		private BooleanCheck(boolean value) {
+			this.value = value;
 		}
 
-		//
-		// "Anonymous" can View public projects
-		//
-		for (String permission : DatabasePermissionSets.getPermissionsForAnonymous()){
-			Permission permissionObject = new Permission();
-			permissionObject.setRole("anonymous");
-			permissionObject.setPermission(permission);
-			service.createPermission(permissionObject);
+		public boolean getValue() {
+			return this.value;
 		}
 
-    }
-}
+		public static BooleanCheck valueOf(String value) {
+			switch (value.toLowerCase()) {
+				case "true" :
+				case "yes" :
+				case "y" :
+				case "staging" : {
+					return BooleanCheck.TRUE;
+				}
+				default : {
+					return BooleanCheck.FALSE;
+				}
+			}
+		}
+	}
+
+ }

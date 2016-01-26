@@ -3,10 +3,13 @@ package uk.ac.ox.it.ords.api.database.conf;
 import java.io.IOException;
 import java.util.Properties;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
 
 
 
@@ -18,22 +21,52 @@ public class AuthenticationDetails {
 	private String rootDbUser, rootDbPassword;
 	private String ordsOdbcUserMasterPassword;
 	
+	protected static String ODBC_MASTER_PASSWORD_PROPERTY = "ords.odbc.masterpassword";
+	protected static String ORDS_DATABASE_NAME = "ords.database.name";
+	protected static String ORDS_DATABASE_USER = "ords.database.user";
+	protected static String ORDS_DATABASE_PASSWORD = "ords.database.password";
+	protected static String ORDS_DATABASE_HOST = "ords.database.server.host";
+	
+	protected static String ORDS_READONLY_USER = "ords.database.readonlyuser";
+	protected static String ORDS_READONLY_PASSWORD = "ords.database.readonlypassword";
+	protected static String ORDS_DATASET_VIEWER = "ords.database.datasetviewer";
+	protected static String ORDS_DATASET_PASSWORD = "ords.datasetviewerpassword";
+	
+	protected static String ORDS_DATABASE_ROOT_USER = "ords.database.rootdbuser";
+	protected static String ORDS_DATABASE_ROOT_PASSWORD = "ords.database.rootdbpassword";
+	
+	/*
+	 * ords.server.configuration=serverConfig.xml
+ords.database.readonlyuser=ordsreadonly
+ords.database.readonlypassword=
+ords.database.datasetviewer=datasetViewer
+ords.datasetviewerpassword=ords.database.name=ords2
+ords.database.username=ords
+ords.database.password=ords
+ords.database.server.host=localhost
+ords.database.rootdbuser=ords
+ords.database.rootdbpassword=ords
+ords.odbc.masterpassword=iU7*%fiXkls
+ords.database.name=ords2
+	 */
+	
 	
 
 	public AuthenticationDetails() {
-		try {
-			String dbPropertiesLocation = MetaConfiguration
-					.getConfigurationLocation("databaseProperties");
-			PropertiesConfiguration prop = new PropertiesConfiguration(
-					dbPropertiesLocation);
+			//String dbPropertiesLocation = MetaConfiguration
+			//		.getConfigurationLocation("databaseProperties");
+			//PropertiesConfiguration prop = new PropertiesConfiguration(
+			//		dbPropertiesLocation);
+			
+			Configuration properties = MetaConfiguration.getConfiguration();
 
 			//Properties prop = GeneralWebServicesUtils.readProperties(CommonVars.mainPropertiesFile);
 			
 			/**
 			 * The user that can connect to and read/write from/to the ords database. Used for hibernate.
 			 */
-			ordsUser = prop.getProperty("user").toString();
-			ordsPassword = prop.getProperty("password").toString();
+			ordsUser = properties.getString(AuthenticationDetails.ORDS_DATABASE_USER);
+			ordsPassword = properties.getString(AuthenticationDetails.ORDS_DATABASE_PASSWORD);
 			
 			/**
 			 * A user that can read from (but not write to) users databases. Used to gather statistics (number of records held by ords).
@@ -42,20 +75,20 @@ public class AuthenticationDetails {
 			 * always an owner so this could be used to collect statistics.
 			 * Thus for now I shall deprecate this
 			 */
-			ordsReadOnlyUser = prop.getProperty("ordsReadOnlyUser").toString();
-			ordsReadOnlyPassword = prop.getProperty("ordsReadOnlyPassword").toString();
+			ordsReadOnlyUser = properties.getString(AuthenticationDetails.ORDS_READONLY_USER);
+			ordsReadOnlyPassword = properties.getString(AuthenticationDetails.ORDS_READONLY_PASSWORD);
 			
 			/**
 			 * A read only user used to view public datasets
 			 */
-			datasetViewer = prop.getProperty("datasetViewer").toString();
-			datasetViewerPassword = prop.getProperty("datasetViewerPassword").toString();
+			datasetViewer = properties.getString(AuthenticationDetails.ORDS_DATASET_VIEWER);
+			datasetViewerPassword = properties.getString(AuthenticationDetails.ORDS_DATASET_PASSWORD);
 			
 			/**
 			 * A root user on the server that can create databases and set the public schema permissions
 			 */
-			rootDbUser = prop.getProperty("rootDbUser").toString();
-			rootDbPassword = prop.getProperty("rootDbPassword").toString();
+			rootDbUser = properties.getString(AuthenticationDetails.ORDS_DATABASE_ROOT_USER);
+			rootDbPassword = properties.getString(AuthenticationDetails.ORDS_DATABASE_ROOT_PASSWORD);
 			
 			/**
 			 * When ords accesses data via a user command (e.g. the user logs in to a project and adds rows to a table in a 
@@ -63,15 +96,11 @@ public class AuthenticationDetails {
 			 * the project and performs the update: under the covers, ords will access the database with user fred_ords. 
 			 * ordsOdbcUserMasterPassword provides the password for this access.
 			 */
-			ordsOdbcUserMasterPassword = prop.getProperty("ordsOdbcUserMasterPassword").toString();
+			ordsOdbcUserMasterPassword = properties.getString(AuthenticationDetails.ODBC_MASTER_PASSWORD_PROPERTY);
             if ((ordsOdbcUserMasterPassword == null) || (ordsOdbcUserMasterPassword.length() == 0) ) {
                 log.error("Unable to get odbc master password - defaulting");
                 ordsOdbcUserMasterPassword = ordsPassword;
             }
-		}
-		catch (ConfigurationException e) {
-			log.error("Unable to read main properties file " + CommonVars.mainPropertiesFile, e);
-		}
 	}
 
 //	public String getOrdsReadOnlyUser() {
