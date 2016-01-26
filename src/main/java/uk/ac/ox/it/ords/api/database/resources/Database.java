@@ -455,7 +455,8 @@ public class Database {
 			tempDirectory = (File)context.getAttribute("javax.servlet.context.tmpdir");
 		}
 		if (tempDirectory == null ) {
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("temp directory not set on server").build();
+			// try with tmp again
+			tempDirectory = new File("/tmp");
 		}
 		File dbFile = new File(tempDirectory, fileName);
 		
