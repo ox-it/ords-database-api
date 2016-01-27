@@ -127,7 +127,7 @@ public class Database {
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path("dataset/{databaseid}/{query}")
-	public Response createDatabaseDatasert(@PathParam("id") final int id,
+	public Response createDatabaseDataset(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("datasetid") int datasetID,
 			@PathParam("query") String queryString) {
@@ -190,17 +190,17 @@ public class Database {
 	 * 
 	 * @direction
 	 */
+	///{startIndex}/{rowsPerPage}/{filter}/{sort}/{direction}
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("tabledata/{tablename}/{startIndex}/{rowsPerPage}/{filter}/{sort}/{direction}")
+	@Path("tabledata/{tablename}")
 	public Response getTableData(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
-			@PathParam("startIndex") int startIndex,
-			@PathParam("rowsPerPage") int rowsPerPage,
-			@PathParam("filter") String filter,
-			@PathParam("sort") String sort,
-			@PathParam("direction") String direction
+			@DefaultValue("0") @QueryParam("startIndex") int startIndex,
+			@DefaultValue("100") @QueryParam("rowsPerPage") int rowsPerPage,
+			@QueryParam("sort") String sort,
+			@QueryParam("direction") String direction
 			) {
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(id))) {
 			return Response.status(Response.Status.FORBIDDEN)
@@ -208,16 +208,13 @@ public class Database {
 		}
 		TableData tableData = null;
 		try {
-			if ( "none".equalsIgnoreCase(filter)) {
-				filter = null;
-			}
 			if ( "none".equalsIgnoreCase(sort)) {
 				sort = null;
 			}
 			if ( "none".equalsIgnoreCase(direction)) {
 				direction = null;
 			}
-			tableData = tableViewService().getDatabaseRows(id, instance, tableName, startIndex, rowsPerPage, filter, sort, direction);
+			tableData = tableViewService().getDatabaseRows(id, instance, tableName, startIndex, rowsPerPage, sort, direction);
 		}
 		catch (BadParameterException ex) {
 			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
@@ -260,18 +257,17 @@ public class Database {
 	@PUT
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Path("tabledata/{tablename}/{lookupCol}/{lookupValue}")
+	@Path("tabledata/{tablename}")
 	public Response updateTableRow(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
-			@PathParam("lookupCol") String lookupColName,
-			@PathParam("lookupValue") String lookupValue, DataRow rowData) {
+			Row rowData) {
 		if (!SecurityUtils.getSubject().isPermitted("database:modify" + id)) {
 			return Response.status(Response.Status.FORBIDDEN)
 					.entity("Unauthorized").build();
 		}
 		try {
-			tableViewService().updateTableRow(id, instance, tableName, lookupColName, lookupValue, rowData);
+			tableViewService().updateTableRow(id, instance, tableName, rowData);
 		}
 		catch (BadParameterException ex) {
 			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())

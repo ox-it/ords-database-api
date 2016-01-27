@@ -28,6 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import uk.ac.ox.it.ords.api.database.queries.QueryRunner;
 
 
@@ -46,8 +48,8 @@ public class TableData implements Serializable {
     public List<String> primaryKeys = new ArrayList<String>();
     //public Map<String, OrdsTableColumn> columns = new ConcurrentHashMap<String, OrdsTableColumn>();
     public List<OrdsTableColumn> columns = new ArrayList<OrdsTableColumn>();
-    public Map<Integer, DataRow> rows = new ConcurrentHashMap<Integer, DataRow>();
-    //public List<DataRow>rows = new ArrayList<DataRow>();
+    //public Map<Integer, DataRow> rows = new ConcurrentHashMap<Integer, DataRow>();
+    public List<DataRow>rows = new ArrayList<DataRow>();
     public List<String> sequences = new ArrayList<String>();
     public String comment;
     private int numberOfRowsInEntireTable = 0;
@@ -355,12 +357,6 @@ public class TableData implements Serializable {
         return originalDbType;
     }
 
-//    public void setOriginalDbType(DataTypesSupported originalDbType) {
-//        if (originalDbType == null) {
-//            return;
-//        }
-//        this.originalDbType = originalDbType;
-//    }
 
     public void setOriginalDbType(String originalDbType) {
         if (originalDbType == null) {
