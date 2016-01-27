@@ -135,7 +135,7 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 				QueryRunner qr = new QueryRunner(databaseServer, databaseName, user, ad.getOrdsOdbcUserMasterPassword());
 				qr.runDBQuery(String.format("SELECT COUNT(*) FROM \"%s\"",getNormalisedTableName(tableName)));
 				TableData tableData = qr.getTableData();
-				int rowsVerified = Integer.parseInt(tableData.rows.values().iterator().next().cell.get("count").getValue());
+				int rowsVerified = Integer.parseInt(tableData.rows.iterator().next().cell.get("count").getValue());
 				results.get(tableName).setRowsVerified(rowsVerified);
 			}
 

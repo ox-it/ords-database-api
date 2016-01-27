@@ -343,7 +343,7 @@ public class GeneralSQLQueries extends ORDSPostgresDB {
 			runDBQuery("SELECT column_name, data_type FROM information_schema.columns where table_name=\'"
 							+ tableName + "\'");
 
-			for (DataRow rows : this.getTableData().rows.values()) {
+			for (DataRow rows : this.getTableData().rows) {
 				DataTypeMap dtm = new DataTypeMap();
 				dtm.colName = rows.cell.get("column_name").getValue();
 				dtm.dt = QueryRunner.getDataType(rows.cell.get("data_type")

@@ -20,7 +20,11 @@ package uk.ac.ox.it.ords.api.database.server;
  */
 public class ValidationException extends Exception {
 
-	private static final long serialVersionUID = 2411830430228398243L;
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 6056239233079348060L;
 
 	public ValidationException(String message) {
 		super(message);

@@ -114,7 +114,7 @@ public class ORDSPostgresDB extends QueryRunner {
         * later
         */
        if (this.getTableData().rows.size() >= 1) {
-           for (DataRow dr : this.getTableData().rows.values()) {
+           for (DataRow dr : this.getTableData().rows) {
                String primaryKey = dr.cell.get("attname").getValue();
                return primaryKey;
            }
@@ -132,7 +132,7 @@ public class ORDSPostgresDB extends QueryRunner {
    
    public OrdsTableColumn addReferencesToColumn(OrdsTableColumn otc, TableData constraints) throws SQLException {
        try {
-           for (DataRow constraint : constraints.rows.values()) {
+           for (DataRow constraint : constraints.rows) {
                if (log.isDebugEnabled()) {
                    log.debug(String.format("Check column name %s against %s", otc.columnName, constraint.cell.get("column_name").getValue()));
                }
@@ -191,7 +191,7 @@ public class ORDSPostgresDB extends QueryRunner {
             log.error("No rows found for database ");
         }
         else {
-	        for (DataRow dr : getTableData().rows.values()) { // Look through each table name in the database
+	        for (DataRow dr : getTableData().rows) { // Look through each table name in the database
 	            for (String s : dr.cell.keySet()) {
 	                runDBQuery("select count(*) from \"" + dr.cell.get(s).getValue() + "\"");
 	                if (this.getTableData() == null) {
@@ -249,7 +249,7 @@ public class ORDSPostgresDB extends QueryRunner {
         if (!lqr.runDBQuery(String.format("SELECT table_name FROM information_schema.tables WHERE table_schema='%s'", CommonVars.SCHEMA_NAME))) {
             return null;
         }
-        for (DataRow dr : lqr.getTableData().rows.values()) {
+        for (DataRow dr : lqr.getTableData().rows) {
             for (DataCell dc : dr.cell.values()) {
                 String existingTable = dc.getValue();
                 if (existingTable.equalsIgnoreCase(tableName)) {
@@ -297,10 +297,10 @@ public class ORDSPostgresDB extends QueryRunner {
                 TableData constraints = getForeignConstraintsForTable(tableName);
                 
                 tableData.columns.clear();
-                for (Map.Entry<Integer, DataRow> entry : tableData.rows.entrySet()) {
-                    DataRow row = entry.getValue();
+                int i = 0;
+                for (DataRow row : tableData.rows) {
                     OrdsTableColumn otc = new OrdsTableColumn();
-                    otc.orderIndex = (entry.getKey()+1);
+                    otc.orderIndex = i++;
                     DataCell dc = row.cell.get("column_name");
                     otc.columnName = dc.getValue();
                     dc = row.cell.get("data_type");
@@ -329,7 +329,7 @@ public class ORDSPostgresDB extends QueryRunner {
                     tableData.columns.add(otc);
                 }
 
-                tableData.rows = new ConcurrentHashMap<Integer, DataRow>();
+                tableData.rows = new ArrayList<DataRow>();
                 tableData.sequences = sequences;
                 tableData.setNumberOfRowsInEntireTable(totalRowsInt);
                 tableData.comment = tableComment;
@@ -433,7 +433,7 @@ public class ORDSPostgresDB extends QueryRunner {
     public ArrayList<String> getSequencesForTable(String tableName) throws ClassNotFoundException, SQLException {
         ArrayList<String> sequences = new ArrayList<String>();
         if (runDBQuery(String.format("SELECT column_name, column_default from information_schema.columns where table_name='%s' AND column_default IS NOT NULL", tableName))) {
-	        for (DataRow row : this.getTableData().rows.values()) {
+	        for (DataRow row : this.getTableData().rows) {
 	            String columnDefault = row.cell.get("column_default").getValue();
 	            if (columnDefault.startsWith("nextval(")) {
 	                sequences.add(row.cell.get("column_name").getValue());
@@ -669,13 +669,13 @@ public class ORDSPostgresDB extends QueryRunner {
                                 log.error("No table data present. Something has gone wrong. Unable to continue here!");
                                 break;
                             }
-                            for (DataRow row : getTableData().rows.values()) {
+                            for (DataRow row : getTableData().rows) {
                                 alternativeOptions.add(row.cell.get(requiredReferencedColumn).getValue());
                             }
 
                             td = getColumnNamesForTable(requiredReferencedTable);
                             List<String> alternateColumns = new ArrayList<String>();
-                            for (DataRow row : td.rows.values()) {
+                            for (DataRow row : td.rows) {
                                 alternateColumns.add(row.cell.get("column_name").getValue());
                             }
 
@@ -726,7 +726,7 @@ public class ORDSPostgresDB extends QueryRunner {
         }
 
         if (this.getTableData().rows.size() >= 1) {
-            for (DataRow dr : this.getTableData().rows.values()) {
+            for (DataRow dr : this.getTableData().rows) {
                 return dr.cell.get("foreign_table_name").getValue();
             }
         }

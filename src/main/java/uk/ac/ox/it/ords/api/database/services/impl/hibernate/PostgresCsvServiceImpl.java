@@ -502,7 +502,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 	
 			while (true) {
 				foundThis = false;
-				for (DataRow dr : tableData.rows.values()) { // Look through each
+				for (DataRow dr : tableData.rows) { // Look through each
 																// table name in the
 																// database
 					for (String s : dr.cell.keySet()) {

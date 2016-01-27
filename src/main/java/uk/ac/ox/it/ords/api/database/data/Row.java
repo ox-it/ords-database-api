@@ -19,6 +19,8 @@ package uk.ac.ox.it.ords.api.database.data;
 
 // pojo for transporting insert data
 public class Row {
+	public String lookupColumn;
+	public String lookupValue;
 	public String[] columnNames;
 	public String[] values;
 }

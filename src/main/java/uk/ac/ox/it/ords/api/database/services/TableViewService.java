@@ -66,7 +66,7 @@ public interface TableViewService {
 	 * @throws Exception
 	 */
 	public TableData getDatabaseRows ( int dbId, String instance, String tableName, 
-			int startIndex, int rowsPerPage, String filter, String sort, String sortDirection ) throws Exception;
+			int startIndex, int rowsPerPage, String sort, String sortDirection ) throws Exception;
 	
 	/**
 	 * 
@@ -90,7 +90,7 @@ public interface TableViewService {
 	 * @return
 	 * @throws Exception
 	 */
-	public int updateTableRow ( int dbId, String instance, String tableName, String lookupColName, String lookupValue, DataRow rowData ) throws Exception;
+	public int updateTableRow ( int dbId, String instance, String tableName, Row rowData ) throws Exception;
 	
 	/**
 	 * 

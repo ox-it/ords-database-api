@@ -22,6 +22,7 @@ import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.queries.DatabaseQueries;
 import uk.ac.ox.it.ords.api.database.queries.GeneralSQLQueries;
+import uk.ac.ox.it.ords.api.database.queries.QueryRunner;
 import uk.ac.ox.it.ords.api.database.services.TableViewService;
 
 public class TableViewServiceImpl extends DatabaseServiceImpl
@@ -58,7 +59,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 
 	@Override
 	public TableData getDatabaseRows(int dbId, String instance,
-			String tableName, int startIndex, int rowsPerPage, String filter,
+			String tableName, int startIndex, int rowsPerPage,
 			String sort, String sortDirection) throws Exception {
 		String userName = this.getODBCUser();
 		String password = this.getODBCPassword();
@@ -90,14 +91,38 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	}
 
 	@Override
-	public int updateTableRow(int dbId, String instance, String tableName,
-			String lookupColName, String lookupValue, DataRow rowData)
+	public int updateTableRow(int dbId, String instance, String tableName, Row rowData)
 			throws Exception {
 		String userName = this.getODBCUser();
 		String password = this.getODBCPassword();
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String server = database.getDatabaseServer();
+		int i = 0;
+		String command = "UPDATE \""+ tableName + "\" SET ";
+		for ( String colName: rowData.columnNames) {
+			command += colName + "=";
+			String colVal = rowData.values[i++];
+			if ( isInt(colVal) || isNumber(colVal) ) {
+				command += colVal;
+			}
+			else {
+				command += "\'"+ colVal + "\',";
+			}
+		}
+		// take off last comma
+		command = command.substring(0, command.length()-1);
 		
-		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(null, database.getDbConsumedName(), userName, password );
+		command += " WHERE "+rowData.lookupColumn+"=";
+		if (isInt(rowData.lookupValue ) || isNumber(rowData.lookupValue)) {
+			command += rowData.lookupValue;
+		}
+		else {
+			command += "'"+rowData.lookupValue+"'";
+		}
+		
+		QueryRunner q = new QueryRunner ( server, database.getDbConsumedName(), userName, password );
+		
+		q.runDBQuery(command);
 
 		return 0;
 	}
@@ -111,6 +136,28 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		
 		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(null, database.getDbConsumedName(), userName, password );
 		sqlQueries.deleteTableRow(tableName, rowToRemove);
+	}
+	
+	
+	private boolean isInt ( String input ) {
+		try {
+			int i = Integer.parseInt(input);
+		}
+		catch ( NumberFormatException e ) {
+			return false;
+		}
+		return true;
+	}
+	
+	
+	private boolean isNumber ( String input ) {
+		try {
+			float f = Float.parseFloat(input );
+		}
+		catch ( NumberFormatException e ) {
+			return false;
+		}
+		return true;
 	}
 
 }

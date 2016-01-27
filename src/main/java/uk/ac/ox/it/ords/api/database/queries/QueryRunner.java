@@ -309,7 +309,7 @@ public class QueryRunner {
 	                        dr.cell.put(md.getColumnName(colNum), dc);
 	                    }
 	
-	                    tableData.rows.put(counter, dr);
+	                    tableData.rows.add(dr);
 	                    counter++;
 	                    
 	                    if (pagination && (counter >= numberOfRecordsRequired)) {
@@ -643,7 +643,7 @@ public class QueryRunner {
 	                        dr.cell.put(md.getColumnName(colNum), dc);
 	                    }
 	
-	                    tableData.rows.put(counter, dr);
+	                    tableData.rows.add(dr);
 	                    counter++;
 	                    
 	                    if (pagination && (counter >= numberOfRecordsRequired)) {
