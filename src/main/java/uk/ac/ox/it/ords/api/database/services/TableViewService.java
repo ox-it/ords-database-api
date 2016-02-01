@@ -100,7 +100,7 @@ public interface TableViewService {
 	 * @param dataToRemove
 	 * @throws Exception
 	 */
-	public void deleteTableData (int dbId, String instance, String tableName, Row rowToRemove ) throws Exception;
+	public void deleteTableData (int dbId, String instance, String tableName, String primaryKey, String primaryKeyValue ) throws Exception;
 	
 	
     public static class Factory {

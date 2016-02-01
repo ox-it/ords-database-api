@@ -129,12 +129,15 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 
 	@Override
 	public void deleteTableData(int dbId, String instance, String tableName,
-			Row rowToRemove) throws Exception {
+			String primaryKey, String primaryKeyValue) throws Exception {
 		String userName = this.getODBCUser();
 		String password = this.getODBCPassword();
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		
 		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(null, database.getDbConsumedName(), userName, password );
+		Row rowToRemove = new Row();
+		rowToRemove.columnNames = new String[]{primaryKey};
+		rowToRemove.values = new String[]{primaryKeyValue};
 		sqlQueries.deleteTableRow(tableName, rowToRemove);
 	}
 	

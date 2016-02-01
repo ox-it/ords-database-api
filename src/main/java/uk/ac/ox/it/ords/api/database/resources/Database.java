@@ -284,16 +284,20 @@ public class Database {
 	@DELETE
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Path("tabledata/{tablename}")
+	@Path("tabledata/{tablename}/{columnName}/{columnValue}")
 	public Response deleteTableRow(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
-			@PathParam("tablename") String tableName, Row rowToRemove) {
+			@PathParam("tablename") String tableName,
+			@PathParam("primaryKey") String primaryKey,
+			@PathParam("primaryKeyValue") String primaryKeyValue
+			) {
 		if (!SecurityUtils.getSubject().isPermitted("database:modify" + id)) {
 			return Response.status(Response.Status.FORBIDDEN)
 					.entity("Unauthorized").build();
 		}
 		try {
-			tableViewService().deleteTableData(id, instance, tableName, rowToRemove);
+			Row rowToRemove = new Row();
+			tableViewService().deleteTableData(id, instance, tableName, primaryKey, primaryKeyValue);
 		}
 		catch ( NotFoundException nfe ) {
 			return Response.status(Response.Status.GONE).build();
