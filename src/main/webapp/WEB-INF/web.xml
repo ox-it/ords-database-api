@@ -38,6 +38,12 @@
 		    uk.ac.ox.it.ords.api.database.resources.Database         
 		  </param-value>
  		</init-param>
+ 		 <init-param>	
+		   <param-name>jaxrs.providers</param-name>
+           <param-value>
+              com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider
+           </param-value>
+        </init-param>
         <load-on-startup>1</load-on-startup>
     </servlet>
  

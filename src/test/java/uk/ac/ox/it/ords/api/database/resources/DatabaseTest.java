@@ -52,7 +52,7 @@ public class DatabaseTest extends AbstractResourceTest{
 			// get the data from the table created as small_test
 			
 			client = getClient(false);
-			String tablePath = "/"+id+"/MAIN/tabledata/small_test/0/1000/none/none/none";
+			String tablePath = "/"+id+"/MAIN/tabledata/small_test";
 			response = client.path(tablePath).get();
 			assertEquals(200, response.getStatus());
 			TableData tableData = response.readEntity(TableData.class);
@@ -74,10 +74,13 @@ public class DatabaseTest extends AbstractResourceTest{
 			id = path.substring(path.lastIndexOf('/')+1);
 			AbstractResourceTest.databaseIds.add(id);
 			
-			String sql = "SELECT * FROM city";
-			String queryPath = "/"+id+"/MAIN/query";
+			//String sql = "SELECT * FROM country";
+			//String queryPath = "/"+id+"/MAIN/query";
+			//client = getClient(false);
+			//response = client.path(queryPath).query("q", sql).query("startindex", 0).query("rowsperpage", 100).get();
+			
 			client = getClient(false);
-			response = client.path(queryPath).query("q", sql).query("startindex", 0).query("rowsperpage", 100).get();
+			response = client.path("/"+id+"/MAIN/tabledata/country").get();
 			assertEquals(200, response.getStatus());
 			InputStream stream = (InputStream) response.getEntity();
 			this.getResponseFromInputStream(stream, "mondial.json");
