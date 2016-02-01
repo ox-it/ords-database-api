@@ -11,6 +11,8 @@ import org.hibernate.cfg.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
+
 
 /**
  *
@@ -19,7 +21,9 @@ import org.slf4j.LoggerFactory;
  */
 public class DBCredentials extends HibernateCreds {
     private static Logger log = LoggerFactory.getLogger(DBCredentials.class);
-    
+
+	protected static String HIBERNATE_CONFIGURATION_PROPERTY = "ords.hibernate.configuration";
+
     public DBCredentials() {
     	super();
     }
@@ -28,8 +32,8 @@ public class DBCredentials extends HibernateCreds {
     public DBCredentials(String dbServer, String dbName) {
     	if ( dbServer == null ) {
     		Configuration configuration = new Configuration();
-    		String hibernateConfigLocation = MetaConfiguration
-    				.getConfigurationLocation("hibernate");
+    		String hibernateConfigLocation = MetaConfiguration.getConfiguration().getString(HIBERNATE_CONFIGURATION_PROPERTY);
+
 
     		if (hibernateConfigLocation == null) {
     			configuration.configure();

@@ -10,6 +10,8 @@ import org.hibernate.cfg.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
+
 
 /**
  *
@@ -18,6 +20,8 @@ import org.slf4j.LoggerFactory;
 public class HibernateCreds {
     private static Logger log = LoggerFactory.getLogger(HibernateCreds.class);
     
+	protected static String HIBERNATE_CONFIGURATION_PROPERTY = "ords.hibernate.configuration";
+
     protected String user;
     protected String password;
     protected String dbName; // This will be the ords db name
@@ -36,8 +40,9 @@ public class HibernateCreds {
         log.debug("HibernateCreds:init");
         
 		Configuration configuration = new Configuration();
-		String hibernateConfigLocation = MetaConfiguration
-				.getConfigurationLocation("hibernate");
+
+		String hibernateConfigLocation = MetaConfiguration.getConfiguration().getString(HIBERNATE_CONFIGURATION_PROPERTY);
+
 
 		if (hibernateConfigLocation == null) {
 			configuration.configure();
