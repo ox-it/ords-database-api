@@ -7,6 +7,11 @@
    <listener>
     <listener-class>org.apache.shiro.web.env.EnvironmentLoaderListener</listener-class>
    </listener>
+   
+   <context-param>
+		<param-name>shiroEnvironmentClass</param-name>
+		<param-value>uk.ac.ox.it.ords.security.configuration.OrdsShiroEnvironment</param-value>
+   </context-param>
 
    <filter>
     <filter-name>ShiroFilter</filter-name>
