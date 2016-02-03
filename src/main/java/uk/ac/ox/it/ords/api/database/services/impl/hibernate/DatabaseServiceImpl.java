@@ -234,6 +234,27 @@ public class DatabaseServiceImpl {
 				session.close();
 			}
 		}
+		
+		@SuppressWarnings("rawtypes")
+		protected List runSQLQuery(String query) {
+			Session session;
+			session = this.getOrdsDBSessionFactory().openSession();
+			try {
+				Transaction transaction = session.beginTransaction();
+				SQLQuery sqlQuery = session.createSQLQuery(query);
+				List results = sqlQuery.list();
+				transaction.commit();
+				return results;
+
+			} catch (Exception e) {
+				log.debug(e.getMessage());
+				session.getTransaction().rollback();
+				throw e;
+			} finally {
+				session.close();
+			}
+		}
+
 
 		
 		protected CachedRowSet runJDBCQuery(String query, List<Object> parameters,

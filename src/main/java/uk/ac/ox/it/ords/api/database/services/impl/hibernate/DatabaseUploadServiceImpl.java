@@ -17,6 +17,7 @@
 package uk.ac.ox.it.ords.api.database.services.impl.hibernate;
 
 import java.io.File;
+import java.util.List;
 
 import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
@@ -39,7 +40,7 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 			String server) throws Exception {
 		String odbcUserName = this.getODBCUser();
 		String odbcPassword = this.getODBCPassword();
-		OrdsPhysicalDatabase db = this.createPhysicalDatabase(logicalDatabaseId, type, dbFile.getName(), server);
+		OrdsPhysicalDatabase db = this.createPhysicalDatabase(logicalDatabaseId, type, dbFile.getName(), server, odbcUserName, odbcPassword);
 		String databaseName = db.getDbConsumedName();
 		DatabaseRoleService.Factory.getInstance().createInitialPermissions(db.getPhysicalDatabaseId());
 		
@@ -68,7 +69,7 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 	}
 	
 	
-	private OrdsPhysicalDatabase createPhysicalDatabase ( int logicalDatabaseId, String databaseFileType, String fileName, String server ) throws Exception {
+	private OrdsPhysicalDatabase createPhysicalDatabase ( int logicalDatabaseId, String databaseFileType, String fileName, String server, String userName, String password ) throws Exception {
 		OrdsPhysicalDatabase db = new OrdsPhysicalDatabase();
 		db.setLogicalDatabaseId(logicalDatabaseId);
 		db.setEntityType(EntityType.MAIN);
@@ -84,8 +85,8 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 			throw new Exception("Cannot retrieve database ID in newly created record");
 		}
 		 else {
+			this.createOBDCUserRole(userName, password);
 			String dbName = db.getDbConsumedName();
-			String userName = this.getODBCUser();
 			String statement = String.format(
 					"rollback transaction;create database %s owner = \"%s\";",
 					dbName, userName);
@@ -221,6 +222,23 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		return above;
 	}
 
+
+	private void createOBDCUserRole(String username, String password)
+			throws Exception {
+
+		// check if role exists already
+		String sql = String.format("SELECT 1 FROM pg_roles WHERE rolname='%s'",
+				username);
+		@SuppressWarnings("rawtypes")
+		List r = this.runSQLQuery(sql);
+		if (r.size() == 0) {
+			// role doesn't exist
+			String command = String
+					.format("create role \"%s\" nosuperuser login createdb inherit nocreaterole password '%s' valid until '2045-01-01'",
+							username, password);
+			this.runSQLStatementOnOrdsDB(command);
+		}
+	}
 
 
 }

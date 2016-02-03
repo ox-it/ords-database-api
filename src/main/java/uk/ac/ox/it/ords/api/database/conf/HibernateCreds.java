@@ -47,7 +47,7 @@ public class HibernateCreds {
 		if (hibernateConfigLocation == null) {
 			configuration.configure();
 		} else {
-			configuration.configure(hibernateConfigLocation);
+			configuration.configure(new File(hibernateConfigLocation));
 		}
 
 
