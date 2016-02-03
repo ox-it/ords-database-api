@@ -7,6 +7,8 @@
 package uk.ac.ox.it.ords.api.database.conf;
 
 
+import java.io.File;
+
 import org.hibernate.cfg.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +40,7 @@ public class DBCredentials extends HibernateCreds {
     		if (hibernateConfigLocation == null) {
     			configuration.configure();
     		} else {
-    			configuration.configure(hibernateConfigLocation);
+    			configuration.configure(new File(hibernateConfigLocation));
     		}
 
 

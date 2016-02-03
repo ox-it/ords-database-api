@@ -27,7 +27,6 @@ import java.util.List;
 import javax.activation.DataHandler;
 import javax.annotation.PostConstruct;
 import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -51,19 +50,14 @@ import org.apache.cxf.jaxrs.ext.multipart.Multipart;
 import org.apache.shiro.SecurityUtils;
 
 import uk.ac.ox.it.ords.api.database.data.ColumnReference;
-import uk.ac.ox.it.ords.api.database.data.DataRow;
 import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
-import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
-import uk.ac.ox.it.ords.api.database.permissions.DatabasePermissionSets;
 import uk.ac.ox.it.ords.api.database.permissions.DatabasePermissions;
 import uk.ac.ox.it.ords.api.database.services.DatabaseUploadService;
 import uk.ac.ox.it.ords.api.database.services.QueryService;
 import uk.ac.ox.it.ords.api.database.services.SQLService;
 import uk.ac.ox.it.ords.api.database.services.TableViewService;
-import uk.ac.ox.it.ords.security.model.Permission;
-import uk.ac.ox.it.ords.security.services.PermissionsService;
 
 @Path("/{id}/{instance}")
 public class Database {
@@ -79,9 +73,8 @@ public class Database {
 	public Response getDatabaseDataset(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("datasetid") int datasetID) {
-		if (!SecurityUtils.getSubject().isPermitted("database:view:" + id)) {
-			return Response.status(Response.Status.FORBIDDEN)
-					.entity("Unauthorized").build();
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(id))){
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		TableData data = null;
 		try {
@@ -106,9 +99,8 @@ public class Database {
 			@PathParam("instance") String instance,
 			@PathParam("datasetid") int datasetID,
 			@PathParam("query") String queryString) {
-		if (!SecurityUtils.getSubject().isPermitted("database:modify" + id)) {
-			return Response.status(Response.Status.FORBIDDEN)
-					.entity("Unauthorized").build();
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		try {
 			tableViewService().updateStaticDataSet(id, instance, queryString);
@@ -131,9 +123,8 @@ public class Database {
 			@PathParam("instance") String instance,
 			@PathParam("datasetid") int datasetID,
 			@PathParam("query") String queryString) {
-		if (!SecurityUtils.getSubject().isPermitted("database:modify" + id)) {
-			return Response.status(Response.Status.FORBIDDEN)
-					.entity("Unauthorized").build();
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		int staticDataSetId = 0;
 		try {
@@ -160,9 +151,8 @@ public class Database {
 	public Response deleteDatabaseDataset(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("datasetid") int datasetID) {
-		if (!SecurityUtils.getSubject().isPermitted("database:delete" + id)) {
-			return Response.status(Response.Status.FORBIDDEN)
-					.entity("Unauthorized").build();
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_DELETE(id))) {
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		try {
 			tableViewService().deleteStaticDataSet(id, instance, datasetID);
@@ -203,8 +193,7 @@ public class Database {
 			@QueryParam("direction") String direction
 			) {
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(id))) {
-			return Response.status(Response.Status.FORBIDDEN)
-					.entity("Unauthorized").build();
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		TableData tableData = null;
 		try {
@@ -235,9 +224,8 @@ public class Database {
 	public Response appendTableData(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName, Row newData) {
-		if (!SecurityUtils.getSubject().isPermitted("database:modify" + id)) {
-			return Response.status(Response.Status.FORBIDDEN)
-					.entity("Unauthorized").build();
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		try {
 			tableViewService().appendTableData(id, instance, tableName, newData);
@@ -262,9 +250,8 @@ public class Database {
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			Row rowData) {
-		if (!SecurityUtils.getSubject().isPermitted("database:modify" + id)) {
-			return Response.status(Response.Status.FORBIDDEN)
-					.entity("Unauthorized").build();
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		try {
 			tableViewService().updateTableRow(id, instance, tableName, rowData);
@@ -275,7 +262,7 @@ public class Database {
 		} 
 		catch (Exception e) {
 			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(e.getMessage()).build();
+					.entity(e).build();
 		}
 		return Response.status(Response.Status.OK).entity("Success").build();
 
@@ -291,21 +278,19 @@ public class Database {
 			@PathParam("primaryKey") String primaryKey,
 			@PathParam("primaryKeyValue") String primaryKeyValue
 			) {
-		if (!SecurityUtils.getSubject().isPermitted("database:modify" + id)) {
-			return Response.status(Response.Status.FORBIDDEN)
-					.entity("Unauthorized").build();
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		try {
-			Row rowToRemove = new Row();
 			tableViewService().deleteTableData(id, instance, tableName, primaryKey, primaryKeyValue);
 		}
 		catch ( NotFoundException nfe ) {
 			return Response.status(Response.Status.GONE).build();
 		}
 		catch ( Exception e ) {
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
 		}
-		return Response.status(Response.Status.OK).entity("Success").build();
+		return Response.status(Response.Status.OK).build();
 
 	}
 
@@ -337,9 +322,8 @@ public class Database {
 			@PathParam("tablename") String tableName,
 			@PathParam("foreignkeycolumn") String foreignKeyColumn) {
 
-		if (!SecurityUtils.getSubject().isPermitted("database:modify" + id)) {
-			return Response.status(Response.Status.FORBIDDEN)
-					.entity("Unauthorized").build();
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		List<ColumnReference> cols = new ArrayList<ColumnReference>();
 		try {
@@ -351,7 +335,7 @@ public class Database {
 		} 
 		catch (Exception e) {
 			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(e.getMessage()).build();
+					.entity(e).build();
 		}
 		
 		return Response.status(Response.Status.OK).entity(cols).build();
@@ -377,8 +361,7 @@ public class Database {
 			@DefaultValue("0") @QueryParam("startindex") int startIndex,
 			@DefaultValue("50") @QueryParam("rowsperpage") int rowsPerPage) {
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(id))) {
-			return Response.status(Response.Status.FORBIDDEN)
-					.entity("Unauthorized").build();
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		TableData data = null;
 		try {
@@ -390,7 +373,7 @@ public class Database {
 		} 
 		catch (Exception e) {
 			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(e.getMessage()).build();
+					.entity(e).build();
 		}
 		return Response.status(Response.Status.OK).entity(data).build();
 
@@ -402,9 +385,8 @@ public class Database {
 	@Path("data")
 	public Response exportDataBase(@PathParam("id") final int id,
 			@PathParam("instance") String instance) {
-		if (!SecurityUtils.getSubject().isPermitted("database:modify" + id)) {
-			return Response.status(Response.Status.FORBIDDEN)
-					.entity("Unauthorized").build();
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		String sql = "";
 		try {
@@ -416,7 +398,7 @@ public class Database {
 		} 
 		catch (Exception e) {
 			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(e.getMessage()).build();
+					.entity(e).build();
 		}
 		return Response.status(Response.Status.OK).entity(sql).build();
 	}
@@ -433,8 +415,7 @@ public class Database {
 			@Context ServletContext context,
 			@Context UriInfo uriInfo) {
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_CREATE)) {
-			return Response.status(Response.Status.FORBIDDEN)
-					.entity("Unauthorized").build();
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		//MediaType contentType = fileAttachment.getContentType();
 		//contentType.
@@ -466,7 +447,7 @@ public class Database {
 			saveFile(dbFile, stream);
 			newDbId = DatabaseUploadService.Factory.getInstance().createNewDatabaseFromFile(dbId, dbFile, extension, server);		}
 		catch (Exception e ) {
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
 		}
 	    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
 	    builder.path(Integer.toString(newDbId));
@@ -484,17 +465,15 @@ public class Database {
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
 			@PathParam("staging") BooleanCheck staging) {
-		if (!SecurityUtils.getSubject().isPermitted(
-				DatabasePermissions.DATABASE_DELETE(dbId))) {
-			return Response.status(Response.Status.FORBIDDEN)
-					.entity("Unauthorized").build();
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_DELETE(dbId))) {
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		try {
 			DatabaseUploadService.Factory.getInstance().testDeleteDatabase(dbId, instance, staging.value);
 			return Response.ok().build();
 		}
 		catch (Exception e ) {
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
 		}
 
 				
