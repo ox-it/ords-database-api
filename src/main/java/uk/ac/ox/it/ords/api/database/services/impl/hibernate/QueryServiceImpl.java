@@ -16,9 +16,9 @@
 
 package uk.ac.ox.it.ords.api.database.services.impl.hibernate;
 
-import java.util.List;
+import java.sql.SQLException;
 
-import uk.ac.ox.it.ords.api.database.data.ColumnReference;
+import uk.ac.ox.it.ords.api.database.data.DataRow;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.queries.QueryRunner;
@@ -28,13 +28,6 @@ public class QueryServiceImpl extends DatabaseServiceImpl
 		implements
 			QueryService {
 
-	@Override
-	public List<ColumnReference> getColumnsFromRelation(int dbId,
-			String instance, String table, String foreignKeyColumn)
-			throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
 	@Override
 	public TableData performQuery(int dbId, String instance, String q,
@@ -50,5 +43,56 @@ public class QueryServiceImpl extends DatabaseServiceImpl
 		qr.runDBQuery(q, startIndex, rowsPerPage);
 		return qr.getTableData();
 	}
+
+	@Override
+	public TableData getReferenceColumnData(int dbId, String instance,
+			String table, String foreignKeyColumn) throws Exception {
+		OrdsPhysicalDatabase db = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String dbName = db.getDbConsumedName();
+		String server = db.getDatabaseServer();
+		String userName = this.getODBCUser();
+		String password = this.getODBCPassword();
+        QueryRunner qr = new QueryRunner(server,dbName, userName, password);
+
+		TableData referenceValues = new TableData();
+        try {
+            String primaryKey = getSingularPrimaryKeyColumn(table, qr);
+            String query = String.format("SELECT DISTINCT \"%s\" AS value, \"%s\" AS label FROM \"%s\" ORDER BY label ASC", primaryKey, foreignKeyColumn, table);
+            qr.runDBQuery(query);
+            referenceValues = qr.getTableData();
+        } catch (ClassNotFoundException e) {
+            log.error(e.getMessage());
+        } catch (SQLException e) {
+            log.error(e.getMessage());
+        }
+        return referenceValues;
+	}
+	
+	
+	   protected String getSingularPrimaryKeyColumn(String tableName, QueryRunner qr) throws ClassNotFoundException, SQLException {
+	       log.debug("getSingularPrimaryKeyColumn");
+	       String command = String
+	               .format("SELECT pg_attribute.attname,  format_type(pg_attribute.atttypid, pg_attribute.atttypmod)  FROM pg_index, pg_class, pg_attribute WHERE pg_class.oid = '%s'::regclass AND indrelid = pg_class.oid AND pg_attribute.attrelid = pg_class.oid AND pg_attribute.attnum = any(pg_index.indkey) AND indisprimary",
+	               tableName);
+
+	       if (!qr.runDBQuery(command)) {
+	    	   return null;
+	       }
+
+	       /*
+	        * Note We shall currently restrict this function to only return the
+	        * primary key if there is a single primary key. Maybe we can extend that
+	        * later
+	        */
+	       if (qr.getTableData().rows.size() >= 1) {
+	           for (DataRow dr : qr.getTableData().rows) {
+	               String primaryKey = dr.cell.get("attname").getValue();
+	               return primaryKey;
+	           }
+	       }
+
+	       return null;
+	   }
+
 
 }
