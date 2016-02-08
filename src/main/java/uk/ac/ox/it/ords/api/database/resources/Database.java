@@ -325,9 +325,9 @@ public class Database {
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
-		List<ColumnReference> cols = new ArrayList<ColumnReference>();
+		TableData data = null;
 		try {
-			 cols = queryService().getColumnsFromRelation(id, instance, tableName, foreignKeyColumn);
+			 data = queryService().getReferenceColumnData(id, instance, tableName, foreignKeyColumn);
 		}
 		catch (BadParameterException ex) {
 			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
@@ -338,7 +338,7 @@ public class Database {
 					.entity(e).build();
 		}
 		
-		return Response.status(Response.Status.OK).entity(cols).build();
+		return Response.status(Response.Status.OK).entity(data).build();
 	}
 
 	/*

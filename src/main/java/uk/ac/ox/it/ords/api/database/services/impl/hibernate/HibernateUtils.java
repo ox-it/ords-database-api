@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import uk.ac.ox.it.ords.api.database.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.User;
+import uk.ac.ox.it.ords.security.SimplePersistentSession;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
 import uk.ac.ox.it.ords.security.model.Permission;
 import uk.ac.ox.it.ords.security.model.UserRole;
@@ -48,6 +49,7 @@ public class HibernateUtils {
 		configuration.addAnnotatedClass(Permission.class);
 		//configuration.addAnnotatedClass(Audit.class);
 		configuration.addAnnotatedClass(UserRole.class);
+		configuration.addAnnotatedClass(SimplePersistentSession.class);
 	}
 	
 	private static void init() {
