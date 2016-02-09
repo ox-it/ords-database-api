@@ -87,7 +87,7 @@ public class Database {
 		} 
 		catch (Exception e) {
 			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(e.getMessage()).build();
+					.entity(e).build();
 		}
 		return Response.ok(data).build();
 	}
@@ -111,9 +111,9 @@ public class Database {
 		} 
 		catch (Exception e) {
 			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(e.getMessage()).build();
+					.entity(e).build();
 		}
-		return Response.status(Response.Status.OK).entity("Success").build();
+		return Response.status(Response.Status.OK).build();
 	}
 
 	@POST
@@ -136,7 +136,7 @@ public class Database {
 		} 
 		catch (Exception e) {
 			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(e.getMessage()).build();
+					.entity(e).build();
 		}
 
 		return Response.status(Response.Status.CREATED).entity(new Integer(staticDataSetId)).build();
@@ -161,9 +161,9 @@ public class Database {
 			return Response.status(Response.Status.GONE).build();
 		}
 		catch ( Exception e ) {
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
 		}
-		return Response.status(Response.Status.OK).entity("Success").build();
+		return Response.status(Response.Status.OK).build();
 
 	}
 
@@ -206,12 +206,12 @@ public class Database {
 			tableData = tableViewService().getDatabaseRows(id, instance, tableName, startIndex, rowsPerPage, sort, direction);
 		}
 		catch (BadParameterException ex) {
-			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
+			Response.status(Response.Status.NOT_FOUND).entity(ex)
 					.build();
 		} 
 		catch (Exception e) {
 			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(e.getMessage()).build();
+					.entity(e).build();
 		}		
 		return Response.status(Response.Status.OK).entity(tableData).build();
 
@@ -231,14 +231,14 @@ public class Database {
 			tableViewService().appendTableData(id, instance, tableName, newData);
 		}
 		catch (BadParameterException ex) {
-			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
+			Response.status(Response.Status.NOT_FOUND).entity(ex)
 					.build();
 		} 
 		catch (Exception e) {
-			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(e.getMessage()).build();
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+					.entity(e).build();
 		}
-		return Response.status(Response.Status.CREATED).entity("Success").build();
+		return Response.status(Response.Status.CREATED).build();
 
 	}
 
@@ -257,26 +257,27 @@ public class Database {
 			tableViewService().updateTableRow(id, instance, tableName, rowData);
 		}
 		catch (BadParameterException ex) {
-			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
+			Response.status(Response.Status.NOT_FOUND).entity(ex)
 					.build();
 		} 
 		catch (Exception e) {
 			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
 					.entity(e).build();
 		}
-		return Response.status(Response.Status.OK).entity("Success").build();
+		return Response.status(Response.Status.OK).build();
 
 	}
 
 	@DELETE
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Path("tabledata/{tablename}/{columnName}/{columnValue}")
-	public Response deleteTableRow(@PathParam("id") final int id,
+	@Path("tabledata/{tablename}")
+	public Response deleteTableRow(
+			@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
-			@PathParam("primaryKey") String primaryKey,
-			@PathParam("primaryKeyValue") String primaryKeyValue
+			@QueryParam("primaryKey") String primaryKey,
+			@QueryParam("primaryKeyValue") String primaryKeyValue
 			) {
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
 			return Response.status(Response.Status.FORBIDDEN).build();
@@ -368,7 +369,7 @@ public class Database {
 			data = queryService().performQuery(id, instance, theQuery, startIndex, rowsPerPage, null, null);
 		}
 		catch (BadParameterException ex) {
-			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
+			Response.status(Response.Status.NOT_FOUND).entity(ex)
 					.build();
 		} 
 		catch (Exception e) {
@@ -393,7 +394,7 @@ public class Database {
 			sql = SQLService.Factory.getInstance().buildSQLExportForDatabase(id, instance);
 		}
 		catch (BadParameterException ex) {
-			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
+			Response.status(Response.Status.NOT_FOUND).entity(ex)
 					.build();
 		} 
 		catch (Exception e) {

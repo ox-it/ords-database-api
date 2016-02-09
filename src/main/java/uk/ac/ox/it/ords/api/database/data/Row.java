@@ -16,9 +16,15 @@
 
 package uk.ac.ox.it.ords.api.database.data;
 
+import java.io.Serializable;
+
 
 // pojo for transporting insert data
-public class Row {
+public class Row implements Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -3709050596342680522L;
 	public String lookupColumn;
 	public String lookupValue;
 	public String[] columnNames;

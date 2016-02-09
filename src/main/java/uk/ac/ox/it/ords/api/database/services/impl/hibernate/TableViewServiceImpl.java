@@ -81,10 +81,12 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		String userName = this.getODBCUser();
 		String password = this.getODBCPassword();
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
-		
-		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(null, database.getDbConsumedName(), userName, password );
+
+		String server = database.getDatabaseServer();
+
+		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(server, database.getDbConsumedName(), userName, password );
 		// create a database queries that points by default to the local ordsdb
-		DatabaseQueries dq = new DatabaseQueries(null);
+		DatabaseQueries dq = new DatabaseQueries(server, database.getDbConsumedName(), userName, password);
 		sqlQueries.addRowToTable(tableName, newData.columnNames, newData.values, dq);
 		
 		return 0;
@@ -100,10 +102,10 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		int i = 0;
 		String command = "UPDATE \""+ tableName + "\" SET ";
 		for ( String colName: rowData.columnNames) {
-			command += colName + "=";
+			command += "\""+colName + "\"=";
 			String colVal = rowData.values[i++];
 			if ( isInt(colVal) || isNumber(colVal) ) {
-				command += colVal;
+				command += colVal+",";
 			}
 			else {
 				command += "\'"+ colVal + "\',";
@@ -112,7 +114,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		// take off last comma
 		command = command.substring(0, command.length()-1);
 		
-		command += " WHERE "+rowData.lookupColumn+"=";
+		command += " WHERE \""+rowData.lookupColumn+"\"=";
 		if (isInt(rowData.lookupValue ) || isNumber(rowData.lookupValue)) {
 			command += rowData.lookupValue;
 		}
