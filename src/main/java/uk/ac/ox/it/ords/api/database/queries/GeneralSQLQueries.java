@@ -112,8 +112,8 @@ public class GeneralSQLQueries extends ORDSPostgresDB {
 			log.debug(String.format("addRowToTable(%s)", tableName));
 		}
 
-		OrdsLangBundle lang = new OrdsLangBundle("lang", Locale.getDefault(),
-				false);
+		//OrdsLangBundle lang = new OrdsLangBundle("lang", Locale.getDefault(),
+		//		false);
 		String primaryKey = getSingularPrimaryKeyColumn(tableName);
 
 		if (cols == null) {
@@ -142,8 +142,7 @@ public class GeneralSQLQueries extends ORDSPostgresDB {
 		String values = "";
 		for (int index = 0; index < cols.length; index++) {
 			if ((cellData[index] != null)
-					&& (cellData[index].equals(lang
-							.getString("nullplaceholder")))) {
+					&& (cellData[index].equals("[null value]"))) {
 				log.warn("Null value in cell data");
 				/*
 				 * Null value
@@ -199,7 +198,7 @@ public class GeneralSQLQueries extends ORDSPostgresDB {
 			int colIndex = colList.indexOf(dataTypeMap.colName);
 			if (colIndex > -1) {
 				dataTypeMap.index = colIndex;
-				if (lang.getString("nullplaceholder").equals(
+				if ("[null value]".equals(
 						dataList.get(colIndex))) {
 					dataTypeMap.stringValue = null;
 				} else {
