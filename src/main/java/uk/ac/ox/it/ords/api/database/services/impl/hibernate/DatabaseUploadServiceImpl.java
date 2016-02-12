@@ -40,7 +40,7 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 			String server) throws Exception {
 		String odbcUserName = this.getODBCUser();
 		String odbcPassword = this.getODBCPassword();
-		OrdsPhysicalDatabase db = this.createPhysicalDatabase(logicalDatabaseId, type, dbFile.getName(), server, odbcUserName, odbcPassword);
+		OrdsPhysicalDatabase db = this.createPhysicalDatabase(logicalDatabaseId, type, dbFile.getName(), dbFile.length(), server, odbcUserName, odbcPassword);
 		String databaseName = db.getDbConsumedName();
 		DatabaseRoleService.Factory.getInstance().createInitialPermissions(db.getPhysicalDatabaseId());
 		
@@ -69,13 +69,14 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 	}
 	
 	
-	private OrdsPhysicalDatabase createPhysicalDatabase ( int logicalDatabaseId, String databaseFileType, String fileName, String server, String userName, String password ) throws Exception {
+	private OrdsPhysicalDatabase createPhysicalDatabase ( int logicalDatabaseId, String databaseFileType, String fileName, long fileSize, String server, String userName, String password ) throws Exception {
 		OrdsPhysicalDatabase db = new OrdsPhysicalDatabase();
 		db.setLogicalDatabaseId(logicalDatabaseId);
 		db.setEntityType(EntityType.MAIN);
 		db.setImportProgress(ImportType.IN_PROGRESS);
 		db.setDatabaseServer(server);
 		db.setFileName(fileName);
+		db.setFileSize(fileSize);
 		db.setFullPathToDirectory(System.getProperty("java.io.tmpdir")
 				+ "/databases");
 		db.setDatabaseType(databaseFileType);
