@@ -16,6 +16,8 @@
 
 package uk.ac.ox.it.ords.api.database.services.impl.hibernate;
 
+import java.util.List;
+
 import uk.ac.ox.it.ords.api.database.data.DataRow;
 import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
@@ -93,38 +95,40 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	}
 
 	@Override
-	public int updateTableRow(int dbId, String instance, String tableName, Row rowData)
+	public int updateTableRow(int dbId, String instance, String tableName, List<Row> rowDataList)
 			throws Exception {
 		String userName = this.getODBCUser();
 		String password = this.getODBCPassword();
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String server = database.getDatabaseServer();
-		int i = 0;
-		String command = "UPDATE \""+ tableName + "\" SET ";
-		for ( String colName: rowData.columnNames) {
-			command += "\""+colName + "\"=";
-			String colVal = rowData.values[i++];
-			if ( isInt(colVal) || isNumber(colVal) ) {
-				command += colVal+",";
+		for ( Row rowData: rowDataList ) {
+			int i = 0;
+			String command = "UPDATE \""+ tableName + "\" SET ";
+			for ( String colName: rowData.columnNames) {
+				command += "\""+colName + "\"=";
+				String colVal = rowData.values[i++];
+				if ( isInt(colVal) || isNumber(colVal) ) {
+					command += colVal+",";
+				}
+				else {
+					command += "\'"+ colVal + "\',";
+				}
+			}
+			// take off last comma
+			command = command.substring(0, command.length()-1);
+			
+			command += " WHERE \""+rowData.lookupColumn+"\"=";
+			if (isInt(rowData.lookupValue ) || isNumber(rowData.lookupValue)) {
+				command += rowData.lookupValue;
 			}
 			else {
-				command += "\'"+ colVal + "\',";
+				command += "'"+rowData.lookupValue+"'";
 			}
+			
+			QueryRunner q = new QueryRunner ( server, database.getDbConsumedName(), userName, password );
+			
+			q.runDBQuery(command);
 		}
-		// take off last comma
-		command = command.substring(0, command.length()-1);
-		
-		command += " WHERE \""+rowData.lookupColumn+"\"=";
-		if (isInt(rowData.lookupValue ) || isNumber(rowData.lookupValue)) {
-			command += rowData.lookupValue;
-		}
-		else {
-			command += "'"+rowData.lookupValue+"'";
-		}
-		
-		QueryRunner q = new QueryRunner ( server, database.getDbConsumedName(), userName, password );
-		
-		q.runDBQuery(command);
 
 		return 0;
 	}

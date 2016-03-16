@@ -46,7 +46,7 @@ public class QueryServiceImpl extends DatabaseServiceImpl
 
 	@Override
 	public TableData getReferenceColumnData(int dbId, String instance,
-			String table, String foreignKeyColumn) throws Exception {
+			String table, String foreignKeyColumn, String term) throws Exception {
 		OrdsPhysicalDatabase db = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String dbName = db.getDbConsumedName();
 		String server = db.getDatabaseServer();
@@ -57,7 +57,13 @@ public class QueryServiceImpl extends DatabaseServiceImpl
 		TableData referenceValues = new TableData();
         try {
             String primaryKey = getSingularPrimaryKeyColumn(table, qr);
-            String query = String.format("SELECT DISTINCT \"%s\" AS value, \"%s\" AS label FROM \"%s\" ORDER BY label ASC", primaryKey, foreignKeyColumn, table);
+            String query;
+            if ( term == null || term.equals("") ) {
+            	query = String.format("SELECT DISTINCT \"%s\" AS value, \"%s\" AS label FROM \"%s\" ORDER BY label ASC", primaryKey, foreignKeyColumn, table);
+            }
+            else {
+            	query = String.format("SELECT \"%1$s\" AS value, \"%2$s\" AS label FROM \"%3$s\" WHERE CAST (\"%2$s\" AS TEXT) ILIKE '%%%4$s%%\' ORDER BY \"%2$s\" ASC LIMIT 100", primaryKey, foreignKeyColumn, table, term);
+            }
             qr.runDBQuery(query);
             referenceValues = qr.getTableData();
         } catch (ClassNotFoundException e) {
@@ -67,6 +73,8 @@ public class QueryServiceImpl extends DatabaseServiceImpl
         }
         return referenceValues;
 	}
+	
+	
 	
 	
 	   protected String getSingularPrimaryKeyColumn(String tableName, QueryRunner qr) throws ClassNotFoundException, SQLException {

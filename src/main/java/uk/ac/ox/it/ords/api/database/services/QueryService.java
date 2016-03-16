@@ -17,7 +17,7 @@ public interface QueryService {
 	 * @return
 	 * @throws Exception
 	 */
-	public TableData getReferenceColumnData (int dbId, String instance, String table, String foreignKeyColumn ) throws Exception;
+	public TableData getReferenceColumnData (int dbId, String instance, String table, String foreignKeyColumn, String term ) throws Exception;
 	
 	
 	/**

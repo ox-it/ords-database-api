@@ -53,13 +53,15 @@ import uk.ac.ox.it.ords.api.database.data.ColumnReference;
 import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
+import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.permissions.DatabasePermissions;
+import uk.ac.ox.it.ords.api.database.services.DatabaseRecordService;
 import uk.ac.ox.it.ords.api.database.services.DatabaseUploadService;
 import uk.ac.ox.it.ords.api.database.services.QueryService;
 import uk.ac.ox.it.ords.api.database.services.SQLService;
 import uk.ac.ox.it.ords.api.database.services.TableViewService;
 
-@Path("/{id}/{instance}")
+@Path("/")
 public class Database {
 
 	@PostConstruct
@@ -69,7 +71,7 @@ public class Database {
 
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("dataset/{datasetid}")
+	@Path("{id}/{instance}/dataset/{datasetid}")
 	public Response getDatabaseDataset(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("datasetid") int datasetID) {
@@ -94,7 +96,7 @@ public class Database {
 
 	@PUT
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("dataset/{datasetid}/{query}")
+	@Path("{id}/{instance}/dataset/{datasetid}/{query}")
 	public Response updateDatabaseDataset(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("datasetid") int datasetID,
@@ -118,7 +120,7 @@ public class Database {
 
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("dataset/{databaseid}/{query}")
+	@Path("{id}/{instance}/dataset/{databaseid}/{query}")
 	public Response createDatabaseDataset(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("datasetid") int datasetID,
@@ -147,7 +149,7 @@ public class Database {
 
 	@DELETE
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("dataset/{databaseid}")
+	@Path("{id}/{instance}/dataset/{databaseid}")
 	public Response deleteDatabaseDataset(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("datasetid") int datasetID) {
@@ -183,8 +185,8 @@ public class Database {
 	///{startIndex}/{rowsPerPage}/{filter}/{sort}/{direction}
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("tabledata/{tablename}")
-	public Response getTableData(@PathParam("id") final int id,
+	@Path("{id}/{instance}/tabledata/{tablename}")
+	public Response getTableData(@PathParam("id") String id,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@DefaultValue("0") @QueryParam("startIndex") int startIndex,
@@ -192,35 +194,44 @@ public class Database {
 			@QueryParam("sort") String sort,
 			@QueryParam("direction") String direction
 			) {
-		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(id))) {
-			return Response.status(Response.Status.FORBIDDEN).build();
-		}
-		TableData tableData = null;
 		try {
+			int dbId;
+			if ( isInt(id) ) {
+				dbId = Integer.parseInt(id);
+			}
+			else {
+				OrdsPhysicalDatabase opdb = databaseRecordService().getRecordFromGivenName(id, instance);
+				dbId = opdb.getPhysicalDatabaseId();
+			}
+//			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(dbId))) {
+//				return Response.status(Response.Status.FORBIDDEN).build();
+//			}
+			TableData tableData = null;
+
 			if ( "none".equalsIgnoreCase(sort)) {
 				sort = null;
 			}
 			if ( "none".equalsIgnoreCase(direction)) {
 				direction = null;
 			}
-			tableData = tableViewService().getDatabaseRows(id, instance, tableName, startIndex, rowsPerPage, sort, direction);
+			tableData = tableViewService().getDatabaseRows(dbId, instance, tableName, startIndex, rowsPerPage, sort, direction);
+			return Response.status(Response.Status.OK).entity(tableData).build();
 		}
 		catch (BadParameterException ex) {
-			Response.status(Response.Status.NOT_FOUND).entity(ex)
+			return Response.status(Response.Status.NOT_FOUND).entity(ex)
 					.build();
 		} 
 		catch (Exception e) {
-			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
 					.entity(e).build();
 		}		
-		return Response.status(Response.Status.OK).entity(tableData).build();
 
 	}
 
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Path("tabledata/{tablename}")
+	@Path("{id}/{instance}/tabledata/{tablename}")
 	public Response appendTableData(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName, Row newData) {
@@ -245,11 +256,11 @@ public class Database {
 	@PUT
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Path("tabledata/{tablename}")
+	@Path("{id}/{instance}/tabledata/{tablename}")
 	public Response updateTableRow(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
-			Row rowData) {
+			List<Row> rowData) {
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
@@ -267,11 +278,12 @@ public class Database {
 		return Response.status(Response.Status.OK).build();
 
 	}
+	
 
 	@DELETE
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Path("tabledata/{tablename}")
+	@Path("{id}/{instance}/tabledata/{tablename}")
 	public Response deleteTableRow(
 			@PathParam("id") final int id,
 			@PathParam("instance") String instance,
@@ -317,18 +329,19 @@ public class Database {
 
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("table/{tablename}/column/{foreignkeycolumn}/related/")
+	@Path("{id}/{instance}/table/{tablename}/column/{foreignkeycolumn}/related/")
 	public Response getReferencedColumns(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
-			@PathParam("foreignkeycolumn") String foreignKeyColumn) {
+			@PathParam("foreignkeycolumn") String foreignKeyColumn,
+			@QueryParam("term") String term) {
 
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		TableData data = null;
 		try {
-			 data = queryService().getReferenceColumnData(id, instance, tableName, foreignKeyColumn);
+			 data = queryService().getReferenceColumnData(id, instance, tableName, foreignKeyColumn, term);
 		}
 		catch (BadParameterException ex) {
 			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
@@ -355,7 +368,7 @@ public class Database {
 	 */
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("query")
+	@Path("{id}/{instance}/query")
 	public Response doQuery(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@QueryParam("q") String theQuery,
@@ -383,7 +396,7 @@ public class Database {
 	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("data")
+	@Path("{id}/{instance}/data")
 	public Response exportDataBase(@PathParam("id") final int id,
 			@PathParam("instance") String instance) {
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
@@ -406,7 +419,7 @@ public class Database {
 	
 
 	@POST
-	@Path("data/{server}")
+	@Path("{id}/{instance}/data/{server}")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	public Response handleFileUpload(
 			@PathParam("id") int dbId,
@@ -460,7 +473,7 @@ public class Database {
 	// microservice and database structure api microservice is properly configured
 	
 	@DELETE
-	@Path("/test/delete/{staging}")
+	@Path("{id}/{instance}/test/delete/{staging}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response testDeleteDatabase(
 			@PathParam("id") int dbId,
@@ -487,6 +500,22 @@ public class Database {
 	private TableViewService tableViewService() {
 		return TableViewService.Factory.getInstance();
 	}
+	
+	private DatabaseRecordService databaseRecordService() {
+		return DatabaseRecordService.Factory.getInstance();
+	}
+	
+	
+	private boolean isInt ( String intString ) {
+		try {
+			int i = Integer.parseInt(intString);
+			return true;
+		}
+		catch (NumberFormatException e ) {
+			return false;
+		}
+	}
+	
 	
     private String getFileName(MultivaluedMap<String, String> header) {
     	 

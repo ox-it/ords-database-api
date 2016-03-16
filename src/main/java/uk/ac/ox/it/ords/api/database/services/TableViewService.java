@@ -1,5 +1,6 @@
 package uk.ac.ox.it.ords.api.database.services;
 
+import java.util.List;
 import java.util.ServiceLoader;
 
 import uk.ac.ox.it.ords.api.database.data.DataRow;
@@ -90,7 +91,7 @@ public interface TableViewService {
 	 * @return
 	 * @throws Exception
 	 */
-	public int updateTableRow ( int dbId, String instance, String tableName, Row rowData ) throws Exception;
+	public int updateTableRow ( int dbId, String instance, String tableName, List<Row> rowData ) throws Exception;
 	
 	/**
 	 * 

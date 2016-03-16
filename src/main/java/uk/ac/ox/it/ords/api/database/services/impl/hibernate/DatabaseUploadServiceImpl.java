@@ -51,7 +51,6 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		if ( type.equalsIgnoreCase("csv")) {
 			CSVService service = CSVService.Factory.getInstance();
 			service.newTableDataFromFile(server, databaseName, dbFile, true, odbcUserName, odbcPassword);
-		
 		}
 		else {
 			AccessImportService service = AccessImportService.Factory.getInstance();

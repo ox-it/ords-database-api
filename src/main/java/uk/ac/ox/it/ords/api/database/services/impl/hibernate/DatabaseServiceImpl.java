@@ -29,11 +29,16 @@ import javax.sql.rowset.RowSetProvider;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.subject.Subject;
+import org.hibernate.Criteria;
 import org.hibernate.SQLQuery;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
+import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.Expression;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.criterion.SimpleExpression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,17 +81,28 @@ public class DatabaseServiceImpl {
 	}
 
 	
-	public String getODBCUser ( ) {
-		String principalName = SecurityUtils.getSubject().getPrincipal()
-				.toString();
-		User u = this.getUserByPrincipal(principalName);
-		return u.calculateOdbcUserForOrds();
+	public String getODBCUser ( ) throws ConfigurationException {
+		Subject s = SecurityUtils.getSubject();
+		if ( s.isAuthenticated()) {
+			String principalName = s.getPrincipal().toString();
+			User u = this.getUserByPrincipal(principalName);
+			return u.calculateOdbcUserForOrds();
+		}
+		else {
+			return getORDSDatabaseUser();
+		}
 		
 	}
 	
 	
 	public String getODBCPassword ( ) throws Exception {
-		return MetaConfiguration.getConfiguration().getString(DatabaseServiceImpl.ODBC_MASTER_PASSWORD_PROPERTY);
+		Subject s = SecurityUtils.getSubject();
+		if ( s.isAuthenticated() ) {
+			return MetaConfiguration.getConfiguration().getString(DatabaseServiceImpl.ODBC_MASTER_PASSWORD_PROPERTY);
+		}
+		else {
+			return this.getORDSDatabasePassword();
+		}
 	}
 	
 	
@@ -192,6 +208,28 @@ public class DatabaseServiceImpl {
 				session.getTransaction().rollback();
 				throw e;
 			} finally {
+				session.close();
+			}
+		}
+		
+		
+		protected <T>T getModelObject( List<SimpleExpression> restrictions, Class<T> cls) {
+			Session session = this.getOrdsDBSessionFactory().openSession();
+			try {
+				Transaction transaction = session.beginTransaction();
+				Criteria c = session.createCriteria(cls);
+				for (SimpleExpression exp: restrictions ) {
+					c.add(exp);
+				}
+				@SuppressWarnings("unchecked")
+				List<T> objects = (List<T>) c.list();
+				transaction.commit();
+				if (objects.size() == 1) {
+					return objects.get(0);
+				}
+				return null;
+			}
+			finally {
 				session.close();
 			}
 		}
