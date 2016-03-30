@@ -385,7 +385,7 @@ public class PostgresCsvServiceImpl implements CSVService {
         if (!qr.runDBQuery(command)) {
             return false;
         }
-		return qr.runDBQuery(String.format("alter table  \"%s\" owner to %s", tableName, userName));
+		return qr.runDBQuery(String.format("alter table  \"%s\" owner to \"%s\"", tableName, userName));
 	}
 	
 	//
