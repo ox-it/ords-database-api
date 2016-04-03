@@ -20,8 +20,9 @@ import org.apache.cxf.jaxrs.ext.multipart.ContentDisposition;
 import org.apache.cxf.jaxrs.ext.multipart.MultipartBody;
 
 import uk.ac.ox.it.ords.api.database.data.TableData;
+import uk.ac.ox.it.ords.api.database.data.TableViewInfo;
 
-public class DatabaseTest extends AbstractResourceTest{
+public class DatabaseTest extends AbstractDatabaseTestRunner{
 
 
 	@Test ()
@@ -41,7 +42,7 @@ public class DatabaseTest extends AbstractResourceTest{
 			ContentDisposition cd = new ContentDisposition("attachment;filename=small_test.csv");
 			Attachment att = new Attachment("databaseFile", inputStream, cd);
 
-			Response response = client.path("/10/MAIN/data/localhost").post(new MultipartBody(att));
+			Response response = client.path("/"+logicalDatabaseId+"/MAIN/data/localhost").post(new MultipartBody(att));
 			assertEquals(201, response.getStatus());
 			
 			String path = response.getLocation().getPath();
@@ -67,17 +68,50 @@ public class DatabaseTest extends AbstractResourceTest{
 			att = new Attachment("databaseFile", inputStream, cd);
 			client = getClient(false);
 			client.type("multipart/form-data");
-			response = client.path("/11/MAIN/data/localhost").post(new MultipartBody(att));
+			response = client.path("/"+logicalDatabaseId+"/MAIN/data/localhost").post(new MultipartBody(att));
 			assertEquals(201, response.getStatus());
 			
 			path = response.getLocation().getPath();
 			id = path.substring(path.lastIndexOf('/')+1);
 			AbstractResourceTest.databaseIds.add(id);
 			
-			//String sql = "SELECT * FROM country";
-			//String queryPath = "/"+id+"/MAIN/query";
-			//client = getClient(false);
-			//response = client.path(queryPath).query("q", sql).query("startindex", 0).query("rowsperpage", 100).get();
+			
+			// test view
+			TableViewInfo viewInfo = new TableViewInfo();
+			viewInfo.setViewQuery("SELECT CityName, Population from City");
+			viewInfo.setViewName("Population City");
+			viewInfo.setViewDescription("A view on the city table showing population and city name");
+			viewInfo.setViewAuthorization("public");
+			viewInfo.setViewTable("City");
+			
+			client = getClient(true);
+			response = client.path("/"+id+"/MAIN/dataset").post(viewInfo);
+			assertEquals(201, response.getStatus());
+			
+			String viewPath = response.getLocation().getPath();
+			String viewId = viewPath.substring(viewPath.lastIndexOf('/')+1);
+
+			
+			// view the view
+			client = getClient(true);
+			response = client.path("/"+id+"/MAIN/dataset/"+viewId).get();
+			assertEquals(200, response.getStatus());
+			
+			
+			// update the view
+			viewInfo.setViewName("The population of Cities");
+			viewInfo.setViewAuthorization("authmembers");
+			client = getClient(true);
+			response = client.path("/"+id+"/MAIN/dataset/"+viewId).put(viewInfo);
+			assertEquals(200, response.getStatus());
+			
+			
+			// delete the view
+			client = getClient(true);
+			response = client.path("/"+id+"/MAIN/dataset/"+viewId).delete();
+			assertEquals(200, response.getStatus());
+			
+			
 			
 			client = getClient(false);
 			response = client.path("/"+id+"/MAIN/tabledata/country").get();

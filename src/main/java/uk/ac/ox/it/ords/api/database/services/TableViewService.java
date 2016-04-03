@@ -6,6 +6,8 @@ import java.util.ServiceLoader;
 import uk.ac.ox.it.ords.api.database.data.DataRow;
 import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
+import uk.ac.ox.it.ords.api.database.data.TableViewInfo;
+import uk.ac.ox.it.ords.api.database.model.TableView;
 import uk.ac.ox.it.ords.api.database.services.impl.hibernate.TableViewServiceImpl;
 
 public interface TableViewService {
@@ -19,7 +21,16 @@ public interface TableViewService {
 	 * @return
 	 * @throws Exception
 	 */
-	public TableData getStaticDataSet ( int dbId, String instance, int datasetId ) throws Exception;
+	public TableData getStaticDataSetData ( int dbId, String instance, int datasetId, int startIndex, int rowsPerPage ) throws Exception;
+	
+	
+	/**
+	 * 
+	 * @param datasetId
+	 * @return
+	 * @throws Exception
+	 */
+	public TableViewInfo getStaticDataSet ( int datasetId ) throws Exception;
 	
 	/**
 	 * 
@@ -29,7 +40,7 @@ public interface TableViewService {
 	 * @return
 	 * @throws Exception
 	 */
-	public int createStaticDataSetOnQuery ( int dbId, String instance, String query ) throws Exception;
+	public int createStaticDataSetOnQuery ( int dbId, String instance, TableViewInfo viewInfo ) throws Exception;
 	
 	/**
 	 * 
@@ -39,7 +50,7 @@ public interface TableViewService {
 	 * @return
 	 * @throws Exception
 	 */
-	public int updateStaticDataSet ( int dbId, String instance, String query ) throws Exception;
+	public int updateStaticDataSet ( int dbId, String instance, int datasetId, TableViewInfo viewInfo ) throws Exception;
 	
 	/**
 	 * 
@@ -51,6 +62,12 @@ public interface TableViewService {
 	public void deleteStaticDataSet ( int dbId, String instance, int datasetId ) throws Exception;
 	
 	
+	/**
+	 * 
+	 * @param tableViewId
+	 * @return TableView class
+	 */
+	public TableView getTableViewRecord ( int tableViewId );
 	// live data
 	
 	/**

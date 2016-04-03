@@ -26,6 +26,7 @@ import org.hibernate.criterion.Restrictions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.permissions.DatabasePermissionSets;
 import uk.ac.ox.it.ords.api.database.server.ValidationException;
 import uk.ac.ox.it.ords.api.database.services.DatabaseRoleService;
@@ -49,36 +50,7 @@ public class DatabaseRoleServiceImpl
 	
 	
 	@Override
-	public void updateDatabseRole(UserRole userRole, int dbId) throws Exception {
-		userRole.setRole(getPrivateUserRole(userRole.getRole(), dbId));
-		Session session = this.sessionFactory.openSession();
-		try {
-			session.beginTransaction();
-			session.update(userRole);
-			session.getTransaction().commit();
-		} catch (HibernateException e) {
-			log.error("Error update UserRole", e);
-			session.getTransaction().rollback();
-			throw new Exception("Cannot update UserRole",e);
-		}
-		finally {
-			session.close();
-		}
-
-
-	}
-
-	@Override
-	public UserRole getDatabaseOwner(int dbId) throws Exception {
-		List<UserRole> userRoles = getUserRolesForDatabase(dbId);
-		for (UserRole userRole : userRoles){
-			if (userRole.getRole().startsWith("owner_")) return userRole;
-		}
-		return null;
-	}
-
-	@Override
-	public void createInitialPermissions(int dbId) throws Exception {
+	public void createInitialPermissions(OrdsPhysicalDatabase database) throws Exception {
 		Session session = this.sessionFactory.openSession();
 		
 		try {
@@ -88,13 +60,13 @@ public class DatabaseRoleServiceImpl
 			//
 			UserRole owner = new UserRole();
 			owner.setPrincipalName(SecurityUtils.getSubject().getPrincipal().toString());
-			owner.setRole(getPrivateUserRole("owner", dbId));
+			owner.setRole(getPrivateUserRole("databaseowner", database.getLogicalDatabaseId()));
 			session.save(owner);
 			session.getTransaction().commit();
 			//
 			// Create the permissions for roles associated with the project
 			//
-			createPermissionsForDatabase(dbId);
+			createPermissionsForDatabase(database.getLogicalDatabaseId());
 
 		} catch (HibernateException e) {
 			log.error("Error creating Project", e);
@@ -106,206 +78,13 @@ public class DatabaseRoleServiceImpl
 		}
 
 	}
-
-	@SuppressWarnings("unchecked")
-	@Override
-	public void deletePermissions(int dbId) throws Exception {
-		Session session = this.sessionFactory.openSession();
-		try {
-			session.beginTransaction();
-			//
-			// Get the roles associated with the project
-			//
-			List<UserRole> owners = session.createCriteria(UserRole.class)
-					.add(Restrictions.eq("role", "owner_"+dbId)).list();
-			List<UserRole> contributors = session.createCriteria(UserRole.class)
-					.add(Restrictions.eq("role", "contributor_"+dbId)).list();	
-			List<UserRole> viewers = session.createCriteria(UserRole.class)
-					.add(Restrictions.eq("role", "viewer_"+dbId)).list();
-
-			//
-			// Delete all the permissions for each role, and then each role
-			//
-			for (UserRole owner : owners){
-				deletePermissionsForRole(session, owner);
-				session.delete(owner);
-			}
-			for (UserRole contributor : contributors){
-				deletePermissionsForRole(session, contributor);
-				session.delete(contributor);
-			}
-			for (UserRole viewer : viewers){
-				deletePermissionsForRole(session, viewer);
-				session.delete(viewer);
-			}
-			session.getTransaction().commit();
-
-		} catch (HibernateException e) {
-			log.error("Error removing roles and permissions", e);
-			session.getTransaction().rollback();
-			throw new Exception("Cannot revoke project permissions",e);
-		}
-		finally {
-			session.close();
-		}
-
-	}
 	
-	@SuppressWarnings("unchecked")
-	private void deletePermissionsForRole(Session session, UserRole role){
-		List<Permission> permissions = session.createCriteria(Permission.class)
-				.add(Restrictions.eq("role", role.getRole())).list();
-		for (Permission permission : permissions){
-			session.delete(permission);
-		}
-	}
-
-	@Override
-	public List<UserRole> getUserRolesForDatabase(int dbId) throws Exception {
-		Session session = this.sessionFactory.openSession();
-		try {
-			session.beginTransaction();
-			@SuppressWarnings("unchecked")
-			List<UserRole> userRoles = session.createCriteria(UserRole.class)
-					.add(Restrictions.like("role", "%_"+dbId))
-					.list();
-			session.getTransaction().commit();
-			return userRoles;
-		} catch (Exception e) {
-			session.getTransaction().rollback();
-			throw e;
-		}
-		finally {
-			session.close();
-		}
-
-
-	}
-
-	@Override
-	public UserRole getUserRole(int roleId) throws Exception {
-		Session session = this.sessionFactory.openSession();
-		try {
-			session.beginTransaction();
-			UserRole userRole = (UserRole) session.get(UserRole.class, roleId);
-			session.getTransaction().commit();
-			return userRole;
-		} catch (Exception e) {
-			session.getTransaction().rollback();
-			throw e;
-		}
-		finally {
-			session.close();
-		}
-
-
-	}
-
-	@Override
-	public UserRole addUserRoleToDatabase(int dbId, UserRole userRole)
-			throws Exception {
-		Session session = this.sessionFactory.openSession();
-		try {
-			session.beginTransaction();
-			validate(userRole);
-			String projectRole = getPrivateUserRole(userRole.getRole(), dbId);
-			userRole.setRole(projectRole);
-			session.save(userRole);
-			session.getTransaction().commit();
-			//ProjectAuditService.Factory.getInstance().createProjectUser(userRole, projectId);
-			return userRole;
-		} catch (HibernateException e) {
-			log.error("Error creating user role", e);
-			session.getTransaction().rollback();
-			throw new Exception("Cannot create user role",e);
-		}
-		finally {
-			session.close();
-		}
-
-
-	}
-
-	@Override
-	public void removeUserFromRoleInDatabase(int dbId, int roleId)
-			throws Exception {
-		//
-		// First, obtain the UserRole
-		//
-		UserRole userRole = getUserRole(roleId);
-		if (userRole == null) throw new Exception("Cannot find user role");
-		//
-		// Lets check that the role contains the project id
-		//
-		if(!userRole.getRole().endsWith(String.valueOf(dbId))){
-			throw new ValidationException("Attempt to remove role via another project");
-		}
-		removeUserRole(userRole, dbId);
-
-	}
-	
-	protected void removeUserRole(UserRole userRole, int dbId) throws Exception{
-		Session session = this.sessionFactory.openSession();
-		try {
-			session.beginTransaction();
-			session.delete(userRole);
-			session.getTransaction().commit();
-			//ProjectAuditService.Factory.getInstance().deleteProjectRole(userRole, projectId);
-		} catch (Exception e) {
-			session.getTransaction().rollback();
-			log.error("Cannot find user role", e);
-			throw new Exception("Cannot find user role",e);
-		}
-		finally {
-			session.close();
-		}
-
-	}
-
-
-	/* (non-Javadoc)
-	 * @see uk.ac.ox.it.ords.api.project.services.ProjectRoleService#getPublicUserRole(java.lang.String)
-	 */
-	@Override
-	public String getPublicUserRole(String role) {
-		if (!role.contains("_")) return role;
-		return role.split("_")[0];
-	}
-	
-	
-
 	@Override
 	public String getPrivateUserRole(String role, int projectId) {
 		if (role.contains("_")) return role;
 		return role+"_"+projectId;
 	}
 
-	
-    public enum GroupRole {
-        owner, contributor, viewer, deleted
-    };
-
-	/**
-	 * @param userRole
-	 * @return
-	 * @throws ValidationException
-	 */
-	public boolean validate(UserRole userRole) throws ValidationException{
-		if (userRole == null) throw new ValidationException("Invalid role");
-		if (userRole.getPrincipalName() == null) throw new ValidationException("No user principal set for role");
-		if (userRole.getRole() == null) throw new ValidationException("No role set");
-		if (!isValidRole(userRole.getRole())) throw new ValidationException("Invalid role type");
-		return true;
-	}
-
-	private boolean isValidRole(String role){
-		for (GroupRole projectRole : GroupRole.values()){
-			if (projectRole.name().equals(role)) return true;
-		}
-		return false;
-	}
-	
-	
 	/**
 	 * Each project has a set of roles and permissions
 	 * associated with it.
@@ -323,7 +102,7 @@ public class DatabaseRoleServiceImpl
 		//
 		// Owner
 		//
-		String ownerRole = "owner_"+dbId;
+		String ownerRole = "databaseowner_"+dbId;
 		for (String permission : DatabasePermissionSets.getPermissionsForOwner(dbId)){
 			createPermission(ownerRole, permission);			
 		}
@@ -331,7 +110,7 @@ public class DatabaseRoleServiceImpl
 		//
 		// Contributor
 		//
-		String contributorRole = "contributor_"+dbId;
+		String contributorRole = "databasecontributor_"+dbId;
 		for (String permission : DatabasePermissionSets.getPermissionsForContributor(dbId)){
 			createPermission(contributorRole, permission);			
 		}
@@ -339,7 +118,7 @@ public class DatabaseRoleServiceImpl
 		//
 		// Viewer
 		//
-		String viewerRole = "viewer_"+dbId;
+		String viewerRole = "databaseviewer_"+dbId;
 		for (String permission : DatabasePermissionSets.getPermissionsForViewer(dbId)){
 			createPermission(viewerRole, permission);			
 		}
@@ -368,6 +147,12 @@ public class DatabaseRoleServiceImpl
 			session.close();
 		}
 
+	}
+
+	@Override
+	public String getPublicUserRole(String role) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

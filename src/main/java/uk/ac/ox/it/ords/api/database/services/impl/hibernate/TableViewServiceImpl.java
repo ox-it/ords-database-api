@@ -16,12 +16,24 @@
 
 package uk.ac.ox.it.ords.api.database.services.impl.hibernate;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import uk.ac.ox.it.ords.api.database.data.DataRow;
+import javax.ws.rs.NotFoundException;
+
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.subject.Subject;
+import org.hibernate.criterion.Restrictions;
+import org.hibernate.criterion.SimpleExpression;
+
 import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
+import uk.ac.ox.it.ords.api.database.data.TableViewInfo;
+import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
+import uk.ac.ox.it.ords.api.database.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
+import uk.ac.ox.it.ords.api.database.model.TableView;
+import uk.ac.ox.it.ords.api.database.model.User;
 import uk.ac.ox.it.ords.api.database.queries.DatabaseQueries;
 import uk.ac.ox.it.ords.api.database.queries.GeneralSQLQueries;
 import uk.ac.ox.it.ords.api.database.queries.QueryRunner;
@@ -32,32 +44,75 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 			TableViewService {
 
 	@Override
-	public TableData getStaticDataSet(int dbId, String instance, int datasetId)
+	public TableData getStaticDataSetData(int dbId, String instance, int datasetId, int startIndex, int rowsPerPage)
 			throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		TableView tableView = this.getTableViewRecord(datasetId);
+		OrdsPhysicalDatabase db = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String query = tableView.getQuery();
+		String databaseName = tableView.getAssociatedDatabase();
+		String server = db.getDatabaseServer();
+		// run as ords superuser because this might be accessed by an unauthenticated user.
+		String userName = this.getORDSDatabaseUser();
+		String password = this.getORDSDatabasePassword();
+		
+		QueryRunner qr = new QueryRunner(server,databaseName,userName, password);
+		qr.runDBQuery(query, startIndex, rowsPerPage);
+		return qr.getTableData();
 	}
 
 	@Override
 	public int createStaticDataSetOnQuery(int dbId, String instance,
-			String query) throws Exception {
-		// TODO Auto-generated method stub
-		return 0;
+			TableViewInfo viewInfo) throws Exception {
+		return this.createStaticRecordAndDB(dbId, instance, 0, viewInfo);
 	}
 
 	@Override
-	public int updateStaticDataSet(int dbId, String instance, String query)
+	public int updateStaticDataSet(int dbId, String instance, int datasetId, TableViewInfo viewInfo)
 			throws Exception {
-		// TODO Auto-generated method stub
-		return 0;
+		return this.createStaticRecordAndDB(dbId, instance, datasetId, viewInfo);
 	}
 
 	@Override
 	public void deleteStaticDataSet(int dbId, String instance, int datasetId)
 			throws Exception {
-		// TODO Auto-generated method stub
-
+		TableView tableView = this.getTableView(datasetId);
+		String databaseName = tableView.getAssociatedDatabase();
+		String statement = this.getTerminateStatement(databaseName);
+		this.singleResultQuery(statement);
+		
+		statement = "rollback transaction; drop database " + databaseName + ";";
+		this.runSQLStatementOnOrdsDB(statement);
+		
+		this.removeModelObject(tableView);
 	}
+
+
+
+	@Override
+	public TableViewInfo getStaticDataSet(int datasetId) throws Exception {
+		TableViewInfo viewInfo = new TableViewInfo();
+		TableView tableView = this.getTableView(datasetId);
+		if ( tableView == null ) {
+			throw new NotFoundException("Unable to find dataset id: "+datasetId);
+		}
+		viewInfo.setViewAuthorization(tableView.getTvAuthorization());
+		viewInfo.setViewDescription(tableView.getViewDescription());
+		viewInfo.setViewName(tableView.getViewName());
+		viewInfo.setViewQuery(tableView.getQuery());
+		viewInfo.setViewTable(tableView.getAssociatedTable());
+		
+		return viewInfo;
+	}
+	
+	
+
+	@Override
+	public TableView getTableViewRecord(int tableViewId) {
+		ArrayList<SimpleExpression> exprs = new ArrayList<SimpleExpression>();
+		exprs.add(Restrictions.eq("id", tableViewId));
+		return this.getModelObject(exprs, TableView.class);
+	}
+	
 
 	@Override
 	public TableData getDatabaseRows(int dbId, String instance,
@@ -147,10 +202,137 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		sqlQueries.deleteTableRow(tableName, rowToRemove);
 	}
 	
+
+	protected int createStaticRecordAndDB(int dbId, String instance, int datasetId,
+			TableViewInfo viewInfo) throws Exception {
+		if ( !this.isQueryAllowed(viewInfo.getViewQuery())) {
+			throw new BadParameterException("Only select queries allowed on datasets");
+		}
+		OrdsPhysicalDatabase physicalDatabase = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		OrdsDB logicalDatabase = this.getLogicalDatabaseFromID(physicalDatabase.getLogicalDatabaseId());
+		Subject s = SecurityUtils.getSubject();
+		String principalName = s.getPrincipal().toString();
+		User u = this.getUserByPrincipal(principalName);
+		String staticDBName = this.generateStaticDBName(physicalDatabase.getDbConsumedName());
+
+		TableView viewRecord = this.getTableView(datasetId);
+		
+		viewRecord.setViewName(viewInfo.getViewName());
+		viewRecord.setProjectId(logicalDatabase.getDatabaseProjectId());
+		viewRecord.setViewDescription(viewInfo.getViewDescription());
+		viewRecord.setAssociatedDatabase(staticDBName);
+		viewRecord.setCreatorId(u.getUserId());
+		viewRecord.setQuery(viewInfo.getViewQuery());
+		viewRecord.setPhysicalDatabaseId(physicalDatabase.getPhysicalDatabaseId());
+		viewRecord.setStaticDataset(true);
+		viewRecord.setOriginalDatabase(physicalDatabase.getDbConsumedName());
+		viewRecord.setAssociatedTable(viewInfo.getViewTable());
+
+		viewRecord.setTvAuthorization(viewInfo.getViewAuthorization());
+		// create a copy of the database
+		this.copyStatic(physicalDatabase.getDbConsumedName(), staticDBName);
+		viewRecord.setOriginalDatabase(physicalDatabase.getDbConsumedName());
+		if ( datasetId == 0 ) {
+			this.saveModelObject(viewRecord);
+		}
+		else {
+			this.updateModelObject(viewRecord);
+		}
+		return viewRecord.getId();
+	}
+
+	
+	
+	
+	
+    private boolean isQueryAllowed(String query) {
+        log.debug("isQueryAllowed");
+        
+        boolean ret = false;
+        
+        if (query != null) {
+            String strippedQuery = query.toLowerCase().trim();
+            if (strippedQuery.startsWith("select")) {
+                // ok so far
+                if ( (query.contains("update")) || (query.contains("grant")) ||
+                    (query.contains("delete")) ) {
+                    // bad
+                }
+                else {
+                    ret = true;
+                }
+            }
+        }
+
+        
+        return ret;
+    }
+
+	
+	
+	
+	
+    private TableView getTableView(int viewId) throws Exception {
+        TableView tv;
+        if (viewId == 0) {
+            tv = new TableView();
+        }
+        else {
+            tv = this.getTableViewRecord(viewId);
+        }
+
+        return tv;
+    }
+    
+  
+    
+    
+    
+    private  String generateStaticDBName(String dbName) throws Exception{
+        log.debug(String.format("generateStaticDBName(%s)", dbName));
+
+        String possibleDbName;
+        int counter = 1;
+
+        while (true) {
+            possibleDbName = dbName + "_" + counter + "_static";
+            if (!this.checkDatabaseExists(possibleDbName)) {
+                break;
+            }
+            counter++;
+        }
+
+        return possibleDbName;
+    }
+    
+    
+	private void copyStatic (String from, String to ) throws Exception {
+		String userName = this.getODBCUser();
+		String password = this.getODBCPassword();
+		this.createOBDCUserRole(userName, password);
+		
+		if (this.checkDatabaseExists(to)) {
+			String statement = this.getTerminateStatement(to);
+			this.runSQLStatementOnOrdsDB(statement);
+			statement = "rollback transaction; drop database " + to + ";";
+			this.runSQLStatementOnOrdsDB(statement);
+		}
+		String clonedb = String.format(
+				"ROLLBACK TRANSACTION; CREATE DATABASE %s WITH TEMPLATE %s OWNER = %s",
+				quote_ident(to),
+				quote_ident(from),
+				quote_ident(userName));
+		this.runSQLStatementOnOrdsDB(clonedb);
+	
+	}
+
+
+
+	
 	
 	private boolean isInt ( String input ) {
 		try {
-			int i = Integer.parseInt(input);
+			Integer.parseInt(input);
 		}
 		catch ( NumberFormatException e ) {
 			return false;
@@ -161,12 +343,13 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	
 	private boolean isNumber ( String input ) {
 		try {
-			float f = Float.parseFloat(input );
+			Float.parseFloat(input );
 		}
 		catch ( NumberFormatException e ) {
 			return false;
 		}
 		return true;
 	}
+
 
 }

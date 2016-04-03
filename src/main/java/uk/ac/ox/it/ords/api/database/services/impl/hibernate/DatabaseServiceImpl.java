@@ -21,6 +21,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
@@ -42,6 +43,7 @@ import org.hibernate.criterion.SimpleExpression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.ox.it.ords.api.database.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.User;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
@@ -155,29 +157,37 @@ public class DatabaseServiceImpl {
 	    }
 	   
 	   
+	protected OrdsDB getLogicalDatabaseFromID(int id ) {
+		ArrayList<SimpleExpression> exprs = new ArrayList<SimpleExpression>();
+		exprs.add(Restrictions.eq("logicalDatabaseId",id));
+		return this.getModelObject(exprs, OrdsDB.class);
+
+	}
+	   
 		protected OrdsPhysicalDatabase getPhysicalDatabaseFromIDInstance ( int dbId, String instance){
-			//EntityType dbType = OrdsPhysicalDatabase.EntityType.valueOf(instance
-			//		.toUpperCase());
-			//OrdsPhysicalDatabase database = this
-			//		.getPhysicalDatabaseByLogicalDatabaseId(dbId, dbType);
-			Session session = this.getOrdsDBSessionFactory().openSession();
-			try {
-				Transaction transaction = session.beginTransaction();
-				
-				@SuppressWarnings("unchecked")
-				List<OrdsPhysicalDatabase> users = (List<OrdsPhysicalDatabase>) session.createCriteria(OrdsPhysicalDatabase.class).add(Restrictions.eq("physicalDatabaseId", dbId)).list();
-				transaction.commit();
-				if (users.size() == 1){
-					return users.get(0);
-				} 
-				return null;
-			} catch (Exception e) {
-				session.getTransaction().rollback();
-				throw e;
-			}
-			finally {
-				session.close();
-			}
+			ArrayList<SimpleExpression> exprs = new ArrayList<SimpleExpression>();
+			exprs.add(Restrictions.eq("physicalDatabaseId", dbId));
+			//exprs.add(Restrictions.eq("instance", instance));
+			return this.getModelObject(exprs, OrdsPhysicalDatabase.class);
+			
+//			Session session = this.getOrdsDBSessionFactory().openSession();
+//			try {
+//				Transaction transaction = session.beginTransaction();
+//				
+//				@SuppressWarnings("unchecked")
+//				List<OrdsPhysicalDatabase> users = (List<OrdsPhysicalDatabase>) session.createCriteria(OrdsPhysicalDatabase.class).add(Restrictions.eq("physicalDatabaseId", dbId)).list();
+//				transaction.commit();
+//				if (users.size() == 1){
+//					return users.get(0);
+//				} 
+//				return null;
+//			} catch (Exception e) {
+//				session.getTransaction().rollback();
+//				throw e;
+//			}
+//			finally {
+//				session.close();
+//			}
 		}
 		
 		
@@ -292,6 +302,134 @@ public class DatabaseServiceImpl {
 				session.close();
 			}
 		}
+		
+		
+		public boolean checkDatabaseExists(String databaseName) throws Exception {
+			String sql = "SELECT COUNT(*) as count from pg_database WHERE datname = ?";
+			List<Object> parameters = this.createParameterList(databaseName);
+			return this.runCountSql(sql, parameters,null, null, null, null) == 1;
+		}
+
+		protected List<Object> createParameterList(Object... args) {
+			ArrayList<Object> parameters = new ArrayList<Object>();
+			for (Object p : args) {
+				parameters.add(p);
+			}
+			return parameters;
+		}
+		
+		private int runCountSql(String sql, List<Object> parameters, String dbName, String databaseServer,
+				String username, String password) throws Exception {
+			CachedRowSet result = this
+					.runJDBCQuery(sql, parameters, databaseServer, dbName);
+			try {
+				// If count is 1, then a table with the given name was found
+				while (result.next()) {
+					return result.getInt("count");
+				}
+			} finally {
+				if ( result != null ) result.close();
+			}
+			return 0;
+
+		}
+
+		
+		protected String getTerminateStatement(String databaseName)
+				throws Exception {
+			boolean above9_2 = isPostgresVersionAbove9_2();
+			String command;
+			if (above9_2) {
+				log.info("Postgres version is 9.2 or later");
+				command = String
+						.format("select pg_terminate_backend(pid) from pg_stat_activity where datname = '%s' AND pid <> pg_backend_pid()",
+								databaseName);
+			} else {
+				log.info("Postgres version is earlier than 9.2");
+				command = String
+						.format("select pg_terminate_backend(procpid) from pg_stat_activity where datname = '%s' AND procpid <> pg_backend_pid()",
+								databaseName);
+			}
+			return command;
+
+		}
+
+		private String[] getPostgresVersionArray() throws Exception {
+
+			String version = (String) this.singleResultQuery("SELECT version()");
+
+			String[] versionArray = null;
+			String[] tempVersionArray = null;
+			tempVersionArray = version.split(" ");
+			version = tempVersionArray[1];
+			versionArray = version.split("\\.");
+
+			return versionArray;
+		}
+
+		protected boolean isPostgresVersionAbove9_2() throws Exception {
+			String[] versionArray = getPostgresVersionArray();
+			boolean above = false;
+			if (versionArray != null) {
+				try {
+					int majorVersionNumber = Integer.parseInt(versionArray[0]);
+					int minorVersionNumber = Integer.parseInt(versionArray[1]);
+					if (majorVersionNumber >= 9) {
+						if (minorVersionNumber >= 2) {
+							above = true;
+						}
+					}
+				} catch (NumberFormatException e) {
+					log.error("Unable to get Postgres version");
+				}
+			}
+
+			return above;
+		}
+
+
+		protected void createOBDCUserRole(String username, String password)
+				throws Exception {
+
+			// check if role exists already
+			String sql = String.format("SELECT 1 FROM pg_roles WHERE rolname='%s'",
+					username);
+			@SuppressWarnings("rawtypes")
+			List r = this.runSQLQuery(sql);
+			if (r.size() == 0) {
+				// role doesn't exist
+				String command = String
+						.format("create role \"%s\" nosuperuser login createdb inherit nocreaterole password '%s' valid until '2045-01-01'",
+								username, password);
+				this.runSQLStatementOnOrdsDB(command);
+			}
+		}
+		/**
+		 * Mimicks the postgres function, surrounding a table or column name in
+		 * quotes, escaping existing quotes by doubling them.
+		 * 
+		 * @param ident
+		 *            The table, column or other object name.
+		 * @return
+		 */
+		protected String quote_ident(String ident) {
+			return "\"" + ident.replace("\"", "\"\"") + "\"";
+		}
+
+		/**
+		 * Mimicks the postgres function, surrounding a string in quotes, escaping
+		 * existing quotes by doubling them.
+		 * 
+		 * @param literal
+		 * @return
+		 */
+		protected String quote_literal(String literal) {
+			if (literal == null) {
+				return literal;
+			}
+			return "'" + literal.replace("'", "''") + "'";
+		}
+
 
 
 		

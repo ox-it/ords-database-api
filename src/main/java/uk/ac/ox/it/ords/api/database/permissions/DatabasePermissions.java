@@ -20,6 +20,8 @@ import uk.ac.ox.it.ords.security.permissions.Permissions;
 
 public class DatabasePermissions extends Permissions {
 
-	
+	public static String DATABASE_REQUEST_ODBC_ACCESS(int logicalDatabaseId){
+		return "database:odbc:"+logicalDatabaseId;
+	}	
 	
 }

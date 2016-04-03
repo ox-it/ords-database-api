@@ -52,8 +52,10 @@ import org.apache.shiro.SecurityUtils;
 import uk.ac.ox.it.ords.api.database.data.ColumnReference;
 import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
+import uk.ac.ox.it.ords.api.database.data.TableViewInfo;
 import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
+import uk.ac.ox.it.ords.api.database.model.TableView;
 import uk.ac.ox.it.ords.api.database.permissions.DatabasePermissions;
 import uk.ac.ox.it.ords.api.database.services.DatabaseRecordService;
 import uk.ac.ox.it.ords.api.database.services.DatabaseUploadService;
@@ -71,17 +73,24 @@ public class Database {
 
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("{id}/{instance}/dataset/{datasetid}")
-	public Response getDatabaseDataset(@PathParam("id") final int id,
+	@Path("{id}/{instance}/datasetdata/{datasetid}")
+	public Response getDatabaseDatasetData(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
-			@PathParam("datasetid") int datasetID) {
-		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(id))){
-			return Response.status(Response.Status.FORBIDDEN).build();
-		}
+			@PathParam("datasetid") int datasetID,
+			@DefaultValue("0") @QueryParam("startindex") int startIndex,
+			@DefaultValue("50") @QueryParam("rowsperpage") int rowsPerPage) {
+
 		TableData data = null;
 		try {
-			 data = tableViewService().getStaticDataSet(id, instance,
-					datasetID);
+			TableView tableView = tableViewService().getTableViewRecord(datasetID);
+			if ( !"public".equals(tableView.getTvAuthorization())) {
+				OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id, instance);
+				if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))){
+					return Response.status(Response.Status.FORBIDDEN).build();
+				}
+			}
+			data = tableViewService().getStaticDataSetData(id, instance,
+					datasetID, startIndex, rowsPerPage);
 		} 
 		catch (BadParameterException ex) {
 			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
@@ -93,19 +102,51 @@ public class Database {
 		}
 		return Response.ok(data).build();
 	}
+	
+	
+	
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	@Path("{id}/{instance}/dataset/{datasetId}")
+	public Response getDatabaseDataset(@PathParam("id") final int id,
+			@PathParam("instance") String instance,
+			@PathParam("datasetId") int datasetId ) {
+		TableViewInfo tableViewInfo = null;
+		try {
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id, instance);
+			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
+			tableViewInfo = tableViewService().getStaticDataSet(datasetId);
+		}
+		catch (BadParameterException ex) {
+			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
+					.build();
+		} 
+		catch (Exception e) {
+			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+					.entity(e).build();
+		}
+		return Response.ok(tableViewInfo).build();
+		
+		
+	}
+	
+	
 
 	@PUT
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("{id}/{instance}/dataset/{datasetid}/{query}")
+	@Path("{id}/{instance}/dataset/{datasetid}")
 	public Response updateDatabaseDataset(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
-			@PathParam("datasetid") int datasetID,
-			@PathParam("query") String queryString) {
-		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
-			return Response.status(Response.Status.FORBIDDEN).build();
-		}
+			@PathParam("datasetid") int datasetId,
+			TableViewInfo tableViewInfo) {
 		try {
-			tableViewService().updateStaticDataSet(id, instance, queryString);
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id, instance);
+			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
+			tableViewService().updateStaticDataSet(id, instance, datasetId, tableViewInfo);
 		}
 		catch (BadParameterException ex) {
 			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
@@ -120,17 +161,18 @@ public class Database {
 
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("{id}/{instance}/dataset/{databaseid}/{query}")
+	@Path("{id}/{instance}/dataset")
 	public Response createDatabaseDataset(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
-			@PathParam("datasetid") int datasetID,
-			@PathParam("query") String queryString) {
-		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
-			return Response.status(Response.Status.FORBIDDEN).build();
-		}
+			TableViewInfo tableViewInfo,
+			@Context UriInfo uriInfo) {
 		int staticDataSetId = 0;
 		try {
-			staticDataSetId = tableViewService().createStaticDataSetOnQuery(id, instance, queryString);
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id, instance);
+			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
+			staticDataSetId = tableViewService().createStaticDataSetOnQuery(id, instance, tableViewInfo);
 		}
 		catch (BadParameterException ex) {
 			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
@@ -140,23 +182,24 @@ public class Database {
 			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
 					.entity(e).build();
 		}
-
-		return Response.status(Response.Status.CREATED).entity(new Integer(staticDataSetId)).build();
-
+	    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+	    builder.path(Integer.toString(staticDataSetId));
+	    return Response.created(builder.build()).build();
 	}
 	
 	
 
 	@DELETE
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("{id}/{instance}/dataset/{databaseid}")
+	@Path("{id}/{instance}/dataset/{datasetid}")
 	public Response deleteDatabaseDataset(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("datasetid") int datasetID) {
-		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_DELETE(id))) {
-			return Response.status(Response.Status.FORBIDDEN).build();
-		}
 		try {
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id, instance);
+			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_DELETE(physicalDatabase.getLogicalDatabaseId()))) {
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
 			tableViewService().deleteStaticDataSet(id, instance, datasetID);
 		}
 		catch ( NotFoundException nfe ) {
@@ -195,17 +238,19 @@ public class Database {
 			@QueryParam("direction") String direction
 			) {
 		try {
+			OrdsPhysicalDatabase physicalDatabase;
 			int dbId;
 			if ( isInt(id) ) {
 				dbId = Integer.parseInt(id);
+				physicalDatabase = databaseRecordService().getRecordFromId(dbId, instance);
 			}
 			else {
-				OrdsPhysicalDatabase opdb = databaseRecordService().getRecordFromGivenName(id, instance);
-				dbId = opdb.getPhysicalDatabaseId();
+				physicalDatabase = databaseRecordService().getRecordFromGivenName(id, instance);
+				dbId = physicalDatabase.getPhysicalDatabaseId();
 			}
-//			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(dbId))) {
-//				return Response.status(Response.Status.FORBIDDEN).build();
-//			}
+			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
 			TableData tableData = null;
 
 			if ( "none".equalsIgnoreCase(sort)) {
@@ -235,10 +280,12 @@ public class Database {
 	public Response appendTableData(@PathParam("id") final int id,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName, Row newData) {
-		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
-			return Response.status(Response.Status.FORBIDDEN).build();
-		}
+		
 		try {
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id, instance);
+			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
 			tableViewService().appendTableData(id, instance, tableName, newData);
 		}
 		catch (BadParameterException ex) {
@@ -261,10 +308,11 @@ public class Database {
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			List<Row> rowData) {
-		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
-			return Response.status(Response.Status.FORBIDDEN).build();
-		}
 		try {
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id, instance);
+			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
 			tableViewService().updateTableRow(id, instance, tableName, rowData);
 		}
 		catch (BadParameterException ex) {
@@ -291,10 +339,11 @@ public class Database {
 			@QueryParam("primaryKey") String primaryKey,
 			@QueryParam("primaryKeyValue") String primaryKeyValue
 			) {
-		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
-			return Response.status(Response.Status.FORBIDDEN).build();
-		}
 		try {
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id, instance);
+			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
 			tableViewService().deleteTableData(id, instance, tableName, primaryKey, primaryKeyValue);
 		}
 		catch ( NotFoundException nfe ) {
@@ -336,11 +385,12 @@ public class Database {
 			@PathParam("foreignkeycolumn") String foreignKeyColumn,
 			@QueryParam("term") String term) {
 
-		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
-			return Response.status(Response.Status.FORBIDDEN).build();
-		}
 		TableData data = null;
 		try {
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id, instance);
+			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
 			 data = queryService().getReferenceColumnData(id, instance, tableName, foreignKeyColumn, term);
 		}
 		catch (BadParameterException ex) {
@@ -374,11 +424,12 @@ public class Database {
 			@QueryParam("q") String theQuery,
 			@DefaultValue("0") @QueryParam("startindex") int startIndex,
 			@DefaultValue("50") @QueryParam("rowsperpage") int rowsPerPage) {
-		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(id))) {
-			return Response.status(Response.Status.FORBIDDEN).build();
-		}
 		TableData data = null;
 		try {
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id, instance);
+			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
 			data = queryService().performQuery(id, instance, theQuery, startIndex, rowsPerPage, null, null);
 		}
 		catch (BadParameterException ex) {
@@ -399,11 +450,12 @@ public class Database {
 	@Path("{id}/{instance}/data")
 	public Response exportDataBase(@PathParam("id") final int id,
 			@PathParam("instance") String instance) {
-		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(id))) {
-			return Response.status(Response.Status.FORBIDDEN).build();
-		}
 		String sql = "";
 		try {
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id, instance);
+			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
 			sql = SQLService.Factory.getInstance().buildSQLExportForDatabase(id, instance);
 		}
 		catch (BadParameterException ex) {
@@ -479,10 +531,11 @@ public class Database {
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
 			@PathParam("staging") BooleanCheck staging) {
-		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_DELETE(dbId))) {
-			return Response.status(Response.Status.FORBIDDEN).build();
-		}
 		try {
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(dbId, instance);
+			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_DELETE(physicalDatabase.getLogicalDatabaseId()))) {
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
 			DatabaseUploadService.Factory.getInstance().testDeleteDatabase(dbId, instance, staging.value);
 			return Response.ok().build();
 		}

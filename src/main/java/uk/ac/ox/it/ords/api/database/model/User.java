@@ -26,6 +26,13 @@ public class User {
     
     private String email;
     
+    //
+    // Password hash if using built-in authentication
+    //
+    @JsonIgnore 
+    private String token;
+
+    
     @NotNull
     @Size(min = 2, max = 200)
     private String name = "Unknown";
@@ -109,6 +116,19 @@ public class User {
     public String getOdbcUser() {
 		return odbcUser;
 	}
+    
+    
+
+    @JsonIgnore 
+	public String getToken() {
+		return token;
+	}
+    
+    @JsonIgnore 
+	public void setToken(String token) {
+		this.token = token;
+	}
+
     
     public String calculateOdbcUserForOrds() {
     	return getOdbcUser() + ODBC_CALCULATED_NAME_SUFFIX;

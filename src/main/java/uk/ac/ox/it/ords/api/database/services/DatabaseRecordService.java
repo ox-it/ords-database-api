@@ -26,6 +26,8 @@ public interface DatabaseRecordService {
 	OrdsPhysicalDatabase getRecordFromGivenName(String givenName,
 			String instance) throws Exception;
 	
+	OrdsPhysicalDatabase getRecordFromId ( int id, String instance );
+	
 	   public static class Factory {
 			private static DatabaseRecordService provider;
 		    public static DatabaseRecordService getInstance() {

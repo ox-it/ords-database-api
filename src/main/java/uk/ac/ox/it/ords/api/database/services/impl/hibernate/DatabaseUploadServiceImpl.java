@@ -42,7 +42,7 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		String odbcPassword = this.getODBCPassword();
 		OrdsPhysicalDatabase db = this.createPhysicalDatabase(logicalDatabaseId, type, dbFile.getName(), dbFile.length(), server, odbcUserName, odbcPassword);
 		String databaseName = db.getDbConsumedName();
-		DatabaseRoleService.Factory.getInstance().createInitialPermissions(db.getPhysicalDatabaseId());
+		DatabaseRoleService.Factory.getInstance().createInitialPermissions(db);
 		
 		if ( type == null ) {
 			throw new BadParameterException("No type for uploaded file");
@@ -170,75 +170,6 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		
 	}
 	
-	protected String getTerminateStatement(String databaseName)
-			throws Exception {
-		boolean above9_2 = isPostgresVersionAbove9_2();
-		String command;
-		if (above9_2) {
-			log.info("Postgres version is 9.2 or later");
-			command = String
-					.format("select pg_terminate_backend(pid) from pg_stat_activity where datname = '%s' AND pid <> pg_backend_pid()",
-							databaseName);
-		} else {
-			log.info("Postgres version is earlier than 9.2");
-			command = String
-					.format("select pg_terminate_backend(procpid) from pg_stat_activity where datname = '%s' AND procpid <> pg_backend_pid()",
-							databaseName);
-		}
-		return command;
-
-	}
-
-	private String[] getPostgresVersionArray() throws Exception {
-
-		String version = (String) this.singleResultQuery("SELECT version()");
-
-		String[] versionArray = null;
-		String[] tempVersionArray = null;
-		tempVersionArray = version.split(" ");
-		version = tempVersionArray[1];
-		versionArray = version.split("\\.");
-
-		return versionArray;
-	}
-
-	public boolean isPostgresVersionAbove9_2() throws Exception {
-		String[] versionArray = getPostgresVersionArray();
-		boolean above = false;
-		if (versionArray != null) {
-			try {
-				int majorVersionNumber = Integer.parseInt(versionArray[0]);
-				int minorVersionNumber = Integer.parseInt(versionArray[1]);
-				if (majorVersionNumber >= 9) {
-					if (minorVersionNumber >= 2) {
-						above = true;
-					}
-				}
-			} catch (NumberFormatException e) {
-				log.error("Unable to get Postgres version");
-			}
-		}
-
-		return above;
-	}
-
-
-	private void createOBDCUserRole(String username, String password)
-			throws Exception {
-
-		// check if role exists already
-		String sql = String.format("SELECT 1 FROM pg_roles WHERE rolname='%s'",
-				username);
-		@SuppressWarnings("rawtypes")
-		List r = this.runSQLQuery(sql);
-		if (r.size() == 0) {
-			// role doesn't exist
-			String command = String
-					.format("create role \"%s\" nosuperuser login createdb inherit nocreaterole password '%s' valid until '2045-01-01'",
-							username, password);
-			this.runSQLStatementOnOrdsDB(command);
-		}
-	}
 
 
 }

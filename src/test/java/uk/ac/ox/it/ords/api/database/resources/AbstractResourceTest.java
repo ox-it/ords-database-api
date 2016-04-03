@@ -73,19 +73,6 @@ public class AbstractResourceTest extends AbstractShiroTest {
 	
 	public static void createTestUsersAndRoles() throws Exception{
 		
-		///
-		/// I have no idea why this is needed to "kickstart" Hibernate
-		/// into behaving properly for these tests. I *think* it binds
-		/// the hibernate session to the same thread that is used by
-		/// the resource classes, but I could be wrong. It doesn't seem
-		/// to bother any of the other modules.
-		/// 
-		DatabaseRoleService service = DatabaseRoleService.Factory.getInstance();
-		UserRole userRole = new UserRole();
-		userRole.setPrincipalName("bob");
-		userRole.setRole("viewer");
-		service.addUserRoleToDatabase(1, userRole);	
-		
 		//
 		// Set up the database
 		//

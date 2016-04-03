@@ -41,4 +41,13 @@ public class DatabaseRecordServiceImpl extends DatabaseServiceImpl implements Da
 		return this.getModelObject(exprs, OrdsPhysicalDatabase.class);
 	}
 
+	@Override
+	public OrdsPhysicalDatabase getRecordFromId(int id, String instance) {
+		ArrayList<SimpleExpression> exprs = new ArrayList<SimpleExpression>();
+		exprs.add(Restrictions.eq("physicalDatabaseId", id));
+		exprs.add(Restrictions.eq("entityType", OrdsPhysicalDatabase.EntityType.valueOf(instance)));
+		return this.getModelObject(exprs, OrdsPhysicalDatabase.class);
+	}
+	
+
 }
