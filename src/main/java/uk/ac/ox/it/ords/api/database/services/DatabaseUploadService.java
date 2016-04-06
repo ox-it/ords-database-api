@@ -21,43 +21,48 @@ import java.util.ServiceLoader;
 
 import uk.ac.ox.it.ords.api.database.services.impl.hibernate.DatabaseUploadServiceImpl;
 
-
-
-
 public interface DatabaseUploadService {
-	
-	
-	public int createNewDatabaseFromFile(int logicalDatabaseId, File dbFile, String type, String server) throws Exception;
-	
-		public void init() throws Exception;
-		
-		public void testDeleteDatabase ( int dbId, String instance, boolean staging ) throws Exception;
 
-	   public static class Factory {
-			private static DatabaseUploadService provider;
-		    public static DatabaseUploadService getInstance() {
-		    	//
-		    	// Use the service loader to load an implementation if one is available
-		    	// Place a file called uk.ac.ox.oucs.ords.utilities.csv in src/main/resources/META-INF/services
-		    	// containing the classname to load as the CsvService implementation. 
-		    	// By default we load the Hibernate implementation.
-		    	//
-		    	if (provider == null){
-		    		ServiceLoader<DatabaseUploadService> ldr = ServiceLoader.load(DatabaseUploadService.class);
-		    		for (DatabaseUploadService service : ldr) {
-		    			// We are only expecting one
-		    			provider = service;
-		    		}
-		    	}
-		    	//
-		    	// If no service provider is found, use the default
-		    	//
-		    	if (provider == null){
-		    		provider = new DatabaseUploadServiceImpl();
-		    	}
-		    	
-		    	return provider;
-		    }
-	   }
+	public int createNewDatabaseFromFile(int logicalDatabaseId, File dbFile,
+			String type, String server) throws Exception;
+
+	public int appendCSVToDatabase(int physicalDatabaseId, File csvFile,
+			String server) throws Exception;
+
+	public void init() throws Exception;
+
+	public void testDeleteDatabase(int dbId, boolean staging)
+			throws Exception;
+
+	public static class Factory {
+		private static DatabaseUploadService provider;
+		public static DatabaseUploadService getInstance() {
+			//
+			// Use the service loader to load an implementation if one is
+			// available
+			// Place a file called uk.ac.ox.oucs.ords.utilities.csv in
+			// src/main/resources/META-INF/services
+			// containing the classname to load as the CsvService
+			// implementation.
+			// By default we load the Hibernate implementation.
+			//
+			if (provider == null) {
+				ServiceLoader<DatabaseUploadService> ldr = ServiceLoader
+						.load(DatabaseUploadService.class);
+				for (DatabaseUploadService service : ldr) {
+					// We are only expecting one
+					provider = service;
+				}
+			}
+			//
+			// If no service provider is found, use the default
+			//
+			if (provider == null) {
+				provider = new DatabaseUploadServiceImpl();
+			}
+
+			return provider;
+		}
+	}
 
 }

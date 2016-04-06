@@ -66,6 +66,20 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		initializePermissions();
 		
 	}
+
+
+	@Override
+	public int appendCSVToDatabase(int physicalDatabaseId,File csvFile,
+			String server) throws Exception {
+		
+		String odbcUserName = this.getODBCUser();
+		String odbcPassword = this.getODBCPassword();
+		OrdsPhysicalDatabase physicalDatabase = this.getPhysicalDatabaseFromID(physicalDatabaseId);
+		String databaseName = physicalDatabase.getDbConsumedName();
+		CSVService service = CSVService.Factory.getInstance();
+		service.newTableDataFromFile(server, databaseName, csvFile, true, odbcUserName, odbcPassword);
+		return 0;
+	}
 	
 	
 	private OrdsPhysicalDatabase createPhysicalDatabase ( int logicalDatabaseId, String databaseFileType, String fileName, long fileSize, String server, String userName, String password ) throws Exception {
@@ -151,10 +165,9 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 	    }
 
 	@Override
-	public void testDeleteDatabase(int dbId, String instance, boolean staging) throws Exception {
+	public void testDeleteDatabase(int dbId, boolean staging) throws Exception {
 		// TODO Auto-generated method stub
-		OrdsPhysicalDatabase database = getPhysicalDatabaseFromIDInstance(dbId,
-				instance);
+		OrdsPhysicalDatabase database = getPhysicalDatabaseFromID(dbId);
 		String databaseName;
 		if (!staging) {
 			databaseName = database.getDbConsumedName();
@@ -169,7 +182,7 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		this.runSQLStatementOnOrdsDB(statement);
 		
 	}
-	
+
 
 
 }

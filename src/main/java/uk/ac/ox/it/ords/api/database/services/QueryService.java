@@ -17,7 +17,7 @@ public interface QueryService {
 	 * @return
 	 * @throws Exception
 	 */
-	public TableData getReferenceColumnData (int dbId, String instance, String table, String foreignKeyColumn, String term ) throws Exception;
+	public TableData getReferenceColumnData (int dbId, String table, String foreignKeyColumn, String term ) throws Exception;
 	
 	
 	/**
@@ -32,7 +32,7 @@ public interface QueryService {
 	 * @return
 	 * @throws Exception
 	 */
-	public TableData performQuery ( int dbId, String instance, String q, int startIndex, int rowsPerPage, String filter, String order ) throws Exception;
+	public TableData performQuery ( int dbId, String q, int startIndex, int rowsPerPage, String filter, String order ) throws Exception;
 	
 	
     public static class Factory {

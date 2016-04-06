@@ -30,10 +30,10 @@ public class QueryServiceImpl extends DatabaseServiceImpl
 
 
 	@Override
-	public TableData performQuery(int dbId, String instance, String q,
+	public TableData performQuery(int dbId, String q,
 			int startIndex, int rowsPerPage, String filter, String order)
 			throws Exception {
-		OrdsPhysicalDatabase db = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		OrdsPhysicalDatabase db = this.getPhysicalDatabaseFromID(dbId);
 		String dbName = db.getDbConsumedName();
 		String server = db.getDatabaseServer();
 		String userName = this.getODBCUser();
@@ -45,9 +45,9 @@ public class QueryServiceImpl extends DatabaseServiceImpl
 	}
 
 	@Override
-	public TableData getReferenceColumnData(int dbId, String instance,
+	public TableData getReferenceColumnData(int dbId,
 			String table, String foreignKeyColumn, String term) throws Exception {
-		OrdsPhysicalDatabase db = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		OrdsPhysicalDatabase db = this.getPhysicalDatabaseFromID(dbId);
 		String dbName = db.getDbConsumedName();
 		String server = db.getDatabaseServer();
 		String userName = this.getODBCUser();

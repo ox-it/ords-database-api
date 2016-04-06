@@ -14,14 +14,14 @@ public interface SQLService {
 	 * @return
 	 * @throws Exception
 	 */
-	public String buildSQLExportForDatabase( int dbId, String instance ) throws Exception;
+	public String buildSQLExportForDatabase( int dbId ) throws Exception;
 	
 	/**
 	 * 
 	 * @param sql
 	 * @return
 	 */
-	public void createDatabaseFromSQL ( int dbId, String instance, String sql ) throws Exception;
+	public void createDatabaseFromSQL ( int dbId, String sql ) throws Exception;
 	
 
     public static class Factory {

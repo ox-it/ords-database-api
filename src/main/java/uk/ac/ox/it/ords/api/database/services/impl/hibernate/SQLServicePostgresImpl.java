@@ -21,14 +21,14 @@ import uk.ac.ox.it.ords.api.database.services.SQLService;
 public class SQLServicePostgresImpl extends DatabaseServiceImpl implements SQLService {
 
 	@Override
-	public String buildSQLExportForDatabase(int dbId, String instance)
+	public String buildSQLExportForDatabase(int dbId)
 			throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public void createDatabaseFromSQL(int dbId, String instance, String sql)
+	public void createDatabaseFromSQL(int dbId, String sql)
 			throws Exception {
 		// TODO Auto-generated method stub
 

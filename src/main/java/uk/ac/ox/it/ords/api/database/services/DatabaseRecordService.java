@@ -23,10 +23,9 @@ import uk.ac.ox.it.ords.api.database.services.impl.hibernate.DatabaseRecordServi
 
 public interface DatabaseRecordService {
 	
-	OrdsPhysicalDatabase getRecordFromGivenName(String givenName,
-			String instance) throws Exception;
+	OrdsPhysicalDatabase getRecordFromGivenName(String givenName) throws Exception;
 	
-	OrdsPhysicalDatabase getRecordFromId ( int id, String instance );
+	OrdsPhysicalDatabase getRecordFromId ( int id);
 	
 	   public static class Factory {
 			private static DatabaseRecordService provider;

@@ -21,7 +21,7 @@ public interface TableViewService {
 	 * @return
 	 * @throws Exception
 	 */
-	public TableData getStaticDataSetData ( int dbId, String instance, int datasetId, int startIndex, int rowsPerPage ) throws Exception;
+	public TableData getStaticDataSetData ( int dbId,   int datasetId, int startIndex, int rowsPerPage ) throws Exception;
 	
 	
 	/**
@@ -40,7 +40,7 @@ public interface TableViewService {
 	 * @return
 	 * @throws Exception
 	 */
-	public int createStaticDataSetOnQuery ( int dbId, String instance, TableViewInfo viewInfo ) throws Exception;
+	public int createStaticDataSetOnQuery ( int dbId,   TableViewInfo viewInfo ) throws Exception;
 	
 	/**
 	 * 
@@ -50,7 +50,7 @@ public interface TableViewService {
 	 * @return
 	 * @throws Exception
 	 */
-	public int updateStaticDataSet ( int dbId, String instance, int datasetId, TableViewInfo viewInfo ) throws Exception;
+	public int updateStaticDataSet ( int dbId,   int datasetId, TableViewInfo viewInfo ) throws Exception;
 	
 	/**
 	 * 
@@ -59,7 +59,7 @@ public interface TableViewService {
 	 * @param datasetId
 	 * @throws Exception
 	 */
-	public void deleteStaticDataSet ( int dbId, String instance, int datasetId ) throws Exception;
+	public void deleteStaticDataSet ( int dbId,   int datasetId ) throws Exception;
 	
 	
 	/**
@@ -83,7 +83,7 @@ public interface TableViewService {
 	 * @return
 	 * @throws Exception
 	 */
-	public TableData getDatabaseRows ( int dbId, String instance, String tableName, 
+	public TableData getDatabaseRows ( int dbId,   String tableName, 
 			int startIndex, int rowsPerPage, String sort, String sortDirection ) throws Exception;
 	
 	/**
@@ -95,7 +95,7 @@ public interface TableViewService {
 	 * @return
 	 * @throws Exception
 	 */
-	public int appendTableData ( int dbId, String instance, String tableName, Row newData ) throws Exception;
+	public int appendTableData ( int dbId,   String tableName, Row newData ) throws Exception;
 	
 	/**
 	 * 
@@ -108,7 +108,7 @@ public interface TableViewService {
 	 * @return
 	 * @throws Exception
 	 */
-	public int updateTableRow ( int dbId, String instance, String tableName, List<Row> rowData ) throws Exception;
+	public int updateTableRow ( int dbId,   String tableName, List<Row> rowData ) throws Exception;
 	
 	/**
 	 * 
@@ -118,7 +118,7 @@ public interface TableViewService {
 	 * @param dataToRemove
 	 * @throws Exception
 	 */
-	public void deleteTableData (int dbId, String instance, String tableName, String primaryKey, String primaryKeyValue ) throws Exception;
+	public void deleteTableData (int dbId,   String tableName, String primaryKey, String primaryKeyValue ) throws Exception;
 	
 	
     public static class Factory {

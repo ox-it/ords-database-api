@@ -42,7 +42,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			ContentDisposition cd = new ContentDisposition("attachment;filename=small_test.csv");
 			Attachment att = new Attachment("databaseFile", inputStream, cd);
 
-			Response response = client.path("/"+logicalDatabaseId+"/MAIN/data/localhost").post(new MultipartBody(att));
+			Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
 			assertEquals(201, response.getStatus());
 			
 			String path = response.getLocation().getPath();
@@ -53,7 +53,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			// get the data from the table created as small_test
 			
 			client = getClient(false);
-			String tablePath = "/"+id+"/MAIN/tabledata/small_test";
+			String tablePath = "/"+id+"/tabledata/small_test";
 			response = client.path(tablePath).get();
 			assertEquals(200, response.getStatus());
 			TableData tableData = response.readEntity(TableData.class);
@@ -68,7 +68,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			att = new Attachment("databaseFile", inputStream, cd);
 			client = getClient(false);
 			client.type("multipart/form-data");
-			response = client.path("/"+logicalDatabaseId+"/MAIN/data/localhost").post(new MultipartBody(att));
+			response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
 			assertEquals(201, response.getStatus());
 			
 			path = response.getLocation().getPath();
@@ -85,7 +85,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			viewInfo.setViewTable("City");
 			
 			client = getClient(true);
-			response = client.path("/"+id+"/MAIN/dataset").post(viewInfo);
+			response = client.path("/"+id+"/dataset").post(viewInfo);
 			assertEquals(201, response.getStatus());
 			
 			String viewPath = response.getLocation().getPath();
@@ -94,7 +94,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			
 			// view the view
 			client = getClient(true);
-			response = client.path("/"+id+"/MAIN/dataset/"+viewId).get();
+			response = client.path("/"+id+"/dataset/"+viewId).get();
 			assertEquals(200, response.getStatus());
 			
 			
@@ -102,19 +102,19 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			viewInfo.setViewName("The population of Cities");
 			viewInfo.setViewAuthorization("authmembers");
 			client = getClient(true);
-			response = client.path("/"+id+"/MAIN/dataset/"+viewId).put(viewInfo);
+			response = client.path("/"+id+"/dataset/"+viewId).put(viewInfo);
 			assertEquals(200, response.getStatus());
 			
 			
 			// delete the view
 			client = getClient(true);
-			response = client.path("/"+id+"/MAIN/dataset/"+viewId).delete();
+			response = client.path("/"+id+"/dataset/"+viewId).delete();
 			assertEquals(200, response.getStatus());
 			
 			
 			
 			client = getClient(false);
-			response = client.path("/"+id+"/MAIN/tabledata/country").get();
+			response = client.path("/"+id+"/tabledata/country").get();
 			assertEquals(200, response.getStatus());
 			InputStream stream = (InputStream) response.getEntity();
 			this.getResponseFromInputStream(stream, "mondial.json");

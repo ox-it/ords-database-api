@@ -28,7 +28,7 @@ import uk.ac.ox.it.ords.api.database.services.DatabaseRecordService;
 public class DatabaseRecordServiceImpl extends DatabaseServiceImpl implements DatabaseRecordService {
 
 	@Override
-	public OrdsPhysicalDatabase getRecordFromGivenName(String givenName, String instance)
+	public OrdsPhysicalDatabase getRecordFromGivenName(String givenName)
 			throws Exception {
 		ArrayList<SimpleExpression> exprs = new ArrayList<SimpleExpression>();
 		exprs.add(Restrictions.eq("dbName", givenName));
@@ -36,16 +36,14 @@ public class DatabaseRecordServiceImpl extends DatabaseServiceImpl implements Da
 		
 		exprs.clear();
 		exprs.add(Restrictions.eq("logicalDatabaseId", odb.getLogicalDatabaseId()));
-		exprs.add(Restrictions.eq("entity", OrdsPhysicalDatabase.EntityType.valueOf(instance)));
 		
 		return this.getModelObject(exprs, OrdsPhysicalDatabase.class);
 	}
 
 	@Override
-	public OrdsPhysicalDatabase getRecordFromId(int id, String instance) {
+	public OrdsPhysicalDatabase getRecordFromId(int id) {
 		ArrayList<SimpleExpression> exprs = new ArrayList<SimpleExpression>();
 		exprs.add(Restrictions.eq("physicalDatabaseId", id));
-		exprs.add(Restrictions.eq("entityType", OrdsPhysicalDatabase.EntityType.valueOf(instance)));
 		return this.getModelObject(exprs, OrdsPhysicalDatabase.class);
 	}
 	

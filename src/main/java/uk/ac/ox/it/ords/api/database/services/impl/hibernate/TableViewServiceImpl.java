@@ -44,10 +44,10 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 			TableViewService {
 
 	@Override
-	public TableData getStaticDataSetData(int dbId, String instance, int datasetId, int startIndex, int rowsPerPage)
+	public TableData getStaticDataSetData(int dbId, int datasetId, int startIndex, int rowsPerPage)
 			throws Exception {
 		TableView tableView = this.getTableViewRecord(datasetId);
-		OrdsPhysicalDatabase db = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		OrdsPhysicalDatabase db = this.getPhysicalDatabaseFromID(dbId);
 		String query = tableView.getQuery();
 		String databaseName = tableView.getAssociatedDatabase();
 		String server = db.getDatabaseServer();
@@ -61,19 +61,18 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	}
 
 	@Override
-	public int createStaticDataSetOnQuery(int dbId, String instance,
-			TableViewInfo viewInfo) throws Exception {
-		return this.createStaticRecordAndDB(dbId, instance, 0, viewInfo);
+	public int createStaticDataSetOnQuery(int dbId, TableViewInfo viewInfo) throws Exception {
+		return this.createStaticRecordAndDB(dbId, 0, viewInfo);
 	}
 
 	@Override
-	public int updateStaticDataSet(int dbId, String instance, int datasetId, TableViewInfo viewInfo)
+	public int updateStaticDataSet(int dbId, int datasetId, TableViewInfo viewInfo)
 			throws Exception {
-		return this.createStaticRecordAndDB(dbId, instance, datasetId, viewInfo);
+		return this.createStaticRecordAndDB(dbId, datasetId, viewInfo);
 	}
 
 	@Override
-	public void deleteStaticDataSet(int dbId, String instance, int datasetId)
+	public void deleteStaticDataSet(int dbId, int datasetId)
 			throws Exception {
 		TableView tableView = this.getTableView(datasetId);
 		String databaseName = tableView.getAssociatedDatabase();
@@ -115,12 +114,12 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	
 
 	@Override
-	public TableData getDatabaseRows(int dbId, String instance,
+	public TableData getDatabaseRows(int dbId,
 			String tableName, int startIndex, int rowsPerPage,
 			String sort, String sortDirection) throws Exception {
 		String userName = this.getODBCUser();
 		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
 		
 		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(null,database.getDbConsumedName(), userName, password );
 		boolean direction = false;
@@ -133,11 +132,11 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	}
 
 	@Override
-	public int appendTableData(int dbId, String instance, String tableName,
+	public int appendTableData(int dbId, String tableName,
 			Row newData) throws Exception {
 		String userName = this.getODBCUser();
 		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
 
 		String server = database.getDatabaseServer();
 
@@ -150,11 +149,11 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	}
 
 	@Override
-	public int updateTableRow(int dbId, String instance, String tableName, List<Row> rowDataList)
+	public int updateTableRow(int dbId, String tableName, List<Row> rowDataList)
 			throws Exception {
 		String userName = this.getODBCUser();
 		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
 		String server = database.getDatabaseServer();
 		for ( Row rowData: rowDataList ) {
 			int i = 0;
@@ -189,11 +188,11 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	}
 
 	@Override
-	public void deleteTableData(int dbId, String instance, String tableName,
+	public void deleteTableData(int dbId, String tableName,
 			String primaryKey, String primaryKeyValue) throws Exception {
 		String userName = this.getODBCUser();
 		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
 		
 		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(null, database.getDbConsumedName(), userName, password );
 		Row rowToRemove = new Row();
@@ -203,12 +202,12 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	}
 	
 
-	protected int createStaticRecordAndDB(int dbId, String instance, int datasetId,
+	protected int createStaticRecordAndDB(int dbId, int datasetId,
 			TableViewInfo viewInfo) throws Exception {
 		if ( !this.isQueryAllowed(viewInfo.getViewQuery())) {
 			throw new BadParameterException("Only select queries allowed on datasets");
 		}
-		OrdsPhysicalDatabase physicalDatabase = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		OrdsPhysicalDatabase physicalDatabase = this.getPhysicalDatabaseFromID(dbId);
 		OrdsDB logicalDatabase = this.getLogicalDatabaseFromID(physicalDatabase.getLogicalDatabaseId());
 		Subject s = SecurityUtils.getSubject();
 		String principalName = s.getPrincipal().toString();

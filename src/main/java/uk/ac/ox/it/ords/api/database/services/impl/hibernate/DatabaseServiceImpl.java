@@ -130,8 +130,8 @@ public class DatabaseServiceImpl {
 				DatabaseServiceImpl.ORDS_DATABASE_HOST);
 	}
 
-	public String getDatabaseServer( int dbId, String instance ) throws Exception {
-		OrdsPhysicalDatabase pdb = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+	public String getDatabaseServer( int dbId ) throws Exception {
+		OrdsPhysicalDatabase pdb = this.getPhysicalDatabaseFromID(dbId);
 		return pdb.getDatabaseServer();
 	}
 	
@@ -164,7 +164,7 @@ public class DatabaseServiceImpl {
 
 	}
 	   
-		protected OrdsPhysicalDatabase getPhysicalDatabaseFromIDInstance ( int dbId, String instance){
+		protected OrdsPhysicalDatabase getPhysicalDatabaseFromID ( int dbId ){
 			ArrayList<SimpleExpression> exprs = new ArrayList<SimpleExpression>();
 			exprs.add(Restrictions.eq("physicalDatabaseId", dbId));
 			//exprs.add(Restrictions.eq("instance", instance));
