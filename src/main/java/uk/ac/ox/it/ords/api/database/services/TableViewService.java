@@ -21,7 +21,7 @@ public interface TableViewService {
 	 * @return
 	 * @throws Exception
 	 */
-	public TableData getStaticDataSetData ( int dbId,   int datasetId, int startIndex, int rowsPerPage ) throws Exception;
+	public TableData getStaticDataSetData ( int dbId,   int datasetId, int startIndex, int rowsPerPage, String sort, String direction ) throws Exception;
 	
 	
 	/**

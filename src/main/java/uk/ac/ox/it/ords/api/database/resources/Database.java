@@ -17,6 +17,11 @@
 
 package uk.ac.ox.it.ords.api.database.resources;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -63,6 +68,7 @@ import uk.ac.ox.it.ords.api.database.services.QueryService;
 import uk.ac.ox.it.ords.api.database.services.SQLService;
 import uk.ac.ox.it.ords.api.database.services.TableViewService;
 
+@Api(value="Database")
 @Path("/")
 public class Database {
 
@@ -70,14 +76,28 @@ public class Database {
 	public void init() throws Exception {
 		DatabaseUploadService.Factory.getInstance().init();
 	}
-
+	
+	
+	
+	@ApiOperation(
+		value="Gets the data for a specified dataset",
+		notes="Optional query parameters start and length can be used to paginate over the dataset",
+		response=uk.ac.ox.it.ords.api.database.data.TableData.class
+	)
+	@ApiResponses(value = { 
+		@ApiResponse(code = 200, message = "Dataset successfully queried."),
+		@ApiResponse(code = 404, message = "The static dataset does not exist."),
+		@ApiResponse(code = 403, message = "Not authorized to access the dataset.")
+	})
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path("{id}/datasetdata/{datasetid}")
 	public Response getDatabaseDatasetData(@PathParam("id") final int id,
 			@PathParam("datasetid") int datasetID,
 			@DefaultValue("0") @QueryParam("startindex") int startIndex,
-			@DefaultValue("50") @QueryParam("rowsperpage") int rowsPerPage) {
+			@DefaultValue("50") @QueryParam("rowsperpage") int rowsPerPage,
+			@QueryParam("sort") String sort,
+			@QueryParam("direction") String direction ) {
 
 		TableData data = null;
 		try {
@@ -89,7 +109,7 @@ public class Database {
 				}
 			}
 			data = tableViewService().getStaticDataSetData(id,
-					datasetID, startIndex, rowsPerPage);
+					datasetID, startIndex, rowsPerPage, sort, direction);
 		} 
 		catch (BadParameterException ex) {
 			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
@@ -104,6 +124,16 @@ public class Database {
 	
 	
 	
+	@ApiOperation(
+			value="Gets the meta data for a specified dataset",
+			notes="This returns the data transfer object used to create the dataset",
+			response=uk.ac.ox.it.ords.api.database.data.TableViewInfo.class
+	)
+	@ApiResponses(value = { 
+			@ApiResponse(code = 200, message = "Dataset metadata successfully retrieved."),
+		    @ApiResponse(code = 404, message = "The dataset does not exist."),
+		    @ApiResponse(code = 403, message = "Not authorized to access the dataset.")
+	})
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path("{id}/dataset/{datasetId}")
@@ -126,12 +156,18 @@ public class Database {
 					.entity(e).build();
 		}
 		return Response.ok(tableViewInfo).build();
-		
-		
 	}
 	
 	
-
+	
+	@ApiOperation(
+		value="Updates the data and metadata for a specified dataset"
+	)
+	@ApiResponses(value = { 
+			@ApiResponse(code = 200, message = "Dataset successfully queried."),
+		    @ApiResponse(code = 404, message = "The dataset does not exist."),
+		    @ApiResponse(code = 403, message = "Not authorized to modify the dataset.")
+	})
 	@PUT
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path("{id}/dataset/{datasetid}")
@@ -155,7 +191,18 @@ public class Database {
 		}
 		return Response.status(Response.Status.OK).build();
 	}
+	
+	
 
+	@ApiOperation(
+		value="Creates a new dataset based upon the specified dataset",
+		notes="This appends the id for the new dataset to the url"
+	)
+	@ApiResponses(value = { 
+			@ApiResponse(code = 201, message = "Dataset successfully created."),
+		    @ApiResponse(code = 404, message = "Original database does not exist."),
+		    @ApiResponse(code = 403, message = "Not authorized to access the dataset.")
+	})
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path("{id}/dataset")
@@ -171,7 +218,7 @@ public class Database {
 			}
 			staticDataSetId = tableViewService().createStaticDataSetOnQuery(id, tableViewInfo);
 		}
-		catch (BadParameterException ex) {
+		catch (NotFoundException ex) {
 			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
 					.build();
 		} 
@@ -185,7 +232,14 @@ public class Database {
 	}
 	
 	
-
+	@ApiOperation(
+		value="Deletes a dataset"
+	)
+	@ApiResponses(value = { 
+		@ApiResponse(code = 200, message = "Dataset successfully deleted."),
+	    @ApiResponse(code = 404, message = "Dataset does not exist."),
+	    @ApiResponse(code = 403, message = "Not authorized to delete the dataset.")
+	})
 	@DELETE
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path("{id}/dataset/{datasetid}")
@@ -205,30 +259,27 @@ public class Database {
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
 		}
 		return Response.status(Response.Status.OK).build();
-
 	}
+	
 
-	/*
-	 * @startindex=0
-	 * 
-	 * @rowsperpage=100
-	 * 
-	 * @filter
-	 * 
-	 * @filterparams
-	 * 
-	 * @sort
-	 * 
-	 * @direction
-	 */
-	///{startIndex}/{rowsPerPage}/{filter}/{sort}/{direction}
+
+	@ApiOperation(
+		value="Gets table data",
+		notes="Database id and table name are in the path. There are four optional query parameters for start, length, sort and direction",
+		response=uk.ac.ox.it.ords.api.database.data.TableData.class
+	)
+	@ApiResponses(value = { 
+		@ApiResponse(code = 200, message = "Table data successfully returned."),
+		@ApiResponse(code = 404, message = "Database does not exist."),
+		@ApiResponse(code = 403, message = "Not authorized to access the database.")
+	})
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path("{id}/tabledata/{tablename}")
 	public Response getTableData(@PathParam("id") String id,
 			@PathParam("tablename") String tableName,
-			@DefaultValue("0") @QueryParam("startIndex") int startIndex,
-			@DefaultValue("100") @QueryParam("rowsPerPage") int rowsPerPage,
+			@DefaultValue("0") @QueryParam("start") int startIndex,
+			@DefaultValue("100") @QueryParam("length") int rowsPerPage,
 			@QueryParam("sort") String sort,
 			@QueryParam("direction") String direction
 			) {
@@ -257,7 +308,7 @@ public class Database {
 			tableData = tableViewService().getDatabaseRows(dbId, tableName, startIndex, rowsPerPage, sort, direction);
 			return Response.status(Response.Status.OK).entity(tableData).build();
 		}
-		catch (BadParameterException ex) {
+		catch (NotFoundException ex) {
 			return Response.status(Response.Status.NOT_FOUND).entity(ex)
 					.build();
 		} 
@@ -265,9 +316,19 @@ public class Database {
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
 					.entity(e).build();
 		}		
-
 	}
+	
+	
 
+	@ApiOperation(
+		value="Appends table data",
+		notes="A row of data is added to the database table"
+	)
+	@ApiResponses(value = { 
+		@ApiResponse(code = 200, message = "Table data successfully appended."),
+		@ApiResponse(code = 404, message = "Database does not exist."),
+		@ApiResponse(code = 403, message = "Not authorized to modify the database.")
+	})
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -291,9 +352,19 @@ public class Database {
 					.entity(e).build();
 		}
 		return Response.status(Response.Status.CREATED).build();
-
 	}
-
+	
+	
+	
+	@ApiOperation(
+		value="Updates table data",
+		notes="The row list must have a valid lookup column and value for each row"
+	)
+	@ApiResponses(value = { 
+		@ApiResponse(code = 200, message = "Table data successfully updated."),
+		@ApiResponse(code = 404, message = "Database does not exist."),
+		@ApiResponse(code = 403, message = "Not authorized to modify the database.")
+	})
 	@PUT
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -308,7 +379,7 @@ public class Database {
 			}
 			tableViewService().updateTableRow(id, tableName, rowData);
 		}
-		catch (BadParameterException ex) {
+		catch (NotFoundException ex) {
 			Response.status(Response.Status.NOT_FOUND).entity(ex)
 					.build();
 		} 
@@ -317,10 +388,18 @@ public class Database {
 					.entity(e).build();
 		}
 		return Response.status(Response.Status.OK).build();
-
 	}
 	
-
+	
+	
+	@ApiOperation(
+		value="Deletes a single row from the table"
+	)
+	@ApiResponses(value = { 
+		@ApiResponse(code = 200, message = "Table row successfully deleted."),
+		@ApiResponse(code = 404, message = "Database does not exist."),
+		@ApiResponse(code = 403, message = "Not authorized to modify the database.")
+	})
 	@DELETE
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -345,29 +424,20 @@ public class Database {
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
 		}
 		return Response.status(Response.Status.OK).build();
-
 	}
+	
+	
 
-	/*
-	 * @referencedtablecolumn
-	 * 
-	 * @startindex=0
-	 * 
-	 * @rowsperpage=100
-	 * 
-	 * @filter
-	 * 
-	 * @filterparams
-	 * 
-	 * @sort
-	 * 
-	 * @direction
-	 * 
-	 * @query don't need these
-	 * 
-	 * need to return triples (id/value/label)
-	 */
-
+	@ApiOperation(
+		value="Gets data from the related table for a foreign key",
+		notes="The row list must have a valid lookup column and value for each row",
+		response=uk.ac.ox.it.ords.api.database.data.TableData.class
+	)
+	@ApiResponses(value = { 
+		@ApiResponse(code = 200, message = "Table data successfully updated."),
+		@ApiResponse(code = 404, message = "Database does not exist."),
+		@ApiResponse(code = 403, message = "Not authorized to modify the database.")
+	})
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path("{id}/table/{tablename}/column/{foreignkeycolumn}/related/")
@@ -384,36 +454,36 @@ public class Database {
 			}
 			 data = queryService().getReferenceColumnData(id, tableName, foreignKeyColumn, term);
 		}
-		catch (BadParameterException ex) {
-			Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
+		catch (NotFoundException ex) {
+			return Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
 					.build();
 		} 
 		catch (Exception e) {
-			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
 					.entity(e).build();
 		}
 		
 		return Response.status(Response.Status.OK).entity(data).build();
 	}
 
-	/*
-	 * @q
-	 * 
-	 * @startindex=0
-	 * 
-	 * @rowsperpage=100
-	 * 
-	 * @filter
-	 * 
-	 * @order
-	 */
+
+	@ApiOperation(
+		value="Runs a query against the database",
+		notes="",
+		response=uk.ac.ox.it.ords.api.database.data.TableData.class
+	)
+	@ApiResponses(value = { 
+		@ApiResponse(code = 200, message = "Query successfully run."),
+		@ApiResponse(code = 404, message = "Database does not exist."),
+		@ApiResponse(code = 403, message = "Not authorized to access the database.")
+	})
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path("{id}/query")
 	public Response doQuery(@PathParam("id") final int id,
 			@QueryParam("q") String theQuery,
-			@DefaultValue("0") @QueryParam("startindex") int startIndex,
-			@DefaultValue("50") @QueryParam("rowsperpage") int rowsPerPage) {
+			@DefaultValue("0") @QueryParam("start") int startIndex,
+			@DefaultValue("100") @QueryParam("length") int rowsPerPage) {
 		TableData data = null;
 		try {
 			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
@@ -434,6 +504,16 @@ public class Database {
 
 	}
 
+	@ApiOperation(
+		value="Exports the database as sql",
+		notes="",
+		response=String.class
+	)
+	@ApiResponses(value = { 
+		@ApiResponse(code = 200, message = "Export successful."),
+		@ApiResponse(code = 404, message = "Database does not exist."),
+		@ApiResponse(code = 403, message = "Not authorized to modify the database.")
+	})
 	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
@@ -459,6 +539,15 @@ public class Database {
 	}
 	
 
+	@ApiOperation(
+		value="Handles file upload for and existing database file",
+		notes="CSV and Access are currently supported"
+	)
+	@ApiResponses(value = { 
+		@ApiResponse(code = 201, message = "Database successfully imported."),
+		@ApiResponse(code = 415, message = "Database type not supported."),
+		@ApiResponse(code = 403, message = "Not authorized to create databases.")
+	})
 	@POST
 	@Path("{id}/data/{server}")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)

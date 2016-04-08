@@ -44,7 +44,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 			TableViewService {
 
 	@Override
-	public TableData getStaticDataSetData(int dbId, int datasetId, int startIndex, int rowsPerPage)
+	public TableData getStaticDataSetData(int dbId, int datasetId, int startIndex, int rowsPerPage, String sort, String direction)
 			throws Exception {
 		TableView tableView = this.getTableViewRecord(datasetId);
 		OrdsPhysicalDatabase db = this.getPhysicalDatabaseFromID(dbId);
@@ -57,7 +57,10 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		
 		QueryRunner qr = new QueryRunner(server,databaseName,userName, password);
 		qr.runDBQuery(query, startIndex, rowsPerPage);
-		return qr.getTableData();
+		TableData tableData =  qr.getTableData();
+		
+		
+		return tableData;
 	}
 
 	@Override
@@ -120,6 +123,9 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		String userName = this.getODBCUser();
 		String password = this.getODBCPassword();
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
+		if ( database == null ) {
+			throw new NotFoundException();
+		}
 		
 		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(null,database.getDbConsumedName(), userName, password );
 		boolean direction = false;
@@ -127,6 +133,8 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 			direction = true;
 		}
 		TableData tableData = sqlQueries.getTableDataForTable(tableName, startIndex, rowsPerPage, sort, direction);
+		
+		// get the actual number of rows in table
 		
 		return tableData;
 	}
@@ -137,6 +145,9 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		String userName = this.getODBCUser();
 		String password = this.getODBCPassword();
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
+		if ( database == null ) {
+			throw new NotFoundException();
+		}
 
 		String server = database.getDatabaseServer();
 
@@ -154,6 +165,9 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		String userName = this.getODBCUser();
 		String password = this.getODBCPassword();
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
+		if ( database == null ) {
+			throw new NotFoundException();
+		}
 		String server = database.getDatabaseServer();
 		for ( Row rowData: rowDataList ) {
 			int i = 0;
@@ -193,7 +207,9 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		String userName = this.getODBCUser();
 		String password = this.getODBCPassword();
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
-		
+		if ( database == null ) {
+			throw new NotFoundException();
+		}
 		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(null, database.getDbConsumedName(), userName, password );
 		Row rowToRemove = new Row();
 		rowToRemove.columnNames = new String[]{primaryKey};
