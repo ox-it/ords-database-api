@@ -621,24 +621,35 @@ public class Database {
 			@PathParam("foreignkeycolumn") String foreignKeyColumn,
 			@QueryParam("term") String term) {
 
-		TableData data = null;
-		try {
-			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
-			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
-				return Response.status(Response.Status.FORBIDDEN).build();
-			}
-			 data = queryService().getReferenceColumnData(id, tableName, foreignKeyColumn, term);
-		}
-		catch (NotFoundException ex) {
-			return Response.status(Response.Status.NOT_FOUND).entity(ex.getMessage())
-					.build();
-		} 
-		catch (Exception e) {
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(e).build();
+		//
+		// Get database
+		//
+		OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
+		if (physicalDatabase == null) return Response.status(404).build();
+		
+		//
+		// Check permissions
+		//
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
+			
+			//TODO audit
+			
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		
-		return Response.status(Response.Status.OK).entity(data).build();
+		try {
+			TableData data = queryService().getReferenceColumnData(id, tableName, foreignKeyColumn, term);
+			
+			return Response.status(Response.Status.OK).entity(data).build();
+
+		}
+		catch (Exception e) {
+			
+			log.error(e);
+			
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+		}
+		
 	}
 
 
