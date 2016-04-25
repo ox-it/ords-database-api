@@ -50,6 +50,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
+import org.apache.commons.logging.Log;
 import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.cxf.jaxrs.ext.multipart.Multipart;
 import org.apache.shiro.SecurityUtils;
@@ -294,6 +295,11 @@ public class Database {
 				physicalDatabase = databaseRecordService().getRecordFromGivenName(id);
 				dbId = physicalDatabase.getPhysicalDatabaseId();
 			}
+			
+			if (physicalDatabase == null){
+				return Response.status(404).build();
+			}
+			
 			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
 				return Response.status(Response.Status.FORBIDDEN).build();
 			}
@@ -306,6 +312,10 @@ public class Database {
 				direction = null;
 			}
 			tableData = tableViewService().getDatabaseRows(dbId, tableName, startIndex, rowsPerPage, sort, direction);
+			
+			if (tableData == null){
+				return Response.status(404).build();
+			}
 			return Response.status(Response.Status.OK).entity(tableData).build();
 		}
 		catch (NotFoundException ex) {
@@ -332,25 +342,30 @@ public class Database {
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Path("{id}/{instance}/tabledata/{tablename}")
+	@Path("{id}/tabledata/{tablename}")
 	public Response appendTableData(@PathParam("id") final int id,
 			@PathParam("tablename") String tableName, Row newData) {
 		
+		OrdsPhysicalDatabase physicalDatabase;
+		
+		physicalDatabase = databaseRecordService().getRecordFromId(id);
+		
+		if (physicalDatabase == null) return Response.status(404).build();
+				
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
+			// TODO audit
+			return Response.status(Response.Status.FORBIDDEN).build();
+		}
+		
+		if (newData == null) return Response.status(400).build();
+		
 		try {
-			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
-			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
-				return Response.status(Response.Status.FORBIDDEN).build();
-			}
 			tableViewService().appendTableData(id, tableName, newData);
+		} catch (Exception e) {
+			// TODO log error
+			return Response.status(500).build();
 		}
-		catch (BadParameterException ex) {
-			Response.status(Response.Status.NOT_FOUND).entity(ex)
-					.build();
-		} 
-		catch (Exception e) {
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(e).build();
-		}
+		
 		return Response.status(Response.Status.CREATED).build();
 	}
 	
