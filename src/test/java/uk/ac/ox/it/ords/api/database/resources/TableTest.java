@@ -17,11 +17,13 @@
 package uk.ac.ox.it.ords.api.database.resources;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 
 import javax.ws.rs.core.Response;
 
@@ -79,11 +81,29 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	}
 	
 	@Test
+	public void updateRowInTableNull() throws Exception{
+		loginUsingSSO("pingu@nowhere.co", "");
+		WebClient client = getClient(true);
+		Response response = client.path("/"+dbID+"/tabledata/"+tableName).put(null);
+		assertEquals(400, response.getStatus());
+		logout();
+	}
+	
+	@Test
 	public void addRowToTableUnauth() throws Exception{
 		logout();
 		Row row = new Row();
 		WebClient client = getClient(true);
 		Response response = client.path("/"+dbID+"/tabledata/"+tableName).post(row);
+		assertEquals(403, response.getStatus());
+	}
+	
+	@Test
+	public void updateRowInTableUnauth() throws Exception{
+		logout();
+		ArrayList<Row> rows = new ArrayList<Row>();
+		WebClient client = getClient(true);
+		Response response = client.path("/"+dbID+"/tabledata/"+tableName).put(rows);
 		assertEquals(403, response.getStatus());
 	}
 	
@@ -96,10 +116,72 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	}
 	
 	@Test
+	public void deleteRowUnauth() throws Exception{
+		logout();
+		WebClient client = getClient(true);
+		Response response = client.path("/"+dbID+"/tabledata/"+tableName).query("primaryKey", "id").query("primaryKeyValue", "V3a-36334").delete();
+		assertEquals(403, response.getStatus());
+	}
+	
+	@Test
+	public void deleteRowNonexisting() throws Exception{
+		loginUsingSSO("pingu@nowhere.co", "");
+		assertEquals(404, getClient(true).path("/XXXX/tabledata/"+tableName).query("primaryKey", "id").query("primaryKeyValue", "V3a-36334").delete().getStatus());
+		assertEquals(404, getClient(true).path("/9999/tabledata/"+tableName).query("primaryKey", "id").query("primaryKeyValue", "V3a-36334").delete().getStatus());
+		assertEquals(404, getClient(true).path("/9999/tabledata/"+tableName).query("primaryKey", "id").query("primaryKeyValue", "YYYYYYYY").delete().getStatus());
+		
+		//
+		// FIXME
+		//
+		//assertEquals(404, getClient(true).path("/"+dbID+"/tabledata/nosuchtable").query("primaryKey", "id").query("primaryKeyValue", "V3a-36334").delete().getStatus());
+	}
+	
+	@Test
+	public void updateRowNonexisting() throws Exception{
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		ArrayList<Row> rows = new ArrayList<Row>();
+		Row row = new Row();
+		row.columnNames = new String[]{"id","n", "volume", "pubid","long"};
+		row.values = new String[]{"XXXX","XXXX", "1", "1","99"};
+		row.lookupColumn ="id";
+		row.lookupValue="XXXX";
+		rows.add(row);
+		
+		assertEquals(404, getClient(true).path("/XXXX/tabledata/"+tableName).put(rows).getStatus());
+		assertEquals(404, getClient(true).path("/9999/tabledata/"+tableName).put(rows).getStatus());
+		assertEquals(404, getClient(true).path("/9999/tabledata/"+tableName).put(rows).getStatus());
+		
+		//
+		// FIXME - this should be a 404
+		//
+		assertEquals(500, getClient(true).path("/"+dbID+"/tabledata/nosuchtable").put(rows).getStatus());
+	}
+	
+	@Test
 	public void getTableNonexisting() throws Exception{
 		loginUsingSSO("pingu@nowhere.co", "");
 		assertEquals(404, getClient(true).path("/"+dbID+"/tabledata/nosuchtable").get().getStatus());
 		assertEquals(404, getClient(true).path("/9999/tabledata/"+tableName).get().getStatus());
+	}
+	
+	@Test
+	public void addRowToTableNonexisting(){
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		Row row = new Row();
+		row.columnNames = new String[]{"id","n", "volume", "pubid","long"};
+		row.values = new String[]{"XXXX","XXXX", "1", "1","1"};
+		
+		assertEquals(404, getClient(true).path("/XXXX/tabledata/"+tableName).post(row).getStatus());
+		assertEquals(404, getClient(true).path("/9999/tabledata/"+tableName).post(row).getStatus());
+		assertEquals(404, getClient(true).path("/9999/tabledata/"+tableName).post(row).getStatus());
+		
+		//
+		// FIXME - this should be a 404
+		//
+		assertEquals(500, getClient(true).path("/"+dbID+"/tabledata/nosuchtable").post(row).getStatus());
+
 	}
 	
 	@Test
@@ -127,16 +209,128 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		
 		boolean containsNewRow = false;
 		for (DataRow currentRow : data.rows){
-			for(Object value : currentRow.cell.values()){
-				System.out.println(((DataCell)value).getValue());
-			}
-
 			if (
 					((DataCell)currentRow.cell.get("id")).getValue().equals("XXXX") &&
 					((DataCell)currentRow.cell.get("n")).getValue().equals("XXXX") &&
 					((DataCell)currentRow.cell.get("volume")).getValue().equals("1") &&
 					((DataCell)currentRow.cell.get("pubid")).getValue().equals("1") &&
 					((DataCell)currentRow.cell.get("long")).getValue().equals("1")
+			){
+				containsNewRow = true;
+			}
+		}
+		assertTrue(containsNewRow);
+		logout();
+	}
+	
+	@Test
+	public void deleteRowFromTable() throws Exception{		
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		assertEquals(200, getClient(true).path("/"+dbID+"/tabledata/"+tableName).get().getStatus());
+
+		//
+		// Create the row
+		//
+		Row row = new Row();
+		row.columnNames = new String[]{"id","n", "volume", "pubid","long"};
+		row.values = new String[]{"XXXX","XXXX", "1", "1","1"};
+		Response response = getClient(true).path("/"+dbID+"/tabledata/"+tableName).post(row);
+		assertEquals(201, response.getStatus());
+		
+		//
+		// Check it exists
+		//
+		response = getClient(true).path("/"+dbID+"/tabledata/"+tableName).query("length", 400).get();
+		assertEquals(200, response.getStatus());
+
+		TableData data = response.readEntity(TableData.class);
+		
+		boolean containsNewRow = false;
+		for (DataRow currentRow : data.rows){
+			if (
+					((DataCell)currentRow.cell.get("id")).getValue().equals("XXXX") &&
+					((DataCell)currentRow.cell.get("n")).getValue().equals("XXXX") &&
+					((DataCell)currentRow.cell.get("volume")).getValue().equals("1") &&
+					((DataCell)currentRow.cell.get("pubid")).getValue().equals("1") &&
+					((DataCell)currentRow.cell.get("long")).getValue().equals("1")
+			){
+				containsNewRow = true;
+			}
+		}
+		assertTrue(containsNewRow);
+		
+		//
+		// Delete it
+		//
+		assertEquals(200, getClient(true).path("/"+dbID+"/tabledata/"+tableName).query("primaryKey", "id").query("primaryKeyValue", "XXXX").delete().getStatus());
+
+		//
+		// Check it was deleted
+		//
+		response = getClient(true).path("/"+dbID+"/tabledata/"+tableName).query("length", 400).get();
+		assertEquals(200, response.getStatus());
+		data = response.readEntity(TableData.class);
+		containsNewRow = false;
+		for (DataRow currentRow : data.rows){
+			if (
+					((DataCell)currentRow.cell.get("id")).getValue().equals("XXXX") &&
+					((DataCell)currentRow.cell.get("n")).getValue().equals("XXXX") &&
+					((DataCell)currentRow.cell.get("volume")).getValue().equals("1") &&
+					((DataCell)currentRow.cell.get("pubid")).getValue().equals("1") &&
+					((DataCell)currentRow.cell.get("long")).getValue().equals("1")
+			){
+				containsNewRow = true;
+			}
+		}
+		assertFalse(containsNewRow);
+		
+		logout();
+	}
+	
+	@Test
+	public void updateRowInTable() throws Exception{		
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		assertEquals(200, getClient(true).path("/"+dbID+"/tabledata/"+tableName).get().getStatus());
+		
+		//
+		// Create the row
+		//
+		Row row = new Row();
+		row.columnNames = new String[]{"id","n", "volume", "pubid","long"};
+		row.values = new String[]{"XXXX","XXXX", "1", "1","1"};
+		Response response = getClient(true).path("/"+dbID+"/tabledata/"+tableName).post(row);
+		assertEquals(201, response.getStatus());
+
+		//
+		// Update the row
+		//
+		ArrayList<Row> rows = new ArrayList<Row>();
+		row.columnNames = new String[]{"id","n", "volume", "pubid","long"};
+		row.values = new String[]{"XXXX","XXXX", "1", "1","99"};
+		row.lookupColumn ="id";
+		row.lookupValue="XXXX";
+		rows.add(row);
+		response = getClient(true).path("/"+dbID+"/tabledata/"+tableName).put(rows);
+		assertEquals(200, response.getStatus());
+		
+		//
+		// Check it exists
+		//
+		response = getClient(true).path("/"+dbID+"/tabledata/"+tableName).query("length", 400).get();
+		assertEquals(200, response.getStatus());
+
+		TableData data = response.readEntity(TableData.class);
+		
+		boolean containsNewRow = false;
+		for (DataRow currentRow : data.rows){
+			if (
+					((DataCell)currentRow.cell.get("id")).getValue().equals("XXXX") &&
+					((DataCell)currentRow.cell.get("n")).getValue().equals("XXXX") &&
+					((DataCell)currentRow.cell.get("volume")).getValue().equals("1") &&
+					((DataCell)currentRow.cell.get("pubid")).getValue().equals("1") &&
+					((DataCell)currentRow.cell.get("long")).getValue().equals("99")
 			){
 				containsNewRow = true;
 			}
