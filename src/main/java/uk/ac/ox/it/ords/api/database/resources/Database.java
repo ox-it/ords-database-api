@@ -26,7 +26,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.activation.DataHandler;
@@ -50,12 +49,11 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
-import org.apache.commons.logging.Log;
 import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.cxf.jaxrs.ext.multipart.Multipart;
+import org.apache.log4j.Logger;
 import org.apache.shiro.SecurityUtils;
 
-import uk.ac.ox.it.ords.api.database.data.ColumnReference;
 import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.data.TableViewInfo;
@@ -72,6 +70,8 @@ import uk.ac.ox.it.ords.api.database.services.TableViewService;
 @Api(value="Database")
 @Path("/")
 public class Database {
+	
+	static Logger log = Logger.getLogger(Database.class);
 
 	@PostConstruct
 	public void init() throws Exception {
@@ -284,9 +284,14 @@ public class Database {
 			@QueryParam("sort") String sort,
 			@QueryParam("direction") String direction
 			) {
+		
+		int dbId;
+		OrdsPhysicalDatabase physicalDatabase = null; 
+
+		//
+		// Obtain the database
+		//
 		try {
-			OrdsPhysicalDatabase physicalDatabase;
-			int dbId;
 			if ( isInt(id) ) {
 				dbId = Integer.parseInt(id);
 				physicalDatabase = databaseRecordService().getRecordFromId(dbId);
@@ -295,36 +300,54 @@ public class Database {
 				physicalDatabase = databaseRecordService().getRecordFromGivenName(id);
 				dbId = physicalDatabase.getPhysicalDatabaseId();
 			}
-			
-			if (physicalDatabase == null){
-				return Response.status(404).build();
-			}
-			
-			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
-				return Response.status(Response.Status.FORBIDDEN).build();
-			}
-			TableData tableData = null;
+		} catch (Exception ex) {
+			return Response.status(Response.Status.NOT_FOUND).build();
+		} 
 
-			if ( "none".equalsIgnoreCase(sort)) {
-				sort = null;
-			}
-			if ( "none".equalsIgnoreCase(direction)) {
-				direction = null;
-			}
-			tableData = tableViewService().getDatabaseRows(dbId, tableName, startIndex, rowsPerPage, sort, direction);
+		if (physicalDatabase == null){
+			return Response.status(404).build();
+		}
+
+		//
+		// Check permission
+		//
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
+			// TODO audit this
+			return Response.status(Response.Status.FORBIDDEN).build();
+		}
+		
+		//
+		// Set defaults
+		//
+
+		if ( "none".equalsIgnoreCase(sort)) {
+			sort = null;
+		}
+		if ( "none".equalsIgnoreCase(direction)) {
+			direction = null;
+		}
+
+		try {
 			
+			//
+			// Get data
+			//
+			TableData tableData = tableViewService().getDatabaseRows(dbId, tableName, startIndex, rowsPerPage, sort, direction);
+
+			//
+			// Validate: TODO we should be able to check this before executing the request?
+			//
 			if (tableData == null){
 				return Response.status(404).build();
 			}
+			
 			return Response.status(Response.Status.OK).entity(tableData).build();
-		}
-		catch (NotFoundException ex) {
-			return Response.status(Response.Status.NOT_FOUND).entity(ex)
-					.build();
-		} 
-		catch (Exception e) {
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(e).build();
+			
+		} catch (Exception e) {
+
+			log.error(e);
+			
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
 		}		
 	}
 	
@@ -362,7 +385,9 @@ public class Database {
 		try {
 			tableViewService().appendTableData(id, tableName, newData);
 		} catch (Exception e) {
-			// TODO log error
+			
+			log.error(e);
+			
 			return Response.status(500).build();
 		}
 		
@@ -387,21 +412,51 @@ public class Database {
 	public Response updateTableRow(@PathParam("id") final int id,
 			@PathParam("tablename") String tableName,
 			List<Row> rowData) {
+				
+		//
+		// Check the database exists
+		//
+		OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
+
+		if (physicalDatabase == null){
+			return Response.status(Response.Status.NOT_FOUND).build();
+		}
+		
+		//
+		// Check permissions
+		//
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
+			
+			// TODO audit
+	
+			return Response.status(Response.Status.FORBIDDEN).build();
+		}
+		
+		//
+		// Validate input TODO is this all?
+		//
+		if (rowData == null){
+			return Response.status(400).build();
+		}
+		
+		//
+		// Perform the update
+		//
 		try {
-			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
-			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
-				return Response.status(Response.Status.FORBIDDEN).build();
-			}
+			
 			tableViewService().updateTableRow(id, tableName, rowData);
+			
+			// TODO audit
+			
+		} catch (Exception e) {
+						
+			log.error(e);
+			
+			// TODO this can be thrown by what are really 400 errors - e.g. missing lookupColumn and lookupValue - catch these before getting here
+			
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
 		}
-		catch (NotFoundException ex) {
-			Response.status(Response.Status.NOT_FOUND).entity(ex)
-					.build();
-		} 
-		catch (Exception e) {
-			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(e).build();
-		}
+		
 		return Response.status(Response.Status.OK).build();
 	}
 	
@@ -425,19 +480,43 @@ public class Database {
 			@QueryParam("primaryKey") String primaryKey,
 			@QueryParam("primaryKeyValue") String primaryKeyValue
 			) {
+		
+		//
+		// Check database exists
+		//
+		OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
+		if (physicalDatabase == null) return Response.status(404).build();
+		
+		//
+		// Check permissions
+		// 
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
+
+			// TODO audit
+			
+			return Response.status(Response.Status.FORBIDDEN).build();
+		}
+		
+		//
+		// Perform delete
+		//
 		try {
-			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
-			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
-				return Response.status(Response.Status.FORBIDDEN).build();
-			}
+			
+			// TODO check table actually exists
+			// TODO check row actually exists
+			
 			tableViewService().deleteTableData(id, tableName, primaryKey, primaryKeyValue);
+			
+			// TODO audit
+			
+		} catch (Exception e) {
+			
+			log.error(e);
+			
+			return Response.status(500).build();
+			
 		}
-		catch ( NotFoundException nfe ) {
-			return Response.status(Response.Status.GONE).build();
-		}
-		catch ( Exception e ) {
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
-		}
+		
 		return Response.status(Response.Status.OK).build();
 	}
 	
