@@ -40,7 +40,6 @@ import org.junit.BeforeClass;
 
 import javax.ws.rs.core.Response;
 
-
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 
 import uk.ac.ox.it.ords.api.database.model.User;
@@ -50,11 +49,14 @@ import uk.ac.ox.it.ords.api.database.services.impl.hibernate.HibernateUtils;
 import uk.ac.ox.it.ords.security.AbstractShiroTest;
 import uk.ac.ox.it.ords.security.model.UserRole;
 
+
+
+
 public class AbstractResourceTest extends AbstractShiroTest {
 
 	protected final static String ENDPOINT_ADDRESS = "local://database-api";
 	protected static Server server;
-	protected static ArrayList<String> databaseIds;
+	protected static ArrayList<DatabaseReference> databases;
 	
 	protected static void startServer() throws Exception {
 
@@ -249,26 +251,22 @@ public class AbstractResourceTest extends AbstractShiroTest {
 		//
 		sf.setAddress(ENDPOINT_ADDRESS);
 		server = sf.create(); 
-		databaseIds = new ArrayList<String>();
+		databases = new ArrayList<DatabaseReference>();
 		startServer();
 	}
 
 	@AfterClass
 	public static void destroy() throws Exception {
+		DatabaseUploadService dus = DatabaseUploadService.Factory.getInstance();
+		for ( DatabaseReference db: databases ) {
+			dus.testDeleteDatabase(db.id, db.staging);
+		}
 		server.stop();
 		server.destroy();
-		//DatabaseStructureService dbs = DatabaseStructureService.Factory.getInstance();
-		//for ( String dbId: databaseIds ) {
-		//	dbs.deleteDatabase(Integer.parseInt(dbId), "MAIN", false);
-		//}
 	}
 
 	@After
-	public void logout(){
-		for ( String dbId: databaseIds ) {
-			WebClient client = getClient(true);
-			Response r = client.path("/"+dbId+"/MAIN/test/delete/false").delete();
-		}
+	public void logout() throws Exception{
 		SecurityUtils.getSubject().logout();
 	}
 

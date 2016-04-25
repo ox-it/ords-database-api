@@ -36,18 +36,18 @@ public class PostgresCsvServiceImpl implements CSVService {
 	
 	
 	@Override
-	public File exportQuery(String server, String dbName, String query, String user, String password) throws Exception {
+	public File exportQuery(String server, String dbName, String query) throws Exception {
 		
 		//
 		// Create the temporary file to export to
 		//
 		File file = File.createTempFile(EXPORT_FILE_PREFIX, EXPORT_FILE_SUFFIX);
 		
-		return exportQuery(server, dbName, query, file, user, password);
+		return exportQuery(server, dbName, query, file);
 	}
 
 	@Override
-	public File exportQuery(String server, String dbName, String query, File file, String user, String password)
+	public File exportQuery(String server, String dbName, String query, File file)
 			throws Exception {
 		
 		//
@@ -58,11 +58,11 @@ public class PostgresCsvServiceImpl implements CSVService {
 		//
 		// Perform export
 		// 
-		return exportData(server, dbName, sql, file, user, password);
+		return exportData(server, dbName, sql, file);
 	}
 
 	@Override
-	public File exportTable(String server, String dbName, String tableName, String user, String password) throws Exception {
+	public File exportTable(String server, String dbName, String tableName) throws Exception {
 
 		//
 		// Create the temporary file to export to
@@ -74,12 +74,12 @@ public class PostgresCsvServiceImpl implements CSVService {
 		//
 		TableData tableData = new TableData();
 		tableData.tableName = tableName;
-		return exportTable(server, dbName, tableData, file, user, password);
+		return exportTable(server, dbName, tableData, file);
 
 	}
 	
 	@Override
-	public File exportTable(String server, String dbName, TableData tableData, String user, String password) throws Exception {
+	public File exportTable(String server, String dbName, TableData tableData) throws Exception {
 
 		//
 		// Create the temporary file to export to
@@ -89,13 +89,13 @@ public class PostgresCsvServiceImpl implements CSVService {
 		//
 		// Export the data
 		//
-		return exportTable(server, dbName, tableData, file, user, password);
+		return exportTable(server, dbName, tableData, file);
 	}
 	
 	
 
 	@Override
-	public File exportTable(String server, String dbName, TableData tableData, File file, String user, String password)
+	public File exportTable(String server, String dbName, TableData tableData, File file)
 			throws Exception {
 		if (tableData == null) {
 			file.delete();
@@ -108,7 +108,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 		//
 		// Perform export
 		// 
-		return exportData(server, dbName, sql, file, user, password);
+		return exportData(server, dbName, sql, file);
 	}
 	
 	/**
@@ -122,7 +122,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 	 * @throws SQLException
 	 * @throws Exception
 	 */
-	private File exportData(String server, String dbName, String sql, File file, String user, String password) throws IOException, ClassNotFoundException, SQLException, Exception{
+	private File exportData(String server, String dbName, String sql, File file) throws IOException, ClassNotFoundException, SQLException, Exception{
 		//
 		// Get DBUtils instance for the specified database
 		//
@@ -131,7 +131,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 		//
 		// Get QueryRunner instance for the specified database
 		//
-		QueryRunner qr = new QueryRunner(null, dbName, user, password);
+		QueryRunner qr = new QueryRunner(null, dbName);
 
 		//
 		// Create a writer for outputting the CSV to the file, and get
@@ -171,18 +171,18 @@ public class PostgresCsvServiceImpl implements CSVService {
 
 
 	@Override
-	public TableData newTableDataFromFile(String server, String dbName, File file, boolean headerRow, String user, String password) throws Exception {
-		return this.newTableDataFromFile(server, dbName, file.getName(), file, headerRow, true, user, password);
+	public TableData newTableDataFromFile(String server, String dbName, File file, boolean headerRow) throws Exception {
+		return this.newTableDataFromFile(server, dbName, file.getName(), file, headerRow, true);
 	}
 	
 	@Override
-	public TableData newTableDataFromFile(String server, String dbName, String newTableName, File file, boolean headerRow, String user, String password) throws Exception {
-		return this.newTableDataFromFile(server, dbName, newTableName, file, headerRow, true, user, password);
+	public TableData newTableDataFromFile(String server, String dbName, String newTableName, File file, boolean headerRow) throws Exception {
+		return this.newTableDataFromFile(server, dbName, newTableName, file, headerRow, true);
 	}
 	
 	@Override
 	public TableData newTableDataFromFile(String server, String dbName, String newTableName, File file,
-			boolean headerRow, boolean addPrimaryKeyColumn, String user, String password) throws Exception {
+			boolean headerRow, boolean addPrimaryKeyColumn) throws Exception {
 
 		
 		//
@@ -193,7 +193,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 		//
 		// Get the normalised name for the table
 		//
-		String tableName = getUniqueTableName(server, dbName, newTableName, user, password);
+		String tableName = getUniqueTableName(server, dbName, newTableName);
 
 		log.debug("Using a table name of " + tableName);
 		
@@ -201,18 +201,18 @@ public class PostgresCsvServiceImpl implements CSVService {
 		// Create new table structure using the first row of the CSV file as headers (or placeholders if no header row)
 		//
 		String[] columnNames =  getColumnNames(server, dbName, tableName, file, headerRow);
-		createTableStructure(server, dbName, tableName, columnNames, user, password);
+		createTableStructure(server, dbName, tableName, columnNames);
 		
 		//
 		// Load the data using COPY
 		//
 		try {
-			appendDataFromFile(server, dbName, tableName, file, headerRow, user, password);
+			appendDataFromFile(server, dbName, tableName, file, headerRow);
 		} catch (Exception e) {
 			//
 			// If we can't load the data, drop the table
 			//
-			dropTable(server, dbName, tableName, user, password);
+			dropTable(server, dbName, tableName);
 			log.error(e.getMessage());
 			throw e;
 		}
@@ -221,7 +221,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 		// Add a primary key column
 		//
 		if (addPrimaryKeyColumn){
-		  if (!addPrimaryKeyToCSVTable(server, dbName, tableName, user, password)) {
+		  if (!addPrimaryKeyToCSVTable(server, dbName, tableName)) {
 			log.error("Unable to add primary key to table");
 			throw new Exception(
 					"Unable to add primary key to table");
@@ -234,12 +234,12 @@ public class PostgresCsvServiceImpl implements CSVService {
 	}
 
 	@Override
-	public void appendDataFromFile(String server, String dbName, String tableName, File file, String user, String password) throws Exception{
-		appendDataFromFile(server, dbName, tableName, file, true, user, password);
+	public void appendDataFromFile(String server, String dbName, String tableName, File file) throws Exception{
+		appendDataFromFile(server, dbName, tableName, file, true);
 	}
 	
 	@Override
-	public void appendDataFromFile(String server, String dbName, String tableName, File file, boolean headerRow, String user, String password) throws Exception{
+	public void appendDataFromFile(String server, String dbName, String tableName, File file, boolean headerRow) throws Exception{
 
 		//
 		// Get DBUtils instance for the specified database
@@ -249,7 +249,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 		//
 		// Get QueryRunner instance for the specified database
 		//
-		QueryRunner qr = new QueryRunner(null, dbName, user, password);
+		QueryRunner qr = new QueryRunner(null, dbName);
 
 		//
 		// Define the copy operation
@@ -335,22 +335,22 @@ public class PostgresCsvServiceImpl implements CSVService {
 	 * @throws SQLException
 	 */
 	private String[] createTableStructure(String dbServer, String dbName,
-			String tableName, String[] columnNames, String user, String password)
+			String tableName, String[] columnNames)
 					throws Exception {
 
-		if (createDBTableWithDummyColumn(dbServer, dbName, tableName, user)) {
+		if (createDBTableWithDummyColumn(dbServer, dbName, tableName)) {
 
 			for (int count = 0; count < columnNames.length; count++) {
 				if (columnNames[count] == null || columnNames[count].trim().isEmpty()) {
 					columnNames[count] = "Column_" + count;
 				}
-				if (!addColumnToTable(dbServer, dbName, tableName, columnNames[count], user, password)) {
+				if (!addColumnToTable(dbServer, dbName, tableName, columnNames[count])) {
 					log.error("Unable to create column in table");
 					throw new Exception(
 							"Unable to create column in table");
 				}
 			}
-			if (!removeDummyColumnFromTable(dbServer, dbName, tableName, user, password)) {
+			if (!removeDummyColumnFromTable(dbServer, dbName, tableName)) {
 				log.error("Unable to remove dummy column from table");
 				throw new Exception(
 						"Unable to remove dummy column from table");
@@ -363,42 +363,35 @@ public class PostgresCsvServiceImpl implements CSVService {
 
 	private static final String DUMMY_COLUMN_NAME = "willRemoveThisSoon_dummy";
 
-	private boolean dropTable(String dbServer, String dbName, String tableName, String user, String password) throws ClassNotFoundException, SQLException{
+	private boolean dropTable(String dbServer, String dbName, String tableName) throws ClassNotFoundException, SQLException{
 		String command = String.format("drop table \"%s\";",tableName);
-		return new QueryRunner(dbServer, dbName, user, password).runDBQuery(command);
+		return new QueryRunner(dbServer, dbName).runDBQuery(command);
 	}
 	
 	//
 	// Create a blank table with a single dummy column
 	//
-	private boolean createDBTableWithDummyColumn(String dbServer, String dbName, String tableName, String userName)
+	private boolean createDBTableWithDummyColumn(String dbServer, String dbName, String tableName)
             throws ClassNotFoundException, SQLException {
 		String command = String.format("create table \"%s\" (\"%s\" integer);",
 				tableName, DUMMY_COLUMN_NAME);
 
-        /*
-         * We need to use the root creds to create tables. This is because only using those creds do the correct
-         * ODBC permissions get used as set up in the schema. Surely that shouldn't be?
-         */
-        AuthenticationDetails ad = new AuthenticationDetails();
-        QueryRunner qr = new QueryRunner(dbServer, dbName, ad.getRootDbUser(), ad.getRootDbPassword());
-        if (!qr.runDBQuery(command)) {
-            return false;
-        }
-		return qr.runDBQuery(String.format("alter table  \"%s\" owner to \"%s\"", tableName, userName));
+        QueryRunner qr = new QueryRunner(dbServer, dbName);
+        return qr.runDBQuery(command);
+		//return qr.runDBQuery(String.format("alter table  \"%s\" owner to \"%s\"", tableName));
 	}
 	
 	//
 	// remove the dummy column
 	//
 	private boolean removeDummyColumnFromTable(String dbServer, String dbName,
-			String tableName, String user, String password) throws ClassNotFoundException, SQLException {
+			String tableName) throws ClassNotFoundException, SQLException {
 		log.debug("removeDummyColumnFromTable");
 
 		String command = String.format("alter table \"%s\" drop column \"%s\"",
 				tableName, DUMMY_COLUMN_NAME);
 
-		return new QueryRunner(dbServer, dbName, user, password).runDBQuery(command);
+		return new QueryRunner(dbServer, dbName).runDBQuery(command);
 	}
 
 	/**
@@ -414,7 +407,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 	 * @throws ClassNotFoundException
 	 * @throws SQLException
 	 */
-	private boolean addColumnToTable(String dbServer, String dbName, String tableName, String columnName, String user, String password)
+	private boolean addColumnToTable(String dbServer, String dbName, String tableName, String columnName)
 					throws ClassNotFoundException, SQLException {
 		log.debug("addColumnToTable");
 
@@ -427,12 +420,12 @@ public class PostgresCsvServiceImpl implements CSVService {
 		}
 		
 		String sql = String.format("alter table \"%s\" add column \"%s\" text", tableName, columnName.trim());
-		if (!new QueryRunner(dbServer, dbName, user, password).runDBQuery(sql, 0, 0)) {
+		if (!new QueryRunner(dbServer, dbName).runDBQuery(sql, 0, 0)) {
 			return false;
 		}
 		
 		sql = String.format("alter table \"%s\" alter column \"%s\" drop not null",tableName,columnName.trim());
-		if (!new QueryRunner(dbServer, dbName, user, password).runDBQuery(sql, 0, 0)) {
+		if (!new QueryRunner(dbServer, dbName).runDBQuery(sql, 0, 0)) {
 			return false;
 		}
 
@@ -448,7 +441,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 	 * @throws ClassNotFoundException
 	 * @throws SQLException
 	 */
-	private boolean addPrimaryKeyToCSVTable(String dbServer, String dbName, String tableName, String user, String password)
+	private boolean addPrimaryKeyToCSVTable(String dbServer, String dbName, String tableName)
 			throws ClassNotFoundException, SQLException {
 		log.debug("addPrimaryKeyToCSVTable");
 
@@ -459,7 +452,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 						tableName, tableName + "_index") };
 
 		for (String s : commands) {
-			if (!new QueryRunner(dbServer, dbName, user, password).runDBQuery(s)) {
+			if (!new QueryRunner(dbServer, dbName).runDBQuery(s)) {
 				return false;
 			}
 		}
@@ -479,7 +472,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 	 * @throws java.sql.SQLException
 	 * @throws java.lang.ClassNotFoundException
 	 */
-	private String getUniqueTableName(String dbServer, String dbName, String tableNameSeed, String user, String password) throws SQLException,
+	private String getUniqueTableName(String dbServer, String dbName, String tableNameSeed) throws SQLException,
 			ClassNotFoundException {
 		
 		log.debug("getUniqueTableName:" + tableNameSeed);
@@ -495,7 +488,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 		boolean foundThis;
 		String newTableName = tableNameSeed;
 		
-		ORDSPostgresDB dbUtils = new ORDSPostgresDB(dbServer, dbName, user, password);
+		ORDSPostgresDB dbUtils = new ORDSPostgresDB(dbServer, dbName);
 
 		if (dbUtils.getTablesForDatabase()) {
 			TableData tableData = dbUtils.getTableData();

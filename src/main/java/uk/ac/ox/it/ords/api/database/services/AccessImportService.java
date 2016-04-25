@@ -26,55 +26,67 @@ public interface AccessImportService {
 
 	/**
 	 * Check that a schema can be successfully created for this database
+	 * 
 	 * @param database
 	 * @return true if we are confident that an import can be performed
 	 */
 	public abstract boolean preflightImport(File database) throws Exception;
-	
+
 	/**
 	 * Create a schema from the supplied Access database file
+	 * 
 	 * @param databaseServer
 	 * @param databaseName
 	 * @param database
-	 * @return a map of results for each table; true if the table was successfully created
+	 * @return a map of results for each table; true if the table was
+	 *         successfully created
 	 */
-	public abstract Map<String, TableImportResult> createSchema(String databaseServer, String databaseName, File database, String user) throws Exception;
-	
-	/**
-	 * Import data from supplied Access database file. This method must only be called after creating a schema.
-	 * @param databaseServer
-	 * @param databaseName
-	 * @param database
-	 * @return a map of results for each table; true if the data is successfully imported for that table
-	 */
-	public abstract Map<String, TableImportResult> importData(String databaseServer, String databaseName, File database, String user) throws Exception;
+	public abstract Map<String, TableImportResult> createSchema(
+			String databaseServer, String databaseName, File database) throws Exception;
 
-	
-    public static class Factory {
+	/**
+	 * Import data from supplied Access database file. This method must only be
+	 * called after creating a schema.
+	 * 
+	 * @param databaseServer
+	 * @param databaseName
+	 * @param database
+	 * @return a map of results for each table; true if the data is successfully
+	 *         imported for that table
+	 */
+	public abstract Map<String, TableImportResult> importData(
+			String databaseServer, String databaseName, File database) throws Exception;
+
+	public static class Factory {
 		private static AccessImportService provider;
-	    public static AccessImportService getInstance() {
-	    	//
-	    	// Use the service loader to load an implementation if one is available
-	    	// Place a file called uk.ac.ox.it.ords.api.structure.service.CommentService in src/main/resources/META-INF/services
-	    	// containing the classname to load as the CommentService implementation. 
-	    	// By default we load the Hibernate/Postgresql implementation.
-	    	//
-	    	if (provider == null){
-	    		ServiceLoader<AccessImportService> ldr = ServiceLoader.load(AccessImportService.class);
-	    		for (AccessImportService service : ldr) {
-	    			// We are only expecting one
-	    			provider = service;
-	    		}
-	    	}
-	    	//
-	    	// If no service provider is found, use the default
-	    	//
-	    	if (provider == null){
-	    		provider = new PostgresAccessDatabaseServiceImpl();
-	    	}
-	    	
-	    	return provider;
-	    }
+		public static AccessImportService getInstance() {
+			//
+			// Use the service loader to load an implementation if one is
+			// available
+			// Place a file called
+			// uk.ac.ox.it.ords.api.structure.service.CommentService in
+			// src/main/resources/META-INF/services
+			// containing the classname to load as the CommentService
+			// implementation.
+			// By default we load the Hibernate/Postgresql implementation.
+			//
+			if (provider == null) {
+				ServiceLoader<AccessImportService> ldr = ServiceLoader
+						.load(AccessImportService.class);
+				for (AccessImportService service : ldr) {
+					// We are only expecting one
+					provider = service;
+				}
+			}
+			//
+			// If no service provider is found, use the default
+			//
+			if (provider == null) {
+				provider = new PostgresAccessDatabaseServiceImpl();
+			}
+
+			return provider;
+		}
 	}
 
 }

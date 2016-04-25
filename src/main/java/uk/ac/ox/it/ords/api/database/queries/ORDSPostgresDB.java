@@ -38,13 +38,10 @@ public class ORDSPostgresDB extends QueryRunner {
     /*
      * Constructors ...
      */
-	public ORDSPostgresDB(String dbServer, String dbName, String user) {
-		super(dbServer, dbName, user, new AuthenticationDetails().getOrdsOdbcUserMasterPassword());
+	public ORDSPostgresDB(String dbServer, String dbName) {
+		super(dbServer, dbName);
     }
     
-    public ORDSPostgresDB(String dbServer, String dbName, String odbcUser, String odbcPassword) {
-    	super(dbServer, dbName, odbcUser, odbcPassword);
-    }
     /*
      * ... Constructors
      */
@@ -245,7 +242,7 @@ public class ORDSPostgresDB extends QueryRunner {
          */
         boolean exists = false;
         AuthenticationDetails ad = new AuthenticationDetails();
-        QueryRunner lqr = new QueryRunner(this.getCurrentDbServer(), this.getCurrentDbName(), ad.getRootDbUser(), ad.getRootDbPassword());
+        QueryRunner lqr = new QueryRunner(this.getCurrentDbServer(), this.getCurrentDbName());
         if (!lqr.runDBQuery(String.format("SELECT table_name FROM information_schema.tables WHERE table_schema='%s'", CommonVars.SCHEMA_NAME))) {
             return null;
         }

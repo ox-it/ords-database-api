@@ -47,8 +47,8 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			
 			String path = response.getLocation().getPath();
 			String id = path.substring(path.lastIndexOf('/')+1);
-			
-			AbstractResourceTest.databaseIds.add(id);
+			DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+			AbstractResourceTest.databases.add(r);
 			
 			// get the data from the table created as small_test
 			
@@ -73,7 +73,8 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			
 			path = response.getLocation().getPath();
 			id = path.substring(path.lastIndexOf('/')+1);
-			AbstractResourceTest.databaseIds.add(id);
+			r = new DatabaseReference(Integer.parseInt(id), false);
+			AbstractResourceTest.databases.add(r);
 			
 			
 			// test view
@@ -104,7 +105,9 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			client = getClient(true);
 			response = client.path("/"+id+"/dataset/"+viewId).put(viewInfo);
 			assertEquals(200, response.getStatus());
+
 			
+
 			
 			// delete the view
 			client = getClient(true);

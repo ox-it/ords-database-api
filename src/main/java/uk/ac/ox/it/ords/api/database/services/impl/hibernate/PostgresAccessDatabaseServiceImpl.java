@@ -34,21 +34,24 @@ import com.healthmarketscience.jackcess.Table;
 public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 
 	private static final String DUMMY_COLUMN_NAME = "willRemoveThisSoon_dummy";
-	private Logger log = LoggerFactory.getLogger(PostgresAccessDatabaseServiceImpl.class);
+	private Logger log = LoggerFactory
+			.getLogger(PostgresAccessDatabaseServiceImpl.class);
 
 	public PostgresAccessDatabaseServiceImpl() {
 	}
 
 	@Override
 	public boolean preflightImport(File database) {
-		if (database == null || !database.exists()){
+		if (database == null || !database.exists()) {
 			log.debug("No database was supplied for preflight");
 			return false;
 		}
 		try {
-			Map<String, TableImportResult> results = parseSchema(database, false, null, null, null);
-			for (TableImportResult result: results.values()){
-				if (result.getTableCreateResult() == TableImportResult.FAILED) return false;
+			Map<String, TableImportResult> results = parseSchema(database,
+					false, null, null);
+			for (TableImportResult result : results.values()) {
+				if (result.getTableCreateResult() == TableImportResult.FAILED)
+					return false;
 			}
 			return true;
 		} catch (IOException e) {
@@ -58,14 +61,14 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 	}
 
 	@Override
-	public  Map<String, TableImportResult> createSchema(String databaseServer, String databaseName,
-			File database, String user) {
-		if (database == null || !database.exists()){
+	public Map<String, TableImportResult> createSchema(String databaseServer,
+			String databaseName, File database) {
+		if (database == null || !database.exists()) {
 			log.debug("No database was supplied for schema creation");
 			return null;
 		}
 		try {
-			return parseSchema(database, true, databaseServer, databaseName, user);
+			return parseSchema(database, true, databaseServer, databaseName);
 		} catch (IOException e) {
 			log.debug("Error importing database file");
 			return null;
@@ -73,18 +76,18 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 	}
 
 	@Override
-	public Map<String, TableImportResult> importData(String databaseServer, String databaseName,
-			File file, String user) {
+	public Map<String, TableImportResult> importData(String databaseServer,
+			String databaseName, File file) {
 
 		//
 		// intialise the results map
 		//
-		Map<String,TableImportResult> results = new HashMap<String,TableImportResult>();
+		Map<String, TableImportResult> results = new HashMap<String, TableImportResult>();
 
 		//
 		// Check we have a file
 		//
-		if (file == null || !file.exists()){
+		if (file == null || !file.exists()) {
 			log.debug("No database was supplied for data import");
 			return results;
 		}
@@ -95,61 +98,71 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 		try {
 			Database database = DatabaseBuilder.open(file);
 			List<String> tablesToOmit = new ArrayList<String>();
-			
+
 			//
 			// First, do a dry run
 			//
-            AuthenticationDetails ad = new AuthenticationDetails();
-			results = importData(databaseServer, databaseName, database, user, ad.getOrdsOdbcUserMasterPassword(), tablesToOmit, true);
-			
+			//AuthenticationDetails ad = new AuthenticationDetails();
+			results = importData(databaseServer, databaseName, database,tablesToOmit, true);
+
 			//
 			// Identify tables with problems; we'll omit these
 			//
-			for (String key : results.keySet()){
+			for (String key : results.keySet()) {
 				if (results.get(key).getDataImportResult() == TableImportResult.FAILED) {
-                    tablesToOmit.add(key);
-                }
+					tablesToOmit.add(key);
+				}
 			}
-			
-			log.debug("import preflight complete; " + tablesToOmit.size() + " tables to omit in full run");
-			
+
+			log.debug("import preflight complete; " + tablesToOmit.size()
+					+ " tables to omit in full run");
+
 			//
-			// Now re-run and commit. This should ensure all data is imported that passed preflight.
+			// Now re-run and commit. This should ensure all data is imported
+			// that passed preflight.
 			//
-			Map<String, TableImportResult> finalResults = importData(databaseServer, databaseName, database, user, ad.getOrdsOdbcUserMasterPassword(), tablesToOmit, false);
-			
+			Map<String, TableImportResult> finalResults = importData(
+					databaseServer, databaseName, database, tablesToOmit, false);
+
 			//
 			// Merge results
 			//
-			for (String key : results.keySet()){
+			for (String key : results.keySet()) {
 				if (finalResults.containsKey(key)) {
-                    results.get(key).merge(finalResults.get(key));
-                }
+					results.get(key).merge(finalResults.get(key));
+				}
 			}
-			
+
 			//
-			// Now lets verify the import. While we know how many rows we INSERTed in the batches,
-			// once we committed them Postgres will discard rows that break any table constraints.
+			// Now lets verify the import. While we know how many rows we
+			// INSERTed in the batches,
+			// once we committed them Postgres will discard rows that break any
+			// table constraints.
 			//
-			for (String tableName: results.keySet()){
-				QueryRunner qr = new QueryRunner(databaseServer, databaseName, user, ad.getOrdsOdbcUserMasterPassword());
-				qr.runDBQuery(String.format("SELECT COUNT(*) FROM \"%s\"",getNormalisedTableName(tableName)));
+			for (String tableName : results.keySet()) {
+				QueryRunner qr = new QueryRunner(databaseServer, databaseName);
+				qr.runDBQuery(String.format("SELECT COUNT(*) FROM \"%s\"",
+						getNormalisedTableName(tableName)));
 				TableData tableData = qr.getTableData();
-				int rowsVerified = Integer.parseInt(tableData.rows.iterator().next().cell.get("count").getValue());
+				int rowsVerified = Integer.parseInt(tableData.rows.iterator()
+						.next().cell.get("count").getValue());
 				results.get(tableName).setRowsVerified(rowsVerified);
 			}
 
-		} catch (IOException | SQLException | ClassNotFoundException | NumberFormatException e) {
+		} catch (IOException | SQLException | ClassNotFoundException
+				| NumberFormatException e) {
 			log.debug("Error importing database file", e);
-		} 
+		}
 		return results;
 	}
 
-	private Map<String, TableImportResult> importData(String databaseServer, String databaseName, Database database, String user, String password, List<String> tablesToOmit, boolean preflight) throws SQLException{
+	private Map<String, TableImportResult> importData(String databaseServer,
+			String databaseName, Database database, List<String> tablesToOmit, boolean preflight)
+			throws SQLException {
 		//
 		// intialise the results map
 		//
-		Map<String,TableImportResult> results = new HashMap<String,TableImportResult>();
+		Map<String, TableImportResult> results = new HashMap<String, TableImportResult>();
 
 		Connection conn = null;
 		PreparedStatement defer = null;
@@ -159,34 +172,43 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 			//
 			// Start a transaction
 			//
-			QueryRunner qr = new QueryRunner(databaseServer, databaseName, user, password);
+			QueryRunner qr = new QueryRunner(databaseServer, databaseName);
 			conn = qr.getConnection();
 			conn.setAutoCommit(false);
 
 			//
 			// Import each table in turn
 			//
-			for (String tableName: database.getTableNames()){
-				if (!excludeTable(tableName) && !tablesToOmit.contains(getNormalisedTableName(tableName))) {
+			for (String tableName : database.getTableNames()) {
+				if (!excludeTable(tableName)
+						&& !tablesToOmit
+								.contains(getNormalisedTableName(tableName))) {
 
 					//
-					// Defer foreign key checks. In this way Postgres won't attempt
-					// to do any referential integrity checks until we commit the whole
+					// Defer foreign key checks. In this way Postgres won't
+					// attempt
+					// to do any referential integrity checks until we commit
+					// the whole
 					// import.
 					//
-					defer = conn.prepareStatement("SET CONSTRAINTS ALL DEFERRED;");
+					defer = conn
+							.prepareStatement("SET CONSTRAINTS ALL DEFERRED;");
 					defer.executeUpdate();
 
 					//
-					// Run the import batch. If it fails for any reason, we record a
-					// "false" (import failed) for that row in the result map and keep going
-					// - however to do this we have to close the current transaction, rollback
-					// changes so far and try again. 
+					// Run the import batch. If it fails for any reason, we
+					// record a
+					// "false" (import failed) for that row in the result map
+					// and keep going
+					// - however to do this we have to close the current
+					// transaction, rollback
+					// changes so far and try again.
 					//
-					TableImportResult result = importDataForTable(conn, database.getTable(tableName));
+					TableImportResult result = importDataForTable(conn,
+							database.getTable(tableName));
 					results.put(getNormalisedTableName(tableName), result);
 					if (result.getDataImportResult() == TableImportResult.FAILED) {
-						log.debug("Couldn't import data for table "+tableName);
+						log.debug("Couldn't import data for table " + tableName);
 						conn.rollback();
 						conn = qr.getConnection();
 						conn.setAutoCommit(false);
@@ -200,33 +222,37 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 			if (preflight) {
 				conn.rollback();
 			} else {
-				conn.commit();				
+				conn.commit();
 			}
 		} catch (ClassNotFoundException | SQLException | IOException e) {
 			if (conn != null) {
 				try {
 					log.debug("Transaction is being rolled back");
 					conn.rollback();
-				} catch(SQLException excep) {
+				} catch (SQLException excep) {
 					log.debug("Error rolling back transaction");
 				}
 			}
 			log.error("Problem importing data", e);
 		} finally {
-			if (defer != null) defer.close();
-			if (conn != null) conn.close();
+			if (defer != null)
+				defer.close();
+			if (conn != null)
+				conn.close();
 		}
 
 		return results;
 
 	}
 
-	private TableImportResult importDataForTable(Connection conn, Table table) throws IOException, ClassNotFoundException, SQLException{
+	private TableImportResult importDataForTable(Connection conn, Table table)
+			throws IOException, ClassNotFoundException, SQLException {
 		String tableName = getNormalisedTableName(table.getName());
 		TableImportResult result = new TableImportResult();
-		
+
 		//
-		// How many columns are we dealing with here? We need to create placeholders for the prepared statement,
+		// How many columns are we dealing with here? We need to create
+		// placeholders for the prepared statement,
 		// so we add a "?, " for each.
 		//
 		int columns = table.getColumnCount();
@@ -242,7 +268,8 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 		//
 		// Add our list of placeholders to the INSERT statement
 		//
-		String sql = String.format("INSERT INTO \"%s\" VALUES (%s)", tableName, params );
+		String sql = String.format("INSERT INTO \"%s\" VALUES (%s)", tableName,
+				params);
 		PreparedStatement pstmt = conn.prepareStatement(sql);
 
 		//
@@ -254,14 +281,14 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 		// Set the number of rows we have from the file
 		//
 		result.setRowsReceived(table.getRowCount());
-		
+
 		//
 		// Import each row
 		//
 		int rowIndex = 0;
 		for (Row row : table.newCursor().toCursor()) {
 			rowIndex++;
-			addRowToPreparedStatement(table, row, pstmt);	
+			addRowToPreparedStatement(table, row, pstmt);
 			//
 			// Execute for every 1000 rows as we go
 			//
@@ -299,82 +326,87 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 	}
 
 	/**
-	 * Adds a single row to a prepared statement. 
-	 *  Consider merging this code with DatabaseQueries.prepareAndExecuteStatement and QueryRunner.addParametersToPreparedStatement
+	 * Adds a single row to a prepared statement. Consider merging this code
+	 * with DatabaseQueries.prepareAndExecuteStatement and
+	 * QueryRunner.addParametersToPreparedStatement
+	 * 
 	 * @param table
 	 * @param pstmt
 	 * @param failedRows
 	 * @throws SQLException
 	 * @throws IOException
 	 */
-	private void addRowToPreparedStatement(Table table, Row row, PreparedStatement pstmt) throws SQLException, IOException{
+	private void addRowToPreparedStatement(Table table, Row row,
+			PreparedStatement pstmt) throws SQLException, IOException {
 		int index = 0;
 		//
 		// Set a parameter for each cell. For some types we have to
 		// do an explicit NULL check here.
 		//
-		for (Column column : table.getColumns()){
+		for (Column column : table.getColumns()) {
 			index++;
 			DataType type = column.getType();
 			String columnName = column.getName();
 			switch (type) {
-			case BINARY: 
-				if (row.getInt(columnName) == null) {
-					pstmt.setNull(index, Types.INTEGER);
-				} else {
-					pstmt.setInt(index, row.getInt(columnName));
-				}
-				break;
-			case BOOLEAN:
-				pstmt.setBoolean(index, row.getBoolean(columnName));
-				break;
-			case BYTE:
-				pstmt.setByte(index, row.getByte(columnName));
-				break;
-			case DOUBLE:
-				if (row.getDouble(columnName) == null){
-					pstmt.setNull(index, Types.DOUBLE);
-				} else {
-					pstmt.setDouble(index, row.getDouble(columnName));
-				}
-				break;
-			case FLOAT:
-				pstmt.setFloat(index, row.getFloat(columnName));
-				break;
-			case INT:
+				case BINARY :
+					if (row.getInt(columnName) == null) {
+						pstmt.setNull(index, Types.INTEGER);
+					} else {
+						pstmt.setInt(index, row.getInt(columnName));
+					}
+					break;
+				case BOOLEAN :
+					pstmt.setBoolean(index, row.getBoolean(columnName));
+					break;
+				case BYTE :
+					pstmt.setByte(index, row.getByte(columnName));
+					break;
+				case DOUBLE :
+					if (row.getDouble(columnName) == null) {
+						pstmt.setNull(index, Types.DOUBLE);
+					} else {
+						pstmt.setDouble(index, row.getDouble(columnName));
+					}
+					break;
+				case FLOAT :
+					pstmt.setFloat(index, row.getFloat(columnName));
+					break;
+				case INT :
 
-				if (row.getShort(columnName) == null) {
-					pstmt.setNull(index, Types.INTEGER);
-				} else {
-					pstmt.setShort(index, row.getShort(columnName));
-				}
-				break;
-			case LONG:
-				if (row.getInt(columnName) == null) {
-					pstmt.setNull(index, Types.BIGINT);
-				} else {
-					pstmt.setLong(index, row.getInt(columnName));
-				}
-				break;
-			case MONEY:
-				pstmt.setBigDecimal(index, row.getBigDecimal(columnName));
-				break;
-			case NUMERIC:
-				pstmt.setFloat(index, row.getFloat(columnName));
-				break;
-			case OLE:
-				pstmt.setBytes(index, row.getBytes(columnName));
-				break;
-			case SHORT_DATE_TIME:
-				if (row.getDate(columnName) == null) {
-					pstmt.setNull(index, Types.DATE);
-				} else {
-					pstmt.setDate(index, new java.sql.Date(row.getDate(columnName).getTime()));
-				}
-				break;
-			default:
-				pstmt.setString(index, row.getString(columnName));
-				break;					
+					if (row.getShort(columnName) == null) {
+						pstmt.setNull(index, Types.INTEGER);
+					} else {
+						pstmt.setShort(index, row.getShort(columnName));
+					}
+					break;
+				case LONG :
+					if (row.getInt(columnName) == null) {
+						pstmt.setNull(index, Types.BIGINT);
+					} else {
+						pstmt.setLong(index, row.getInt(columnName));
+					}
+					break;
+				case MONEY :
+					pstmt.setBigDecimal(index, row.getBigDecimal(columnName));
+					break;
+				case NUMERIC :
+					pstmt.setFloat(index, row.getFloat(columnName));
+					break;
+				case OLE :
+					pstmt.setBytes(index, row.getBytes(columnName));
+					break;
+				case SHORT_DATE_TIME :
+					if (row.getDate(columnName) == null) {
+						pstmt.setNull(index, Types.DATE);
+					} else {
+						pstmt.setDate(index,
+								new java.sql.Date(row.getDate(columnName)
+										.getTime()));
+					}
+					break;
+				default :
+					pstmt.setString(index, row.getString(columnName));
+					break;
 			}
 
 		}
@@ -387,6 +419,7 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 
 	/**
 	 * Interpret the schema and create postgres structures
+	 * 
 	 * @param databaseFile
 	 * @param commit
 	 * @param serverName
@@ -394,10 +427,12 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 	 * @return a map of TableImportResult instances with table creation results
 	 * @throws IOException
 	 */
-	private Map<String, TableImportResult> parseSchema(File databaseFile, boolean commit, String serverName, String databaseName, String user) throws IOException{
+	private Map<String, TableImportResult> parseSchema(File databaseFile,
+			boolean commit, String serverName, String databaseName)
+			throws IOException {
 		Database database = DatabaseBuilder.open(databaseFile);
 
-		Map<String,TableImportResult> results = new HashMap<String, TableImportResult>();
+		Map<String, TableImportResult> results = new HashMap<String, TableImportResult>();
 
 		//
 		// Tables
@@ -408,7 +443,8 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 			Table table = database.getTable(tables.next());
 			TableImportResult result = new TableImportResult();
 			if (!excludeTable(table.getName())) {
-				if (!createTableStructure(table, commit, serverName, databaseName, user)) {
+				if (!createTableStructure(table, commit, serverName,
+						databaseName)) {
 					log.error("Unable to create table structure");
 					result.setTableCreateResult(TableImportResult.FAILED);
 				} else {
@@ -421,12 +457,13 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 		//
 		// Constraints
 		//
-		Map<String, TableImportResult> constraintResults = createForeignKeys(serverName, databaseName, database, user, new AuthenticationDetails().getOrdsOdbcUserMasterPassword(), commit);
+		Map<String, TableImportResult> constraintResults = createForeignKeys(
+				serverName, databaseName, database, commit);
 
 		//
 		// Merge results
 		//
-		for (String key : results.keySet()){
+		for (String key : results.keySet()) {
 			results.get(key).merge(constraintResults.get(key));
 		}
 
@@ -435,6 +472,7 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 
 	/**
 	 * Adds a column to a table.
+	 * 
 	 * @param server
 	 * @param database
 	 * @param table
@@ -442,13 +480,16 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 	 * @param dataType
 	 * @return true if the column is successfully added
 	 */
-	private boolean addColumnToTable(String server, String database, String user, String password, String table, String columnName, String dataType) {
+	private boolean addColumnToTable(String server, String database, String table, String columnName,
+			String dataType) {
 
 		columnName = getNormalisedColumnName(columnName);
 
-		String sql = String.format("alter table \"%s\" add column \"%s\" %s", table, columnName.trim(), dataType);
+		String sql = String.format("alter table \"%s\" add column \"%s\" %s",
+				table, columnName.trim(), dataType);
 		try {
-			return (new QueryRunner(server, database, user, password).runDBQuery(sql, 0, 0));
+			return (new QueryRunner(server, database)
+					.runDBQuery(sql, 0, 0));
 		} catch (ClassNotFoundException | SQLException e) {
 			log.debug("Error creating table column", e);
 			return false;
@@ -456,44 +497,48 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 	}
 
 	/**
-	 * If we want to change table names on import we can put the rules here
-	 * For now I'm just changing to lowercase but otherwise leaving intact
+	 * If we want to change table names on import we can put the rules here For
+	 * now I'm just changing to lowercase but otherwise leaving intact
+	 * 
 	 * @param tableName
 	 * @return
 	 */
-	private String getNormalisedTableName(String tableName){
+	private String getNormalisedTableName(String tableName) {
 		return tableName.toLowerCase();
 	}
 
-	private String getNormalisedColumnName(String columnName){
+	private String getNormalisedColumnName(String columnName) {
 		//
 		// Avoid double-quotes - if a column name is in quotes, then PG will
 		// add more quotes around it causing the query to fail
 		//
-		if (columnName.startsWith("\"") && columnName.endsWith("\"")){
-			columnName = columnName.substring(1, columnName.length()-1);
+		if (columnName.startsWith("\"") && columnName.endsWith("\"")) {
+			columnName = columnName.substring(1, columnName.length() - 1);
 		}
 		return columnName;
 	}
 
 	/**
 	 * Creates a primary key constraint
+	 * 
 	 * @param server
 	 * @param database
 	 * @param table
 	 * @param columnNames
 	 * @return true if successful
 	 */
-	private boolean addPrimaryKeysToTable(String server, String database, String user, String password, String table, List<String> columnNames){
+	private boolean addPrimaryKeysToTable(String server, String database, String table, List<String> columnNames) {
 		String columns = "";
-		for (String column : columnNames){
-			columns += ( "\"" + getNormalisedColumnName(column) + "\", ");
+		for (String column : columnNames) {
+			columns += ("\"" + getNormalisedColumnName(column) + "\", ");
 		}
 		columns = columns.substring(0, columns.lastIndexOf(","));
 
-		String command = String.format("alter table \"%s\" ADD PRIMARY KEY (%s)", table, columns);
+		String command = String.format(
+				"alter table \"%s\" ADD PRIMARY KEY (%s)", table, columns);
 		try {
-			return (new QueryRunner(server, database, user, password).runDBQuery(command, 0, 0));
+			return (new QueryRunner(server, database)
+					.runDBQuery(command, 0, 0));
 		} catch (ClassNotFoundException | SQLException e) {
 			log.debug("Error creating primary key", e);
 			return false;
@@ -502,15 +547,16 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 
 	/**
 	 * Create a new table
+	 * 
 	 * @param table
 	 * @param commit
 	 * @param serverName
 	 * @param databaseName
 	 * @return true if successful
 	 */
-	private boolean createTableStructure(Table table, boolean commit, String serverName, String databaseName, String user) {
+	private boolean createTableStructure(Table table, boolean commit,
+			String serverName, String databaseName) {
 		log.debug("createTableStructure");
-
 
 		if (table == null) {
 			log.error("Null table provided. Unable to work with this.");
@@ -522,47 +568,52 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 		//
 		// Create the table with a dummy column
 		//
-		String command = String.format("create table \"%s\" (\"%s\" integer);", tableName, DUMMY_COLUMN_NAME);
+		String command = String.format("create table \"%s\" (\"%s\" integer);",
+				tableName, DUMMY_COLUMN_NAME);
 
 		//
 		// Actually create the table
 		//
-        AuthenticationDetails ad = new AuthenticationDetails();
-		if (commit){
+		AuthenticationDetails ad = new AuthenticationDetails();
+		if (commit) {
 			try {
-                /*
-                 * We need to use the root creds to create tables. This is because only using those creds do the correct
-                 * ODBC permissions get used as set up in the schema. Surely that shouldn't be?
-                 */
-                QueryRunner qr = new QueryRunner(serverName, databaseName, ad.getRootDbUser(), ad.getRootDbPassword());
-				if (qr.runDBQuery(command) == false) { 
-                    return false;
-                }
-                if (!qr.runDBQuery(String.format("alter table  \"%s\" owner to %s", tableName, user))) {
-                    return false;
-                }
+				/*
+				 * We need to use the root creds to create tables. This is
+				 * because only using those creds do the correct ODBC
+				 * permissions get used as set up in the schema. Surely that
+				 * shouldn't be?
+				 */
+				QueryRunner qr = new QueryRunner(serverName, databaseName);
+				if (qr.runDBQuery(command) == false) {
+					return false;
+				}
 			} catch (ClassNotFoundException | SQLException e) {
-				log.debug("Error trying to create table",e);
+				log.debug("Error trying to create table", e);
 				return false;
 			}
 		}
 
 		//
 		// Create each column
-		// 
+		//
 		for (Column column : table.getColumns()) {
-			if (!(column.getName().startsWith("s_") || column.getName().startsWith("Gen_"))) {
-				if (commit){
-					if (column.isAutoNumber()){
-						addColumnToTable(serverName, databaseName, user, ad.getOrdsOdbcUserMasterPassword(), tableName, column.getName(), "SERIAL");
-					}
-					else {
-						addColumnToTable(serverName, databaseName, user, ad.getOrdsOdbcUserMasterPassword(), tableName, column.getName(), getPostgresTypeForAccessDataType(column.getType()));
+			if (!(column.getName().startsWith("s_") || column.getName()
+					.startsWith("Gen_"))) {
+				if (commit) {
+					if (column.isAutoNumber()) {
+						addColumnToTable(serverName, databaseName, tableName,
+								column.getName(), "SERIAL");
+					} else {
+						addColumnToTable(serverName, databaseName,tableName,
+								column.getName(),
+								getPostgresTypeForAccessDataType(column
+										.getType()));
 					}
 				}
-			}
-			else {
-				log.info(String.format("Column <%s> is not suitable for processing", column.getName()));
+			} else {
+				log.info(String.format(
+						"Column <%s> is not suitable for processing",
+						column.getName()));
 			}
 		}
 
@@ -570,22 +621,23 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 		// Add primary keys
 		//
 		List<String> primaryKeyList = getPrimaryKeys(table);
-		if (commit && !primaryKeyList.isEmpty()){
-			addPrimaryKeysToTable(serverName, databaseName, user, ad.getOrdsOdbcUserMasterPassword(), tableName, primaryKeyList);
+		if (commit && !primaryKeyList.isEmpty()) {
+			addPrimaryKeysToTable(serverName, databaseName, tableName,
+					primaryKeyList);
 		}
-
 
 		//
 		// Remove dummy column
 		//
-		command = String.format("alter table \"%s\" drop column \"%s\"", tableName, DUMMY_COLUMN_NAME);
+		command = String.format("alter table \"%s\" drop column \"%s\"",
+				tableName, DUMMY_COLUMN_NAME);
 		if (commit) {
 			try {
-				return new QueryRunner(serverName, databaseName, user, ad.getOrdsOdbcUserMasterPassword()).runDBQuery(command);
+				return new QueryRunner(serverName, databaseName).runDBQuery(command);
 			} catch (ClassNotFoundException | SQLException e) {
 				log.debug("Error removing dummy column", e);
 				return false;
-			}		
+			}
 		}
 
 		return true;
@@ -598,37 +650,47 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 	 * @param serverName
 	 * @param databaseName
 	 * @param database
-	 * @param commit if true, will commit changes; otherwise will simply record whether obtaining the data from the file was successful
-	 * @return a map of TableImportResult instances with the foreign key stats completed
+	 * @param commit
+	 *            if true, will commit changes; otherwise will simply record
+	 *            whether obtaining the data from the file was successful
+	 * @return a map of TableImportResult instances with the foreign key stats
+	 *         completed
 	 * @throws IOException
 	 */
-	private Map<String, TableImportResult> createForeignKeys(String serverName, String databaseName, Database database, String user, String password, boolean commit) throws IOException{
+	private Map<String, TableImportResult> createForeignKeys(String serverName,
+			String databaseName, Database database, boolean commit) throws IOException {
 
 		Map<String, TableImportResult> results = new HashMap<String, TableImportResult>();
-		
+
 		List<Relationship> relationships = database.getRelationships();
 
 		Iterator<String> fromTables = database.getTableNames().iterator();
 		Iterator<String> toTables = database.getTableNames().iterator();
-		
+
 		//
-		// Go through all combinations of tables and set the outcome to SUCCESSFUL - if
+		// Go through all combinations of tables and set the outcome to
+		// SUCCESSFUL - if
 		// we do come across a problem we reset it to FAILED
 		//
 		try {
-			while (fromTables.hasNext()){
+			while (fromTables.hasNext()) {
 				String fromTable = fromTables.next();
-				results.put(getNormalisedTableName(fromTable), new TableImportResult());
-				results.get(getNormalisedTableName(fromTable)).setTableConstraintResult(TableImportResult.SUCCESSFUL);
-				while (toTables.hasNext()){
+				results.put(getNormalisedTableName(fromTable),
+						new TableImportResult());
+				results.get(getNormalisedTableName(fromTable))
+						.setTableConstraintResult(TableImportResult.SUCCESSFUL);
+				while (toTables.hasNext()) {
 					String toTable = toTables.next();
-					results.put(getNormalisedTableName(toTable), new TableImportResult());
-					results.get(getNormalisedTableName(toTable)).setTableConstraintResult(TableImportResult.SUCCESSFUL);
+					results.put(getNormalisedTableName(toTable),
+							new TableImportResult());
+					results.get(getNormalisedTableName(toTable))
+							.setTableConstraintResult(
+									TableImportResult.SUCCESSFUL);
 				}
 			}
 		} catch (Exception e) {
-			log.error("Error reading relatioships",e);
-			for (TableImportResult result : results.values()){
+			log.error("Error reading relatioships", e);
+			for (TableImportResult result : results.values()) {
 				result.setTableConstraintResult(TableImportResult.FAILED);
 			}
 			return results;
@@ -638,20 +700,40 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 		// Actually create the relations in PostgreSQL
 		//
 		if (commit) {
-			for (Relationship relationship: relationships){
+			for (Relationship relationship : relationships) {
 				try {
-					if (!createForeignKeyRelation(serverName, databaseName, user, password, relationship)){
-						results.get(getNormalisedTableName(relationship.getFromTable().getName())).setTableConstraintResult(TableImportResult.FAILED);
+					if (!createForeignKeyRelation(serverName, databaseName,relationship)) {
+						results.get(
+								getNormalisedTableName(relationship
+										.getFromTable().getName()))
+								.setTableConstraintResult(
+										TableImportResult.FAILED);
 					} else {
-						int constraints = results.get(getNormalisedTableName(relationship.getFromTable().getName())).getConstraintsAdded() +1 ; 
-						results.get(getNormalisedTableName(relationship.getFromTable().getName())).setConstraintsAdded(constraints);
+						int constraints = results.get(
+								getNormalisedTableName(relationship
+										.getFromTable().getName()))
+								.getConstraintsAdded() + 1;
+						results.get(
+								getNormalisedTableName(relationship
+										.getFromTable().getName()))
+								.setConstraintsAdded(constraints);
 					}
 				} catch (ClassNotFoundException e) {
-					results.get(getNormalisedTableName(relationship.getFromTable().getName())).setTableConstraintResult(TableImportResult.FAILED);
-					results.get(getNormalisedTableName(relationship.getFromTable().getName())).addException(e);
+					results.get(
+							getNormalisedTableName(relationship.getFromTable()
+									.getName())).setTableConstraintResult(
+							TableImportResult.FAILED);
+					results.get(
+							getNormalisedTableName(relationship.getFromTable()
+									.getName())).addException(e);
 				} catch (SQLException e) {
-					results.get(getNormalisedTableName(relationship.getFromTable().getName())).setTableConstraintResult(TableImportResult.FAILED);
-					results.get(getNormalisedTableName(relationship.getFromTable().getName())).addException(e);
+					results.get(
+							getNormalisedTableName(relationship.getFromTable()
+									.getName())).setTableConstraintResult(
+							TableImportResult.FAILED);
+					results.get(
+							getNormalisedTableName(relationship.getFromTable()
+									.getName())).addException(e);
 				}
 			}
 		}
@@ -661,48 +743,73 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 
 	/**
 	 * Creates a foreign key constraint.
+	 * 
 	 * @param server
 	 * @param database
 	 * @param relationship
-	 * @return true if the relationship was created, false if there was any problem with the query
-	 * @throws SQLException 
-	 * @throws ClassNotFoundException 
+	 * @return true if the relationship was created, false if there was any
+	 *         problem with the query
+	 * @throws SQLException
+	 * @throws ClassNotFoundException
 	 */
-	private boolean createForeignKeyRelation(String server, String database, String user, String password, Relationship relationship) throws ClassNotFoundException, SQLException {
+	private boolean createForeignKeyRelation(String server, String database,
+			Relationship relationship)
+			throws ClassNotFoundException, SQLException {
 		String fromColumn = relationship.getFromColumns().get(0).getName();
 		String toColumn = relationship.getToColumns().get(0).getName();
-		String fromTable = getNormalisedTableName(relationship.getFromTable().getName());
-		String toTable = getNormalisedTableName(relationship.getToTable().getName());
-		String command = ("ALTER TABLE \"" + toTable + "\" ADD CONSTRAINT "+relationship.getName()+" FOREIGN KEY (\"" + toColumn + "\") REFERENCES \""
-				+ fromTable + "\" (\"" + fromColumn + "\") ON UPDATE NO ACTION ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED; \n");
-		return new QueryRunner(server, database, user, password).runDBQuery(command);
+		String fromTable = getNormalisedTableName(relationship.getFromTable()
+				.getName());
+		String toTable = getNormalisedTableName(relationship.getToTable()
+				.getName());
+		String command = ("ALTER TABLE \"" + toTable + "\" ADD CONSTRAINT "
+				+ relationship.getName() + " FOREIGN KEY (\"" + toColumn
+				+ "\") REFERENCES \"" + fromTable + "\" (\"" + fromColumn + "\") ON UPDATE NO ACTION ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED; \n");
+		return new QueryRunner(server, database)
+				.runDBQuery(command);
 	}
 
 	/**
 	 * Maps Access dataTypes to PostgreSQL datatypes
+	 * 
 	 * @param type
 	 * @return
 	 */
-	private String getPostgresTypeForAccessDataType(DataType type){
-		if (type.equals(DataType.BOOLEAN)) return "bool";
-		if (type.equals(DataType.BINARY)) return "int2";
-		if (type.equals(DataType.BYTE)) return "int2";
-		if (type.equals(DataType.COMPLEX_TYPE)) return "bit";
-		if (type.equals(DataType.DOUBLE)) return "double precision";
-		if (type.equals(DataType.FLOAT)) return "float4";
-		if (type.equals(DataType.GUID)) return "character varying(255)";
-		if (type.equals(DataType.INT)) return "int4";
-		if (type.equals(DataType.LONG)) return "int8";
-		if (type.equals(DataType.MEMO)) return "text";
-		if (type.equals(DataType.MONEY)) return "numeric";
-		if (type.equals(DataType.NUMERIC)) return "decimal(20,4)";
-		if (type.equals(DataType.OLE)) return "bytea";
+	private String getPostgresTypeForAccessDataType(DataType type) {
+		if (type.equals(DataType.BOOLEAN))
+			return "bool";
+		if (type.equals(DataType.BINARY))
+			return "int2";
+		if (type.equals(DataType.BYTE))
+			return "int2";
+		if (type.equals(DataType.COMPLEX_TYPE))
+			return "bit";
+		if (type.equals(DataType.DOUBLE))
+			return "double precision";
+		if (type.equals(DataType.FLOAT))
+			return "float4";
+		if (type.equals(DataType.GUID))
+			return "character varying(255)";
+		if (type.equals(DataType.INT))
+			return "int4";
+		if (type.equals(DataType.LONG))
+			return "int8";
+		if (type.equals(DataType.MEMO))
+			return "text";
+		if (type.equals(DataType.MONEY))
+			return "numeric";
+		if (type.equals(DataType.NUMERIC))
+			return "decimal(20,4)";
+		if (type.equals(DataType.OLE))
+			return "bytea";
 		//
-		// Note that we can't tell if its really a DATE, TIME or TIMESTAMP. So users will
+		// Note that we can't tell if its really a DATE, TIME or TIMESTAMP. So
+		// users will
 		// have to use the schema editor to change it as appropriate.
 		//
-		if (type.equals(DataType.SHORT_DATE_TIME)) return "timestamp";
-		if (type.equals(DataType.TEXT)) return "character varying(255)";
+		if (type.equals(DataType.SHORT_DATE_TIME))
+			return "timestamp";
+		if (type.equals(DataType.TEXT))
+			return "character varying(255)";
 		return "text";
 	}
 
@@ -728,13 +835,17 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 
 	/**
 	 * Determine if the table should be excluded from import
+	 * 
 	 * @param tableName
 	 * @return true if the table should be excluded
 	 */
-	private boolean excludeTable(String tableName){
-		if (tableName.trim().startsWith("~TMP")) return true;
-		if (tableName.contains("_Conflict")) return true;
-		if (tableName.equals("Switchboard Items")) return true;
+	private boolean excludeTable(String tableName) {
+		if (tableName.trim().startsWith("~TMP"))
+			return true;
+		if (tableName.contains("_Conflict"))
+			return true;
+		if (tableName.equals("Switchboard Items"))
+			return true;
 		return false;
 	}
 

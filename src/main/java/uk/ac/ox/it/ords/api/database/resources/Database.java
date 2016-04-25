@@ -250,7 +250,7 @@ public class Database {
 			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_DELETE(physicalDatabase.getLogicalDatabaseId()))) {
 				return Response.status(Response.Status.FORBIDDEN).build();
 			}
-			tableViewService().deleteStaticDataSet(id, datasetID);
+			tableViewService().deleteStaticDataSet(datasetID);
 		}
 		catch ( NotFoundException nfe ) {
 			return Response.status(Response.Status.GONE).build();

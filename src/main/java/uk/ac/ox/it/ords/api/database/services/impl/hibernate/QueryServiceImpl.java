@@ -36,10 +36,8 @@ public class QueryServiceImpl extends DatabaseServiceImpl
 		OrdsPhysicalDatabase db = this.getPhysicalDatabaseFromID(dbId);
 		String dbName = db.getDbConsumedName();
 		String server = db.getDatabaseServer();
-		String userName = this.getODBCUser();
-		String password = this.getODBCPassword();
 		
-		QueryRunner qr = new QueryRunner(server,dbName,userName, password);
+		QueryRunner qr = new QueryRunner(server,dbName);
 		qr.runDBQuery(q, startIndex, rowsPerPage);
 		return qr.getTableData();
 	}
@@ -50,9 +48,7 @@ public class QueryServiceImpl extends DatabaseServiceImpl
 		OrdsPhysicalDatabase db = this.getPhysicalDatabaseFromID(dbId);
 		String dbName = db.getDbConsumedName();
 		String server = db.getDatabaseServer();
-		String userName = this.getODBCUser();
-		String password = this.getODBCPassword();
-        QueryRunner qr = new QueryRunner(server,dbName, userName, password);
+        QueryRunner qr = new QueryRunner(server,dbName);
 
 		TableData referenceValues = new TableData();
         try {

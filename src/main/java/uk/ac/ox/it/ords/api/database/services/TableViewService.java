@@ -59,7 +59,7 @@ public interface TableViewService {
 	 * @param datasetId
 	 * @throws Exception
 	 */
-	public void deleteStaticDataSet ( int dbId,   int datasetId ) throws Exception;
+	public void deleteStaticDataSet ( int datasetId ) throws Exception;
 	
 	
 	/**

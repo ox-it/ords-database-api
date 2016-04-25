@@ -56,17 +56,11 @@ public class GeneralSQLQueries extends ORDSPostgresDB {
 	}
 
 
-	public GeneralSQLQueries(String dbServer, String dbName, String odbcUser, String odbcPassword) throws SQLException,
+	public GeneralSQLQueries(String dbServer, String dbName) throws SQLException,
 			ClassNotFoundException, DBEnvironmentException {
-		super(dbServer, dbName, odbcUser, odbcPassword);
+		super(dbServer, dbName);
 	}
     
-    public GeneralSQLQueries(String dbServer, String dbName, String ordsOdbcUser) throws SQLException,
-			ClassNotFoundException, DBEnvironmentException {
-		super(dbServer, dbName, ordsOdbcUser);
-	}
-	
-	
 //	/*
 //	 * This is just a convenience constructor. It is a little naughty to introduce OrdsPhysicalDatabase here
 //	 */
@@ -219,7 +213,7 @@ public class GeneralSQLQueries extends ORDSPostgresDB {
 		boolean ret = false;
 
 		if (dq == null) {
-			ret = new DatabaseQueries(getCurrentDbServer(), getCurrentDbName(), getCurrentDbUser(), getCurrentDbPw())
+			ret = new DatabaseQueries(getCurrentDbServer(), getCurrentDbName())
 			.createAndExecuteStatement(command, dataTypeMaps, tableName);
 		}
 		else {
@@ -233,7 +227,7 @@ public class GeneralSQLQueries extends ORDSPostgresDB {
 				log.error("Unable to reset the sequence - will try the insert again, just in case");
 			}
 			if (dq == null) {
-				ret = new DatabaseQueries(getCurrentDbServer(), getCurrentDbName(), getCurrentDbUser(), getCurrentDbPw()).createAndExecuteStatement(command, dataTypeMaps, tableName);
+				ret = new DatabaseQueries(getCurrentDbServer(), getCurrentDbName()).createAndExecuteStatement(command, dataTypeMaps, tableName);
 			}
 			else {
 				ret = dq.createAndExecuteStatement(command, dataTypeMaps, tableName);
@@ -451,7 +445,7 @@ public class GeneralSQLQueries extends ORDSPostgresDB {
 						}
 
 						AuthenticationDetails ad = new AuthenticationDetails();
-						ret = new DatabaseQueries(getCurrentDbServer(), getCurrentDbName(), actor.calculateOdbcUserForOrds(), ad.getOrdsOdbcUserMasterPassword()).createAndExecuteStatement(updateString, dataTypeMap, tableName, primKey,
+						ret = new DatabaseQueries(getCurrentDbServer(), getCurrentDbName()).createAndExecuteStatement(updateString, dataTypeMap, tableName, primKey,
 								originalKeyDataArray[rowIndex++]);
 					}
 					else {

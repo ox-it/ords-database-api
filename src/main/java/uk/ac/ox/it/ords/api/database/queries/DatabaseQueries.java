@@ -25,8 +25,8 @@ import com.sun.rowset.CachedRowSetImpl;
 public class DatabaseQueries extends QueryRunner {
 	private static Logger log = LoggerFactory.getLogger(DatabaseQueries.class);
 	
-	public DatabaseQueries(String dbServer, String dbName, String odbcUser, String odbcPassword) {
-		super(dbServer, dbName, odbcUser, odbcPassword);
+	public DatabaseQueries(String dbServer, String dbName) {
+		super(dbServer, dbName);
 	}
 	
 	public DatabaseQueries(String dbServer) {

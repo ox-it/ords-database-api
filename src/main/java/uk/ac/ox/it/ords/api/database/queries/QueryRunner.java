@@ -42,12 +42,12 @@ public class QueryRunner {
     private TableData tableData = null;
     
     
-    public QueryRunner(String dbServer, String dbName, String odbcUser, String odbcPassword) {
+    public QueryRunner(String dbServer, String dbName) {
         if (log.isDebugEnabled()) {
-            log.debug(String.format("QR Constructor:%s,%s,%s", dbServer, dbName, odbcUser));
+            log.debug(String.format("QR Constructor:%s,%s", dbServer, dbName ));
         }
     	setCredentials(dbServer, dbName);
-    	setCredentialsSpecial(odbcUser, odbcPassword);
+    	//setCredentialsSpecial(odbcUser, odbcPassword);
     }
     
 

@@ -71,8 +71,8 @@ public class DBCredentials extends HibernateCreds {
         }
         
         AuthenticationDetails ad = new AuthenticationDetails();
-        user = ad.getRootDbUser();
-        password = ad.getRootDbPassword();
+        user = ad.getOrdsUser();
+        password = ad.getOrdsPassword();
     }
     
     public void logCreds() {

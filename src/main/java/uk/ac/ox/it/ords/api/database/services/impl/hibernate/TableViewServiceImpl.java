@@ -52,10 +52,8 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		String databaseName = tableView.getAssociatedDatabase();
 		String server = db.getDatabaseServer();
 		// run as ords superuser because this might be accessed by an unauthenticated user.
-		String userName = this.getORDSDatabaseUser();
-		String password = this.getORDSDatabasePassword();
 		
-		QueryRunner qr = new QueryRunner(server,databaseName,userName, password);
+		QueryRunner qr = new QueryRunner(server,databaseName);
 		qr.runDBQuery(query, startIndex, rowsPerPage);
 		TableData tableData =  qr.getTableData();
 		
@@ -75,17 +73,17 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	}
 
 	@Override
-	public void deleteStaticDataSet(int dbId, int datasetId)
+	public void deleteStaticDataSet(int datasetId)
 			throws Exception {
 		TableView tableView = this.getTableView(datasetId);
 		String databaseName = tableView.getAssociatedDatabase();
-		String statement = this.getTerminateStatement(databaseName);
-		this.singleResultQuery(statement);
-		
-		statement = "rollback transaction; drop database " + databaseName + ";";
-		this.runSQLStatementOnOrdsDB(statement);
-		
+
 		this.removeModelObject(tableView);
+
+		String statement = this.getTerminateStatement(databaseName);
+		this.runJDBCQuery(statement, null, this.getORDSDatabaseHost(), databaseName);
+		statement = "drop database " + databaseName + ";";
+		this.runJDBCQuery(statement, null, this.getORDSDatabaseHost(), this.getORDSDatabaseName());
 	}
 
 
@@ -120,14 +118,12 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	public TableData getDatabaseRows(int dbId,
 			String tableName, int startIndex, int rowsPerPage,
 			String sort, String sortDirection) throws Exception {
-		String userName = this.getODBCUser();
-		String password = this.getODBCPassword();
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
 		if ( database == null ) {
 			throw new NotFoundException();
 		}
 		
-		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(null,database.getDbConsumedName(), userName, password );
+		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(null,database.getDbConsumedName() );
 		boolean direction = false;
 		if (sortDirection != null && sortDirection.equalsIgnoreCase("ASC") ){
 			direction = true;
@@ -142,8 +138,6 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	@Override
 	public int appendTableData(int dbId, String tableName,
 			Row newData) throws Exception {
-		String userName = this.getODBCUser();
-		String password = this.getODBCPassword();
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
 		if ( database == null ) {
 			throw new NotFoundException();
@@ -151,9 +145,9 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 
 		String server = database.getDatabaseServer();
 
-		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(server, database.getDbConsumedName(), userName, password );
+		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(server, database.getDbConsumedName() );
 		// create a database queries that points by default to the local ordsdb
-		DatabaseQueries dq = new DatabaseQueries(server, database.getDbConsumedName(), userName, password);
+		DatabaseQueries dq = new DatabaseQueries(server, database.getDbConsumedName());
 		sqlQueries.addRowToTable(tableName, newData.columnNames, newData.values, dq);
 		
 		return 0;
@@ -162,8 +156,6 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	@Override
 	public int updateTableRow(int dbId, String tableName, List<Row> rowDataList)
 			throws Exception {
-		String userName = this.getODBCUser();
-		String password = this.getODBCPassword();
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
 		if ( database == null ) {
 			throw new NotFoundException();
@@ -193,7 +185,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 				command += "'"+rowData.lookupValue+"'";
 			}
 			
-			QueryRunner q = new QueryRunner ( server, database.getDbConsumedName(), userName, password );
+			QueryRunner q = new QueryRunner ( server, database.getDbConsumedName());
 			
 			q.runDBQuery(command);
 		}
@@ -204,13 +196,11 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	@Override
 	public void deleteTableData(int dbId, String tableName,
 			String primaryKey, String primaryKeyValue) throws Exception {
-		String userName = this.getODBCUser();
-		String password = this.getODBCPassword();
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
 		if ( database == null ) {
 			throw new NotFoundException();
 		}
-		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(null, database.getDbConsumedName(), userName, password );
+		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(null, database.getDbConsumedName() );
 		Row rowToRemove = new Row();
 		rowToRemove.columnNames = new String[]{primaryKey};
 		rowToRemove.values = new String[]{primaryKeyValue};
@@ -228,6 +218,11 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		Subject s = SecurityUtils.getSubject();
 		String principalName = s.getPrincipal().toString();
 		User u = this.getUserByPrincipal(principalName);
+		
+		if ( datasetId != 0 ) {
+			// remove old static copy
+			this.dropDatasetDatabase(datasetId);
+		}
 		String staticDBName = this.generateStaticDBName(physicalDatabase.getDbConsumedName());
 
 		TableView viewRecord = this.getTableView(datasetId);
@@ -322,9 +317,9 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
     
     
 	private void copyStatic (String from, String to ) throws Exception {
-		String userName = this.getODBCUser();
-		String password = this.getODBCPassword();
-		this.createOBDCUserRole(userName, password);
+//		String userName = this.getODBCUser();
+//		String password = this.getODBCPassword();
+//		this.createOBDCUserRole(userName, password);
 		
 		if (this.checkDatabaseExists(to)) {
 			String statement = this.getTerminateStatement(to);
@@ -333,12 +328,24 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 			this.runSQLStatementOnOrdsDB(statement);
 		}
 		String clonedb = String.format(
-				"ROLLBACK TRANSACTION; CREATE DATABASE %s WITH TEMPLATE %s OWNER = %s",
+				"ROLLBACK TRANSACTION; CREATE DATABASE %s WITH TEMPLATE %s",
 				quote_ident(to),
-				quote_ident(from),
-				quote_ident(userName));
+				quote_ident(from));
 		this.runSQLStatementOnOrdsDB(clonedb);
 	
+	}
+	
+	
+	private void dropDatasetDatabase ( int datasetId) throws Exception {
+		TableView tableView = this.getTableView(datasetId);
+		String databaseName = tableView.getAssociatedDatabase();
+
+
+		String statement = this.getTerminateStatement(databaseName);
+		this.runJDBCQuery(statement, null, this.getORDSDatabaseHost(), databaseName);
+		statement = "drop database " + databaseName + ";";
+		this.runJDBCQuery(statement, null, this.getORDSDatabaseHost(), this.getORDSDatabaseName());
+
 	}
 
 
