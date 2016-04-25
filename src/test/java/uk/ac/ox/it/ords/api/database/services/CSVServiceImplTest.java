@@ -66,7 +66,7 @@ public class CSVServiceImplTest {
 		File csvFile = csvService.exportTable(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME),
-				"project"
+				"user"
 		);
 		assertTrue(csvFile.exists());
 		assertTrue(csvFile.length() > 0);
@@ -209,10 +209,11 @@ public class CSVServiceImplTest {
 		TableData tableData = new GeneralSQLQueries(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
-				).getColumnNamesForTable("project");
+				).getColumnNamesForTable("user");
 		
 		
         assertNotNull(tableData);
+        
 		CSVService csvService = CSVService.Factory.getInstance();
 		File csvFile = csvService.exportTable(
 				properties.getString(ORDS_DATABASE_HOST),
