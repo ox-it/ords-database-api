@@ -148,11 +148,16 @@ public class Database {
 	@Path("{id}/dataset/{datasetId}")
 	public Response getDatabaseDataset(@PathParam("id") final int id,
 			@PathParam("datasetId") int datasetId ) {
-		TableViewInfo tableViewInfo = null;
 
+		//
+		// Obtain the database
+		//
 		OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
 		if (physicalDatabase == null) return Response.status(404).build();
 
+		//
+		// Check permissions
+		//
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
 
 			// TODO audit
@@ -160,15 +165,22 @@ public class Database {
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 
+		//
+		// Attempt to get the dataset
+		//
 		try {
-			tableViewInfo = tableViewService().getStaticDataSet(datasetId);
+			TableViewInfo tableViewInfo = tableViewService().getStaticDataSet(datasetId);
 
 			// TODO audit
 
 			return Response.ok(tableViewInfo).build();
 
-		} catch (Exception e) {
+		} catch (NotFoundException e) {
 
+			return Response.status(404).build();
+
+		} catch (Exception e) {
+			
 			log.error(e);
 
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -305,7 +317,7 @@ public class Database {
 		//
 		OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
 		if (physicalDatabase == null) return Response.status(404).build();
-
+		
 		//
 		// Check permission
 		//
@@ -323,6 +335,13 @@ public class Database {
 			return Response.status(Response.Status.OK).build();
 
 		}
+		
+		catch (NotFoundException ex) {
+			
+			log.error(ex);
+			
+			return Response.status(Response.Status.NOT_FOUND).build();
+		} 
 
 		catch ( Exception e ) {
 
@@ -590,6 +609,14 @@ public class Database {
 			
 			// TODO audit
 			
+			return Response.status(Response.Status.OK).build();
+
+		} catch (BadParameterException ex) {
+				
+			log.error(ex);
+				
+			return Response.status(Response.Status.NOT_FOUND).build();
+				
 		} catch (Exception e) {
 			
 			log.error(e);
@@ -597,8 +624,6 @@ public class Database {
 			return Response.status(500).build();
 			
 		}
-		
-		return Response.status(Response.Status.OK).build();
 	}
 	
 	
@@ -671,22 +696,37 @@ public class Database {
 			@DefaultValue("0") @QueryParam("start") int startIndex,
 			@DefaultValue("100") @QueryParam("length") int rowsPerPage) {
 		TableData data = null;
-		try {
-			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
-			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
-				return Response.status(Response.Status.FORBIDDEN).build();
-			}
-			data = queryService().performQuery(id, theQuery, startIndex, rowsPerPage, null, null);
+		
+		OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
+		if (physicalDatabase == null) return Response.status(404).build();
+
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
+			
+			// TODO audit
+			
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
+		
+		try {
+			data = queryService().performQuery(id, theQuery, startIndex, rowsPerPage, null, null);
+			return Response.status(Response.Status.OK).entity(data).build();
+		}
+		//
+		// TODO as far as I can tell this is never thrown - it should whenever the query
+		// has any problems with it, rather than falling over and generating a 500.
+		//
 		catch (BadParameterException ex) {
-			Response.status(Response.Status.NOT_FOUND).entity(ex)
-					.build();
+			
+			log.error(ex);
+			
+			return Response.status(Response.Status.NOT_FOUND).build();
 		} 
 		catch (Exception e) {
-			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(e).build();
+			
+			log.error(e);
+			
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
 		}
-		return Response.status(Response.Status.OK).entity(data).build();
 
 	}
 
