@@ -57,11 +57,60 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		//
 		// Get dataset
 		//
+		assertEquals(404, getClient(true).path("/9999/datasetdata/9999").get().getStatus());
 		assertEquals(404, getClient(true).path("/"+id+"/datasetdata/9999").get().getStatus());
 		
 		// Cleanup
 		AbstractResourceTest.databases.add(r);
 
+		logout();
+		
+	}
+	
+	@Test
+	public void getDatasetUnauth() throws Exception{
+		loginUsingSSO("pingu@nowhere.co", "");		
+		
+		//
+		// Import a database
+		//
+		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		
+		//
+		// Create the dataset
+		//
+		TableViewInfo dataset = new TableViewInfo();
+		dataset.setViewName("test");
+		dataset.setViewTable("City");
+		dataset.setViewQuery("SELECT 'CityName', 'Population' from City");
+		dataset.setViewDescription("test");
+		dataset.setViewAuthorization("private");
+		response = getClient(true).path("/"+id+"/dataset/").post(dataset);	
+		assertEquals(201, response.getStatus());
+		
+		//
+		// Get the metadata
+		//
+		path = response.getLocation().getPath();
+		String viewId = path.substring(path.lastIndexOf('/')+1);
+		logout();
+		assertEquals(403, getClient(true).path("/"+id+"/dataset/"+viewId).get().getStatus());
+		
+		// Cleanup
+		loginUsingSSO("pingu@nowhere.co", "");
+		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
+		AbstractResourceTest.databases.add(r);
 		logout();
 		
 	}
@@ -127,6 +176,10 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		assertEquals(403, response.getStatus());		
 
 		// Cleanup
+		loginUsingSSO("pingu@nowhere.co", "");
+
+		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
+
 		AbstractResourceTest.databases.add(r);
 
 		logout();
@@ -198,6 +251,94 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		
 
 		// Cleanup
+		loginUsingSSO("pingu@nowhere.co", "");
+		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
+		
+		AbstractResourceTest.databases.add(r);
+
+		logout();
+
+	}
+	
+	@Test
+	public void updateDataset() throws Exception{
+		
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		//
+		// Import a database
+		//
+		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		
+		//
+		// Create the dataset
+		//
+		TableViewInfo dataset = new TableViewInfo();
+		dataset.setViewName("test");
+		dataset.setViewTable("City");
+		dataset.setViewQuery("SELECT 'CityName', 'Population' from City");
+		dataset.setViewDescription("test");
+		dataset.setViewAuthorization("public");
+		response = getClient(true).path("/"+id+"/dataset/").post(dataset);	
+		assertEquals(201, response.getStatus());
+		
+		//
+		// Get the metadata
+		//
+		path = response.getLocation().getPath();
+		String viewId = path.substring(path.lastIndexOf('/')+1);
+
+		response = getClient(true).path("/"+id+"/dataset/"+viewId).get();
+		assertEquals(200, response.getStatus());
+		dataset = response.readEntity(TableViewInfo.class);
+		assertEquals("test", dataset.getViewName());
+		
+		//
+		// Update ... lets try some bad URLs first
+		//
+		assertEquals(404, getClient(true).path("/9999/dataset/"+viewId).put(dataset).getStatus());
+		//
+		// TODO FIXME should be 404, but was 200
+		//
+		// assertEquals(404, getClient(true).path("/"+id+"/dataset/00000").put(dataset).getStatus());
+		
+		//
+		// Now try without logging in
+		//
+		logout();
+		assertEquals(403, getClient(true).path("/"+id+"/dataset/"+viewId).put(dataset).getStatus());	
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		//
+		// Update
+		//
+		dataset.setViewName("test updated");
+		response = getClient(true).path("/"+id+"/dataset/"+viewId).put(dataset);	
+		assertEquals(200, response.getStatus());
+		dataset = null;
+		
+		//
+		// See what we get back
+		//
+		response = getClient(true).path("/"+id+"/dataset/"+viewId).get();
+		assertEquals(200, response.getStatus());
+		dataset = response.readEntity(TableViewInfo.class);
+		assertEquals("test updated", dataset.getViewName());
+
+		// Cleanup
+		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
+		
 		AbstractResourceTest.databases.add(r);
 
 		logout();
@@ -398,7 +539,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		// Delete
 		//
 		logout();
-		//assertEquals(403, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
+		assertEquals(403, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
 		
 		AbstractResourceTest.databases.add(r);
 		logout();
