@@ -35,7 +35,7 @@ import uk.ac.ox.it.ords.api.database.data.TableViewInfo;
 public class DatasetTest extends AbstractDatabaseTestRunner {
 	
 	@Test
-	public void getDataNonExisting() throws Exception{
+	public void getDatasetNonExisting() throws Exception{
 		loginUsingSSO("pingu@nowhere.co", "");		
 		
 		//
@@ -245,8 +245,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void createDatasetBadRequests() throws Exception{
-		
-		
+			
 		loginUsingSSO("pingu@nowhere.co", "");
 		
 		//
@@ -264,7 +263,6 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		String path = response.getLocation().getPath();
 		String id = path.substring(path.lastIndexOf('/')+1);
 		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
-		AbstractResourceTest.databases.add(r);
 		
 		//
 		// Create the dataset
@@ -286,20 +284,125 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		//
 		assertEquals(404, getClient(true).path("/9999/dataset/").post(dataset).getStatus());
 		
+		// Clenaup
+		AbstractResourceTest.databases.add(r);
 		logout();
 	}
 	
 	@Test
-	public void deleteDataset(){
+	public void deleteDataset() throws Exception{
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		//
+		// Import a database
+		//
+		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		
+		//
+		// Create the dataset
+		//
+		TableViewInfo dataset = new TableViewInfo();
+		dataset.setViewName("test");
+		dataset.setViewTable("City");
+		dataset.setViewQuery("SELECT 'CityName', 'Population' from City");
+		dataset.setViewDescription("test");
+		dataset.setViewAuthorization("public");
+		response = getClient(true).path("/"+id+"/dataset/").post(dataset);	
+		assertEquals(201, response.getStatus());
+		
+		//
+		// Get the metadata
+		//
+		path = response.getLocation().getPath();
+		String viewId = path.substring(path.lastIndexOf('/')+1);
+
+		response = getClient(true).path("/"+id+"/dataset/"+viewId).get();
+		assertEquals(200, response.getStatus());
+		dataset = response.readEntity(TableViewInfo.class);
+		assertEquals("test", dataset.getViewName());
+			
+		//
+		// Delete
+		//
+		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
+
+		//
+		// Check its gone
+		//
+		assertEquals(404, getClient(true).path("/"+id+"/dataset/"+viewId).get().getStatus());
+		
+		//
+		// Clean up
+		//
+		AbstractResourceTest.databases.add(r);
+		logout();
 		
 	}
 	
 	@Test
 	public void deleteDatasetUnauth() throws Exception{
 		
-		//TODO
+		loginUsingSSO("pingu@nowhere.co", "");
 		
+		//
+		// Import a database
+		//
+		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		
+		//
+		// Create the dataset
+		//
+		TableViewInfo dataset = new TableViewInfo();
+		dataset.setViewName("test");
+		dataset.setViewTable("City");
+		dataset.setViewQuery("SELECT 'CityName', 'Population' from City");
+		dataset.setViewDescription("test");
+		dataset.setViewAuthorization("public");
+		response = getClient(true).path("/"+id+"/dataset/").post(dataset);	
+		assertEquals(201, response.getStatus());
+		
+		//
+		// Get the metadata
+		//
+		path = response.getLocation().getPath();
+		String viewId = path.substring(path.lastIndexOf('/')+1);
+
+		response = getClient(true).path("/"+id+"/dataset/"+viewId).get();
+		assertEquals(200, response.getStatus());
+		dataset = response.readEntity(TableViewInfo.class);
+		assertEquals("test", dataset.getViewName());
+			
+		//
+		// Delete
+		//
 		logout();
+		//assertEquals(403, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
+		
+		AbstractResourceTest.databases.add(r);
+		logout();
+
 	}
 	
 	@Test
