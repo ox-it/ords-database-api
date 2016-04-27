@@ -65,6 +65,20 @@ public class RelationTest extends AbstractDatabaseTestRunner {
 		
 		assertEquals("AFG", data.rows.get(0).cell.get("value").getValue());
 		assertEquals("Afghanistan", data.rows.get(0).cell.get("label").getValue());
+		
+		//
+		// Lets try a subset search
+		//
+		response = getClient(true).path("/"+id+"/table/country/column/CountryName/related").query("term", "aust").get();
+		assertEquals(200, response.getStatus());
+		data = response.readEntity(TableData.class);
+		assertEquals("value", data.columns.get(0).columnName);
+		assertEquals("label", data.columns.get(1).columnName);
+		
+		assertEquals("AUS", data.rows.get(0).cell.get("value").getValue());
+		assertEquals("Australia", data.rows.get(0).cell.get("label").getValue());
+		assertEquals("A", data.rows.get(1).cell.get("value").getValue());
+		assertEquals("Austria", data.rows.get(1).cell.get("label").getValue());
 				
 		// Cleanup
 		AbstractResourceTest.databases.add(r);
