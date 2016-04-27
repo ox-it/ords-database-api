@@ -16,19 +16,16 @@
 
 package uk.ac.ox.it.ords.api.database.services.impl.hibernate;
 
-import java.util.List;
 
 import org.apache.shiro.SecurityUtils;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.criterion.Restrictions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.permissions.DatabasePermissionSets;
-import uk.ac.ox.it.ords.api.database.server.ValidationException;
 import uk.ac.ox.it.ords.api.database.services.DatabaseRoleService;
 import uk.ac.ox.it.ords.security.model.Permission;
 import uk.ac.ox.it.ords.security.model.UserRole;
