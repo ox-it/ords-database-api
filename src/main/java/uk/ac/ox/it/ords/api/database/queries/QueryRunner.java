@@ -116,14 +116,7 @@ public class QueryRunner {
     
     private void setCredentials(String dbServer) {
     	dbc = new DBCredentials(dbServer, "");
-    }
-    
-    public void setCredentialsSpecial(String user, String password) {
-        //log.debug("setCredentialsSpecial:"+user+":"+password);
-    	dbc.setUser(user);
-    	dbc.setPassword(password);
-    }
-    
+    }    
     
     public boolean isDatabaseExist() {
     	boolean exists = true;

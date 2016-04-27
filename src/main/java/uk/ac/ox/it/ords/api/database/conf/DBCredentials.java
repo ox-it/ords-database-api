@@ -21,15 +21,31 @@ import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
  * @author dave
  * @author kjpopat
  */
-public class DBCredentials extends HibernateCreds {
+public class DBCredentials {
     private static Logger log = LoggerFactory.getLogger(DBCredentials.class);
 
 	protected static String HIBERNATE_CONFIGURATION_PROPERTY = "ords.hibernate.configuration";
+	
+	protected static String ORDS_DATABASE_NAME = "ords.database.name";
+	protected static String ORDS_DATABASE_USER = "ords.database.user";
+	protected static String ORDS_DATABASE_PASSWORD = "ords.database.password";
+	protected static String ORDS_DATABASE_HOST = "ords.database.server.host";
 
-    public DBCredentials() {
-    	super();
-    }
-    
+	private String user;
+
+	private String password;
+
+	private String dbName;
+
+	private String dbServer = null;
+
+	private String JDBC_DRIVER;
+
+	private String dbUrl;
+	
+	public void init(){
+		
+	}
     
     public DBCredentials(String dbServer, String dbName) {
     	if ( dbServer == null ) {
@@ -51,11 +67,21 @@ public class DBCredentials extends HibernateCreds {
     		
     	}
     	else {
+    		Configuration configuration = new Configuration();
+    		String hibernateConfigLocation = MetaConfiguration.getConfiguration().getString(HIBERNATE_CONFIGURATION_PROPERTY);
+
+
+    		if (hibernateConfigLocation == null) {
+    			configuration.configure();
+    		} else {
+    			configuration.configure(new File(hibernateConfigLocation));
+    		}
+
+
+            JDBC_DRIVER = configuration.getProperty("hibernate.connection.driver_class");
+            
         	this.dbServer = dbServer;    		
     	}
-        if (log.isDebugEnabled()) {
-            log.debug(String.format("DBCredentials(%s, %s)", dbServer, dbName));
-        }
     	
     	if ((dbName == null) || (dbName.isEmpty()) ) {
     		this.dbName = CommonVars.CONNECTABLE_DB;
@@ -64,41 +90,39 @@ public class DBCredentials extends HibernateCreds {
     		this.dbName = dbName;
     	}
         
-        rootDbUrl = "jdbc:postgresql://" + dbServer + "/";
         dbUrl = "jdbc:postgresql://" + dbServer + "/" + this.dbName;
-        if (log.isDebugEnabled()) {
-            log.debug(String.format("Returning with rootDbUrl = <%s>, dbUrl = <%s>", rootDbUrl, dbUrl));
-        }
         
-        AuthenticationDetails ad = new AuthenticationDetails();
-        user = ad.getOrdsUser();
-        password = ad.getOrdsPassword();
-    }
-    
-    public void logCreds() {
-    	if (log.isDebugEnabled()) {
-    		log.debug(String.format("Server: <%s>, Db:<%s>, User:<%s>", dbServer, dbName, user));
-    		log.debug(String.format("DB URL: <%s>", dbUrl));
-    	}
+		org.apache.commons.configuration.Configuration properties = MetaConfiguration.getConfiguration();
+		
+		/**
+		 * The user that can connect to and read/write from/to the ords database. Used for hibernate.
+		 */
+		user = properties.getString(ORDS_DATABASE_USER);
+		password = properties.getString(ORDS_DATABASE_PASSWORD);
+
     }
 
-    @Override
     public String getDbServer() {
         return dbServer;
     }
 
-    @Override
-    public void setDbServer(String dbServer) {
-        this.dbServer = dbServer;
-    }
-
-    @Override
     public String getDbName() {
         return dbName;
     }
 
-    @Override
-    public void setDbName(String dbName) {
-        this.dbName = dbName;
-    }
+	public String getUser() {
+	    return user;
+	}
+
+	public String getPassword() {
+	    return password;
+	}
+
+	public String getJDBC_DRIVER() {
+	    return JDBC_DRIVER;
+	}
+
+	public String getDbUrl() {
+	    return dbUrl;
+	}
 }

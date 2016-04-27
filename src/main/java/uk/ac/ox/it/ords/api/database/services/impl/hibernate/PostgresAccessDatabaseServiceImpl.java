@@ -16,7 +16,6 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.ox.it.ords.api.database.conf.AuthenticationDetails;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.queries.QueryRunner;
 import uk.ac.ox.it.ords.api.database.services.AccessImportService;
@@ -574,7 +573,6 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 		//
 		// Actually create the table
 		//
-		AuthenticationDetails ad = new AuthenticationDetails();
 		if (commit) {
 			try {
 				/*
