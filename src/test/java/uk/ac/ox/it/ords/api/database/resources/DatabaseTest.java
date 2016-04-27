@@ -24,7 +24,58 @@ import uk.ac.ox.it.ords.api.database.data.TableViewInfo;
 
 public class DatabaseTest extends AbstractDatabaseTestRunner{
 
+	
+	@Test ()
+	public void uploadUnsupportedFile() throws FileNotFoundException {
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		
+		FileInputStream inputStream;
+		
+		// create a csv file database
+		File csvFile = new File(getClass().getResource("/config.xml").getFile());
+		inputStream = new FileInputStream(csvFile);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=config.xml");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(415, response.getStatus());
+	}
+	
+	@Test ()
+	public void uploadCSVFileUnauth() throws FileNotFoundException {
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		
+		FileInputStream inputStream;
+		
+		// create a csv file database
+		File csvFile = new File(getClass().getResource("/small_test.csv").getFile());
+		inputStream = new FileInputStream(csvFile);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=small_test.csv");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(403, response.getStatus());
+	}
+	
+	@Test ()
+	public void uploadAccessFileUnauth() throws FileNotFoundException {
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		
+		FileInputStream inputStream;
+		
+		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(403, response.getStatus());
+	}
+	
 	@Test ()
 	public void uploadCSVFile() {
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
