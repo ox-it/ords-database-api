@@ -47,7 +47,6 @@ public class QueryRunner {
             log.debug(String.format("QR Constructor:%s,%s", dbServer, dbName ));
         }
     	setCredentials(dbServer, dbName);
-    	//setCredentialsSpecial(odbcUser, odbcPassword);
     }
     
 
@@ -104,12 +103,6 @@ public class QueryRunner {
     	return dbc.getPassword();
     }
     
-    
-//    @Deprecated
-//    public QueryRunner(String dbServer, String dbName) {
-//    	setCredentials(dbServer, dbName);
-//    }
-    
     protected void setCredentials(String dbServer, String dbName) {
     	dbc = new DBCredentials(dbServer, dbName);
     }
@@ -117,23 +110,6 @@ public class QueryRunner {
     private void setCredentials(String dbServer) {
     	dbc = new DBCredentials(dbServer, "");
     }    
-    
-    public boolean isDatabaseExist() {
-    	boolean exists = true;
-    	Connection conn = null;
-    	try {
-    		conn = initialiseConnection(false);
-    	}
-    	catch (ClassNotFoundException | SQLException e) {
-    		exists = false;
-    	}
-    	finally {
-    		closeConnection(conn);
-    	}
-    	
-    	return exists;
-    }
-
     
     protected Connection initialiseConnection() throws ClassNotFoundException, SQLException {
         return initialiseConnection(true);
