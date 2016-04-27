@@ -2,16 +2,13 @@ package uk.ac.ox.it.ords.api.database.queries;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -19,17 +16,11 @@ import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.ox.it.ords.api.database.conf.AuthenticationDetails;
-import uk.ac.ox.it.ords.api.database.data.DataCell;
 import uk.ac.ox.it.ords.api.database.data.DataRow;
 import uk.ac.ox.it.ords.api.database.data.DataTypeMap;
-import uk.ac.ox.it.ords.api.database.data.OrdsTableColumn;
 import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.exceptions.DBEnvironmentException;
-import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
-import uk.ac.ox.it.ords.api.database.model.User;
-
 
 /**
  * A key class, this contains the interface between ORDS and the underlying
@@ -351,138 +342,6 @@ public class GeneralSQLQueries extends ORDSPostgresDB {
 	}
 	
 	/**
-	 * Commit changes to the database.
-	 *
-	 * @param tableName
-	 *            the table to commit changes to
-	 * @param rowData
-	 *            the new data to replace. The first array within this array
-	 *            should contain the column names.
-	 * @return
-	 */
-	public boolean commitChanges(String tableName, ArrayList<ArrayList<String>> rowData, String[] originalKeyDataArray, User actor) {
-		boolean ret = false;
-		boolean usePreparedStatement = true;
-		boolean firstRowIsColumnData = true;
-		try {
-			// First up, let's get the primary key of the table
-			String primKey = getSingularPrimaryKeyColumn(tableName);
-			if (primKey == null) {
-				log.error("Problem getting primary key for table");
-				dbErrorMessage = "Unable to find primary key for table";
-				return false;
-			}
-			else {
-				if (log.isDebugEnabled()) {
-					log.debug(String.format("Primary Key for table <%s> is <%s>", tableName, primKey));
-				}
-
-				String command, whereString = null;
-				// Row Data is simply an array of an array of data items.
-				int counter, rowCounter = -1;
-				List<String> colNames = null;
-				if (!firstRowIsColumnData) {
-					colNames = new ArrayList<String>();
-					TableData colInfo = getColumnNamesForTable(tableName);
-					for (int index = 0; index < colInfo.rows.size(); index++) {
-						DataRow dr = colInfo.rows.get(index);
-						colNames.add(dr.cell.get("column_name").getValue());
-					}
-
-					Collections.reverse(colNames);
-				}
-				int rowIndex = 0;
-				Map<String, DataTypeMap> dataTypeMap = getDataTypeMaps(tableName);
-				for (ArrayList<String> row : rowData) {
-					rowCounter++;
-					if ((rowCounter == 0) && (firstRowIsColumnData)) {
-						colNames = row;
-						continue;
-					}
-					counter = 0;
-					if (colNames == null) {
-						log.error("Null value for colNames - should not happen");
-						continue;
-					}
-					if (usePreparedStatement) {
-						String updateString = "update \"" + tableName + "\" set ";
-						if (log.isDebugEnabled()) {
-							for (DataTypeMap d : dataTypeMap.values()) {
-								log.debug(String.format("Col<%s> Value<%s> Type<%s>", d.colName, d.stringValue, d.dt));
-							}
-						}
-						for (String s : row) {
-							// RowData rd = new RowData();
-							log.debug("About to get dtm for " + colNames.get(counter));
-							DataTypeMap dtm = dataTypeMap.get(colNames.get(counter));
-							if (dtm == null) {
-								log.error("Null");
-							}
-							else {
-								if (log.isDebugEnabled()) {
-									log.debug(String.format("Column %s has value %s with index %d",
-											colNames.get(counter), s, counter));
-								}
-								dtm.stringValue = s;
-								dtm.index = counter;
-								updateString += String.format("\"%s\"=?%s ", colNames.get(counter),
-										counter == row.size() - 1 ? "" : ",");
-								if (primKey.equals(colNames.get(counter))) {
-									whereString = String.format(" where \"%s\"=?", primKey);
-								}
-							}
-							counter++;
-						}
-						if (whereString != null) {
-							updateString += whereString;
-						}
-						if (log.isDebugEnabled()) {
-							log.debug(updateString);
-							for (DataTypeMap d : dataTypeMap.values()) {
-								log.debug(String.format("Col<%s> Value<%s> Type<%s> index %d", d.colName,
-										d.stringValue, d.dt, d.index));
-							}
-						}
-
-						AuthenticationDetails ad = new AuthenticationDetails();
-						ret = new DatabaseQueries(getCurrentDbServer(), getCurrentDbName()).createAndExecuteStatement(updateString, dataTypeMap, tableName, primKey,
-								originalKeyDataArray[rowIndex++]);
-					}
-					else {
-						command = String.format("update \"%s\" set ", tableName);
-						// Look at each row of data
-						for (String s : row) {
-							if (log.isDebugEnabled()) {
-								log.debug(String.format("Column %s has value %s", colNames.get(counter), s));
-							}
-							command += String.format("\"%s\"='%s'%s", colNames.get(counter), s,
-									counter == row.size() - 1 ? "" : ",");
-
-							if (primKey.equals(colNames.get(counter))) {
-								whereString = String.format(" where \"%s\"='%s'", primKey, s);
-							}
-							counter++;
-						}
-						ret = runDBQuery(command + whereString);
-					}
-					if (!ret) {
-						return ret;
-					}
-				}
-			}
-		}
-		catch (ClassNotFoundException ex) {
-			dbErrorMessage = ex.toString();
-		}
-		catch (SQLException ex) {
-			dbErrorMessage = ex.toString();
-		}
-
-		return ret;
-	}
-	
-	
-	/**
 	 * Get rows of data from the table. This function will get a subset of the
 	 * table data.
 	 *
@@ -511,149 +370,7 @@ public class GeneralSQLQueries extends ORDSPostgresDB {
 		}
 
 		return getTableDataForTable(tableName, rowStart, numberOfRowsRequired, null, true);
-	}
-	
-	
-	public boolean updateTableData(Map<String, DataCell> originalData, Map<String, String> newData, int dataOffset,
-			TableData tableData) {
-		if ((originalData == null) || (newData == null)) {
-			log.error("Null input - this is bad");
-			return false;
-		}
-
-		String sqlFragment;
-
-		if (log.isDebugEnabled()) {
-			log.debug(String.format("updateTableData for table %s with column size %d", tableData.tableName,
-					tableData.columns.size()));
-			log.debug(String.format(
-					"table data col size: %d, original data col size: %d, new data size (without offset): %d",
-					tableData.columns.size(), originalData.size(), newData.size() - dataOffset));
-			log.debug("These are the data columns to be updated");
-		}
-
-		/*
-		 * OriginalData is key here. newData may have extra preceeding fields
-		 * that are not relevant to the database (but needed for operational
-		 * reasons) and thus we should count backwards when crafting the update
-		 * command.
-		 */
-		String whereString = "";
-		int counter = tableData.columns.size() - 1;
-
-		for (OrdsTableColumn column : tableData.columns) {
-			String s = column.columnName;
-			if (originalData.get(s).getValue() == null) {
-				sqlFragment = String.format("\"%s\" is null ", s);
-			}
-			else {
-				sqlFragment = String.format("\"%s\"='%s' ", s,
-						this.replaceSpecialCharacters(originalData.get(s).getValue()));
-			}
-			whereString += sqlFragment;
-
-			if (log.isDebugEnabled()) {
-				log.debug(String.format("Sql Fragment is <%s>. Thus adding: %s='%s'", sqlFragment,
-						s, originalData.get(s).getValue()));
-			}
-			if (counter > 0) {
-				whereString += " and ";
-			}
-			else {
-				whereString += ";";
-			}
-			counter--;
-		}
-
-		String command;
-
-		/*
-		 * Let's run a select command against the data first. We should get a
-		 * single record returned. If so, all is well. If not, there has been a
-		 * bad problem here.
-		 */
-		command = String.format("select * from \"%s\" where %s", tableData.tableName, whereString);
-		log.debug("Running the select command against " + tableData.tableName);
-		boolean ret = false;
-
-		try {
-			ret = runDBQuery(command);
-		}
-		catch (SQLException e) {
-			log.error("Exception", e);
-		}
-		catch (ClassNotFoundException e) {
-			log.error("Exception", e);
-		}
-		if (ret) {
-			// So far, so good. Now check how many rows have been returned;
-			int size = getTableData().rows.size();
-			if (size == 1) {
-				log.debug("A single row is present - update is fine");
-			}
-			else {
-				log.error(String
-						.format("Number of rows returned for command <%s> = %d. Cannot continue", command, size));
-				return false;
-			}
-		}
-		else {
-			log.error("Unable to get meaningful result from this command.");
-			return false;
-		}
-
-		command = String.format("update \"%s\" set ", tableData.tableName);
-		counter = tableData.columns.size() - 1;
-
-		for (OrdsTableColumn column : tableData.columns) {
-			String s = column.columnName;
-			String columnToReplace = this.replaceSpecialCharacters(newData.get(s));
-			if (columnToReplace == null) {
-				sqlFragment = String.format("\"%s\"=null", s);
-			}
-			else {
-				sqlFragment = String.format("\"%s\"='%s'", s, columnToReplace);
-			}
-
-			command += sqlFragment;
-
-			if (log.isDebugEnabled()) {
-				log.debug(String.format("Fragment is <%s>. Thus adding: %s='%s'", sqlFragment,
-						s, newData.get(s)));// index
-																				// +
-																				// dataOffset
-			}
-
-			if (counter > 0) {
-				command += ", ";
-			}
-			else {
-				command += " ";
-			}
-			counter--;
-		}
-
-		command += "where ";
-
-		command += whereString;
-
-		if (log.isDebugEnabled()) {
-			log.debug("Command to run:" + command);
-		}
-
-		try {
-			ret = runDBQuery(command);
-		}
-		catch (SQLException e) {
-			log.error("Exception", e);
-		}
-		catch (ClassNotFoundException e) {
-			log.error("Exception", e);
-		}
-
-		return ret;
-	}
-	
+	}	
 	
 	/**
 	 * Delete one or more rows from a table
