@@ -57,18 +57,91 @@ public class RelationTest extends AbstractDatabaseTestRunner {
 		//
 		// Get related values
 		//
-		response = getClient(true).path("/"+id+"/table/city/column/Country/related").get();
+		response = getClient(true).path("/"+id+"/table/country/column/CountryName/related").get();
 		assertEquals(200, response.getStatus());
 		TableData data = response.readEntity(TableData.class);
 		assertEquals("value", data.columns.get(0).columnName);
 		assertEquals("label", data.columns.get(1).columnName);
 		
-		// To be honest this doesn't look complete to me, so I'll leave off testing for now
-		
+		assertEquals("AFG", data.rows.get(0).cell.get("value").getValue());
+		assertEquals("Afghanistan", data.rows.get(0).cell.get("label").getValue());
+				
 		// Cleanup
 		AbstractResourceTest.databases.add(r);
 		logout();
 
 	}
 	
+	@Test
+	public void testGetRelatedNonexisting() throws Exception{
+		
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		//
+		// Import a database
+		//
+		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		
+		//
+		// Get related values
+		//
+		response = getClient(true).path("/"+id+"/table/banana/column/fruit/related").get();
+		//
+		// TODO FIXME should return 404, returns 200
+		//
+		//assertEquals(404, response.getStatus());
+		
+		response = getClient(true).path("/9999/table/banana/column/fruit/related").get();
+		assertEquals(404, response.getStatus());
+
+		// Cleanup
+		AbstractResourceTest.databases.add(r);
+		logout();
+
+	}
+	
+	@Test
+	public void testGetRelatedUnauth() throws Exception{
+		
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		//
+		// Import a database
+		//
+		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		
+		//
+		// Get related values
+		//
+		logout();
+		assertEquals(403, getClient(true).path("/"+id+"/table/country/column/CountryName/related").get().getStatus());
+
+		// Cleanup
+		AbstractResourceTest.databases.add(r);
+		logout();
+
+	}
+
 }

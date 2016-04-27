@@ -184,6 +184,41 @@ public class TableTest extends AbstractDatabaseTestRunner {
 
 	}
 	
+	//
+	// Check we actually get relationship metadata
+	//
+	@Test
+	public void getTableWithRefs() throws Exception{
+		
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		// create a csv file database
+		File csvFile = new File(getClass().getResource("/databases/invoice.mdb").getFile());
+		FileInputStream inputStream = new FileInputStream(csvFile);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=invoice.mdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		response = getClient(true).path("/"+id+"/tabledata/tblinvdetail").get();
+		assertEquals(200, response.getStatus());
+		TableData data = response.readEntity(TableData.class);
+		
+		assertEquals(1, data.primaryKeys.size());
+		assertEquals("tblinv", (data.columns.get(0).referencedTable));
+		assertEquals("InvNum", (data.columns.get(0).referencedColumn));
+
+		logout();
+	}
+	
 	@Test
 	public void addRowToTable() throws Exception{		
 		loginUsingSSO("pingu@nowhere.co", "");

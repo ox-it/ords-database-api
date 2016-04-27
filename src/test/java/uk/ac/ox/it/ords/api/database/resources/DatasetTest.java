@@ -57,7 +57,8 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		//
 		// Get dataset
 		//
-		assertEquals(404, getClient(true).path("/9999/datasetdata/9999").get().getStatus());
+		assertEquals(404, getClient(true).path("/9999/dataset/9999").get().getStatus());
+		assertEquals(404, getClient(true).path("/"+id+"/dataset/9999").get().getStatus());
 		assertEquals(404, getClient(true).path("/"+id+"/datasetdata/9999").get().getStatus());
 		
 		// Cleanup
