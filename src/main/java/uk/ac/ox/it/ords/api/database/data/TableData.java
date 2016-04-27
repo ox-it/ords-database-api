@@ -19,19 +19,11 @@ package uk.ac.ox.it.ords.api.database.data;
 
 
 import java.io.Serializable;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
-import uk.ac.ox.it.ords.api.database.queries.QueryRunner;
-
 
 public class TableData implements Serializable {
     /**
