@@ -4,13 +4,10 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.ox.it.ords.api.database.conf.AuthenticationDetails;
 import uk.ac.ox.it.ords.api.database.conf.CommonVars;
 import uk.ac.ox.it.ords.api.database.data.DataCell;
 import uk.ac.ox.it.ords.api.database.data.DataRow;
@@ -171,41 +168,6 @@ public class ORDSPostgresDB extends QueryRunner {
     public TableData getTableDataForTable(String tableName, String sort, boolean direction) throws ClassNotFoundException, SQLException {
         return getTableDataForTable(tableName, 1, 0, sort, direction);
     }
-    
-    
-    
-    
-    public int getTotalRecordCountInDatabase() throws SQLException, ClassNotFoundException {
-        if (log.isDebugEnabled()) {
-            log.debug("getTotalRecordCountInDatabase for database");
-        }
-        
-        int recordCount = 0;
-        if (!getTablesForDatabase()) {
-            log.error("Nothing doing for database ");
-        }
-        else if (getTableData().rows == null) {
-            log.error("No rows found for database ");
-        }
-        else {
-	        for (DataRow dr : getTableData().rows) { // Look through each table name in the database
-	            for (String s : dr.cell.keySet()) {
-	                runDBQuery("select count(*) from \"" + dr.cell.get(s).getValue() + "\"");
-	                if (this.getTableData() == null) {
-	                	/*
-	                	 * Maybe there is another database here with permissions set so that the user cannot read it
-	                	 */
-	                	log.error(String.format("Unable to get data on table %s from database %s", dr.cell.get(s).getValue(), getCurrentDbName()));
-	                }
-	                else {
-	                	recordCount += Integer.parseInt(this.getTableData().rows.get(0).cell.get("count").getValue());
-	                }
-	            }
-	        }
-        }
-        
-        return recordCount;
-    }
 
     /**
      * Get rows of data from the table. This function will get a subset of the table data.
@@ -241,7 +203,6 @@ public class ORDSPostgresDB extends QueryRunner {
          * Get all table names in the database and ensure the table exists
          */
         boolean exists = false;
-        AuthenticationDetails ad = new AuthenticationDetails();
         QueryRunner lqr = new QueryRunner(this.getCurrentDbServer(), this.getCurrentDbName());
         if (!lqr.runDBQuery(String.format("SELECT table_name FROM information_schema.tables WHERE table_schema='%s'", CommonVars.SCHEMA_NAME))) {
             return null;
@@ -438,94 +399,6 @@ public class ORDSPostgresDB extends QueryRunner {
 	        }
         }
         return sequences;
-    }
-
-    /**
-     * Get the next (or previous) portion of data in the table and return it. Suppose the table in question has 100 rows
-     * and ORDS is set to display 30 rows at a time (i.e. PaginationUtils.rowsPerPage == 30). Suppose the user is
-     * currently looking at row 10 (i.e. currentRow == 10). Before calling this, they will see rows 10 -> 39. Suppose
-     * now that they call this function and ask for the next row (direction == "next"). The TableData object will then
-     * contain rows 40 -> 69.
-     *
-     * @param tableName the name of the table being operated on
-     * @param currentRow the current row of data in the table as a String.
-     * @param direction if "prev" then get the previous page of data, else get the next page of data
-     * @return a TableData object containing the next (or previous) age of data for display or null if there has been a
-     * problem
-     * @throws SQLException 
-     */
-    public TableData getNextTableDataForTable(String tableName, String currentRow, String direction, int rowsPerPage) throws ClassNotFoundException, SQLException {
-        int currentRowInt = 0;
-        if (currentRow != null) {
-            currentRowInt = Integer.parseInt(currentRow);
-        }
-        return getNextTableDataForTable(tableName, currentRowInt, direction, rowsPerPage);
-    }
-
-    public TableData getNextTableDataForTable(String tableName, int currentRow, String direction, int rowsPerPage) throws ClassNotFoundException, SQLException {
-        if (log.isDebugEnabled()) {
-            log.debug(String.format("getNextTableDataForTable for table %s, current row %d, direction information %s", tableName, currentRow, direction));
-        }
-        if (tableName == null) {
-            log.error("Null table name - cannot proceed");
-            return null;
-        }
-        if (!runDBQuery("select count(*) from " + tableName)) {
-        	return null;
-        }
-        
-        String totalRows = this.getTableData().rows.get(0).cell.get("count").getValue();
-        int numberOfRowsInEntireTable = Integer.parseInt(totalRows);
-        int newCurrentRow = currentRow + rowsPerPage;
-        /*
-         * Work out direction
-         */
-        log.debug("Checking direction");
-        if (direction == null) {
-            log.error("Unable to assess direction - assume forward");
-        }
-        else if (direction.contains("prev")) {
-            log.debug("Nav backward");
-            newCurrentRow = currentRow - rowsPerPage;
-            if (newCurrentRow < 1) {
-                newCurrentRow = 1;
-            }
-        }
-        String keyName = null;
-        try {
-            keyName = getSingularPrimaryKeyColumn(tableName);
-        }
-        catch (ClassNotFoundException ex) {
-            log.error("Class error - unable to find index", ex);
-        }
-        catch (SQLException ex) {
-            log.error("Unable to find index", ex);
-        }
-
-        TableData td = null;
-        
-        boolean ret = false;
-        if (keyName == null) {
-            ret = runDBQuery(String.format("select * from \"%s\" limit %d offset %d", tableName, rowsPerPage, newCurrentRow - 1));
-        }
-        else {
-        	ret = runDBQuery(String.format("select * from \"%s\" order by %s limit %d offset %d", tableName, keyName, rowsPerPage, newCurrentRow - 1));
-        }
-        if (!ret) {
-        	return null;
-        }
-        td = this.getTableData();
-
-        if (log.isDebugEnabled()) {
-            log.debug(String.format("Tablename = %s, rows in table = %d, new current row = %d", tableName, numberOfRowsInEntireTable, newCurrentRow));
-        }
-        td.setNumberOfRowsInEntireTable(numberOfRowsInEntireTable);
-        td.setCurrentRow(newCurrentRow);
-        td.tableName = tableName;
-
-        log.debug("getNextTableDataForTable:return");
-
-        return td;
     }
 
     /**
