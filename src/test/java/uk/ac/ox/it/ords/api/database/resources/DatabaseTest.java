@@ -34,7 +34,6 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		
 		FileInputStream inputStream;
 		
-		// create a csv file database
 		File csvFile = new File(getClass().getResource("/config.xml").getFile());
 		inputStream = new FileInputStream(csvFile);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=config.xml");
