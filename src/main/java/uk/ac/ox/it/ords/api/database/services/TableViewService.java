@@ -3,7 +3,6 @@ package uk.ac.ox.it.ords.api.database.services;
 import java.util.List;
 import java.util.ServiceLoader;
 
-import uk.ac.ox.it.ords.api.database.data.DataRow;
 import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.data.TableViewInfo;
