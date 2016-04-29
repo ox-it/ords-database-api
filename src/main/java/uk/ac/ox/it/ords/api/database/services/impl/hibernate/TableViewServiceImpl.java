@@ -143,16 +143,14 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	}
 
 	@Override
-	public int appendTableData(int dbId, String tableName,
+	public boolean appendTableData(int dbId, String tableName,
 			Row newData) throws Exception {
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
 		if ( database == null ) {
 			throw new NotFoundException();
 		}
 		
-		addRowToTable(database, tableName, newData.columnNames, newData.values);
-		
-		return 0;
+		return addRowToTable(database, tableName, newData.columnNames, newData.values);
 	}
 	
 	/**
@@ -188,6 +186,11 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 
 		if (cellData.length == 0) {
 			cellData = new String[cols.length];
+		}
+		
+		if (cellData.length != cols.length){
+			log.error("Input contained different lengths for data and columns");
+			return false;
 		}
 
 		/*

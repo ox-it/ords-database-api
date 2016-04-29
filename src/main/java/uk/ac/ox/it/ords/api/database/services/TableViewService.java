@@ -91,10 +91,10 @@ public interface TableViewService {
 	 * @param instance
 	 * @param tableName
 	 * @param newData
-	 * @return
+	 * @return true if the operation was successful
 	 * @throws Exception
 	 */
-	public int appendTableData ( int dbId,   String tableName, Row newData ) throws Exception;
+	public boolean appendTableData ( int dbId,   String tableName, Row newData ) throws Exception;
 	
 	/**
 	 * 

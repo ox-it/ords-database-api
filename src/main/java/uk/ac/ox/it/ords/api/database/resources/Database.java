@@ -483,10 +483,18 @@ public class Database {
 		// Append the data
 		//
 		try {
-			tableViewService().appendTableData(id, tableName, newData);
+			 if (!tableViewService().appendTableData(id, tableName, newData)){
+				 
+				 //
+				 // If the method returns false, there was a problem with the input
+				 //
+				 return Response.status(400).build();
+			 };
 		} catch (Exception e) {
 			
 			log.error(e);
+			
+			e.printStackTrace();
 			
 			return Response.status(500).build();
 		}

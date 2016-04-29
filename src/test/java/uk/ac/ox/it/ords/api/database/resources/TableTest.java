@@ -68,7 +68,8 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	}
 	
 	@After
-	public void tearDownTable(){
+	public void tearDownTable() throws Exception{
+		logout();
 	}
 	
 	@Test
@@ -77,6 +78,45 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		WebClient client = getClient(true);
 		Response response = client.path("/"+dbID+"/tabledata/"+tableName).post(null);
 		assertEquals(400, response.getStatus());
+		
+		//
+		// Empty object
+		//
+		Row row = new Row();
+		response = getClient(true).path("/"+dbID+"/tabledata/"+tableName).post(row);
+		assertEquals(400, response.getStatus());
+		
+		//
+		// Cols, but no data
+		//
+		row.columnNames = new String[]{"id","n", "volume", "pubid","long"};
+		response = getClient(true).path("/"+dbID+"/tabledata/"+tableName).post(row);
+		assertEquals(400, response.getStatus());
+		
+		//
+		// Cols, but data doesn't match up
+		//
+		row.columnNames = new String[]{"id","n", "volume", "pubid","long"};
+		row.values = new String[1];
+		response = getClient(true).path("/"+dbID+"/tabledata/"+tableName).post(row);
+		assertEquals(400, response.getStatus());
+		
+		//
+		// Cols, but data doesn't match up
+		//
+		row.columnNames = new String[]{"id","n", "volume", "pubid","long"};
+		row.values = new String[]{"99", "99", "A", "B", "C", "D"};
+		response = getClient(true).path("/"+dbID+"/tabledata/"+tableName).post(row);
+		assertEquals(400, response.getStatus());
+		
+		//
+		// if we supply empty values, it just uses defaults
+		//
+		row.columnNames = new String[]{"id","n", "volume", "pubid","long"};
+		row.values = new String[]{};
+		response = getClient(true).path("/"+dbID+"/tabledata/"+tableName).post(row);
+		assertEquals(201, response.getStatus());
+		
 		logout();
 	}
 	
@@ -263,6 +303,63 @@ public class TableTest extends AbstractDatabaseTestRunner {
 			}
 		}
 		assertTrue(containsNewRow);
+		logout();
+	}
+	
+	@Test
+	public void addRowToTableWithSomeNullValues() throws Exception{		
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		assertEquals(200, getClient(true).path("/"+dbID+"/tabledata/"+tableName).get().getStatus());
+
+		//
+		// Create the row
+		//
+		Row row = new Row();
+		row.columnNames = new String[]{"id","n", "volume", "pubid","long"};
+		row.values = new String[]{"XXXX","YYYY", "[null value]", "",null};
+		Response response = getClient(true).path("/"+dbID+"/tabledata/"+tableName).post(row);
+		assertEquals(201, response.getStatus());
+		
+		//
+		// Check it exists
+		//
+		response = getClient(true).path("/"+dbID+"/tabledata/"+tableName).query("length", 400).get();
+		assertEquals(200, response.getStatus());
+
+		TableData data = response.readEntity(TableData.class);
+		
+		boolean containsNewRow = false;
+		for (DataRow currentRow : data.rows){
+			if (
+					((DataCell)currentRow.cell.get("id")).getValue().equals("XXXX") &&
+					((DataCell)currentRow.cell.get("n")).getValue().equals("YYYY") &&
+					((DataCell)currentRow.cell.get("volume")).getValue() == null &&
+					((DataCell)currentRow.cell.get("pubid")).getValue() == null &&
+					((DataCell)currentRow.cell.get("long")).getValue() == null
+			){
+				containsNewRow = true;
+			}
+		}
+		assertTrue(containsNewRow);
+		logout();
+	}
+	
+	@Test
+	public void addRowToTableWithEmpties() throws Exception{		
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		assertEquals(200, getClient(true).path("/"+dbID+"/tabledata/"+tableName).get().getStatus());
+
+		//
+		// Create the row
+		//
+		Row row = new Row();
+		row.columnNames = new String[]{"id","n", "volume", "pubid","long"};
+		row.values = new String[]{"","", "", "",""};
+		Response response = getClient(true).path("/"+dbID+"/tabledata/"+tableName).post(row);
+		assertEquals(201, response.getStatus());
+		
 		logout();
 	}
 	
