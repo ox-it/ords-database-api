@@ -34,7 +34,7 @@ import uk.ac.ox.it.ords.api.database.conf.CommonVars;
 import uk.ac.ox.it.ords.api.database.data.OrdsTableColumn;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.exceptions.DBEnvironmentException;
-import uk.ac.ox.it.ords.api.database.queries.GeneralSQLQueries;
+import uk.ac.ox.it.ords.api.database.queries.ORDSPostgresDB;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
 
 public class CSVServiceImplTest {
@@ -54,7 +54,7 @@ public class CSVServiceImplTest {
 		//
 		// Delete the table afterwards
 		//
-		new GeneralSQLQueries(
+		new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				).runDBQuery("DROP TABLE IF EXISTS assetsimportcompletesample");
@@ -92,7 +92,7 @@ public class CSVServiceImplTest {
 
 		assertNotNull(tableData);
 		
-		TableData results = new GeneralSQLQueries(
+		TableData results = new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				)
@@ -123,7 +123,7 @@ public class CSVServiceImplTest {
 
 		assertNotNull(tableData);
 		
-		results = new GeneralSQLQueries(
+		results = new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				)
@@ -134,7 +134,7 @@ public class CSVServiceImplTest {
 		//
 		// Clean up
 		//		
-		new GeneralSQLQueries(
+		new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				).runDBQuery("DROP TABLE " + tableData.tableName);
@@ -206,7 +206,7 @@ public class CSVServiceImplTest {
 	
 	@Test
 	public void exportProjectTableToFile() throws Exception{		
-		TableData tableData = new GeneralSQLQueries(
+		TableData tableData = new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				).getColumnNamesForTable("user");
@@ -238,7 +238,7 @@ public class CSVServiceImplTest {
 
 		assertNotNull(tableData);
 		
-		TableData results = new GeneralSQLQueries(
+		TableData results = new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				)
@@ -261,7 +261,7 @@ public class CSVServiceImplTest {
 		
 		assertNotNull(tableData);
 		
-		TableData results = new GeneralSQLQueries(
+		TableData results = new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				)
@@ -285,7 +285,7 @@ public class CSVServiceImplTest {
 		
 		assertNotNull(tableData);
 		
-		TableData results = new GeneralSQLQueries(
+		TableData results = new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				)
@@ -306,7 +306,7 @@ public class CSVServiceImplTest {
 				true);
 		assertNotNull(tableData);
 
-		TableData results = new GeneralSQLQueries(
+		TableData results = new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				)
@@ -335,7 +335,7 @@ public class CSVServiceImplTest {
 		
 		assertNotNull(tableData);
 		
-		TableData results = new GeneralSQLQueries(
+		TableData results = new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				)
@@ -357,7 +357,7 @@ public class CSVServiceImplTest {
 				true);		assertNotNull(tableData);
 		assertEquals("banana", tableData.tableName);
 		
-		TableData results = new GeneralSQLQueries(
+		TableData results = new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				)
@@ -365,7 +365,7 @@ public class CSVServiceImplTest {
 		
 		assertEquals(4, results.getNumberOfRowsInEntireTable());
 				
-		new GeneralSQLQueries(
+		new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				).runDBQuery("DROP TABLE banana");
@@ -385,7 +385,7 @@ public class CSVServiceImplTest {
 		
 		assertNotNull(tableData);
 				
-		TableData results = new GeneralSQLQueries(
+		TableData results = new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				)
@@ -404,7 +404,7 @@ public class CSVServiceImplTest {
 		
 		assertNotNull(tableData);
 		
-		results = new GeneralSQLQueries(
+		results = new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				)
@@ -413,7 +413,7 @@ public class CSVServiceImplTest {
 		assertEquals(4, results.getNumberOfRowsInEntireTable());
 		assertEquals("assetsimportcompletesample_2", tableData.tableName);
 		
-		new GeneralSQLQueries(
+		new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				).runDBQuery("DROP TABLE assetsimportcompletesample_2");
@@ -432,7 +432,7 @@ public class CSVServiceImplTest {
 		
 		assertNotNull(tableData);
 		
-		TableData results = new GeneralSQLQueries(
+		TableData results = new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				)
@@ -520,7 +520,7 @@ public class CSVServiceImplTest {
 		
 		assertNotNull(tableData);
 		
-		TableData results = new GeneralSQLQueries(
+		TableData results = new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				)
@@ -555,7 +555,7 @@ public class CSVServiceImplTest {
 		
 		assertNotNull(tableData);
 		
-		results = new GeneralSQLQueries(
+		results = new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				)
@@ -567,7 +567,7 @@ public class CSVServiceImplTest {
 		//
 		// Delete the table
 		//	
-		new GeneralSQLQueries(
+		new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				).runDBQuery("DROP TABLE " + tableName);
@@ -597,7 +597,7 @@ public class CSVServiceImplTest {
 				file);
 
 		
-		TableData results = new GeneralSQLQueries(
+		TableData results = new ORDSPostgresDB(
 				properties.getString(ORDS_DATABASE_HOST),
 				properties.getString(ORDS_DATABASE_NAME)
 				)

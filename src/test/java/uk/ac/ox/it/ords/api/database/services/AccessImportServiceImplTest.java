@@ -28,7 +28,7 @@ import org.junit.Test;
 
 import uk.ac.ox.it.ords.api.database.data.DataRow;
 import uk.ac.ox.it.ords.api.database.data.TableData;
-import uk.ac.ox.it.ords.api.database.queries.GeneralSQLQueries;
+import uk.ac.ox.it.ords.api.database.queries.ORDSPostgresDB;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
 
 public class AccessImportServiceImplTest {
@@ -145,7 +145,7 @@ public class AccessImportServiceImplTest {
 			// Check that we have the right tables created in the DB
 			//			
 			
-			TableData tableData = new GeneralSQLQueries(
+			TableData tableData = new ORDSPostgresDB(
 					properties.getString(ORDS_DATABASE_HOST),
 					properties.getString(ORDS_DATABASE_NAME)
 					)
@@ -207,7 +207,7 @@ public class AccessImportServiceImplTest {
 			}
 			sql = sql.substring(0, sql.lastIndexOf(","));
 			
-			new GeneralSQLQueries(
+			new ORDSPostgresDB(
 					properties.getString(ORDS_DATABASE_HOST),
 					properties.getString(ORDS_DATABASE_NAME)
 					).runDBQuery(sql);

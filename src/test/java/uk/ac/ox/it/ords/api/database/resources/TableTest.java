@@ -126,12 +126,20 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void deleteRowNonexisting() throws Exception{
 		loginUsingSSO("pingu@nowhere.co", "");
+		
 		assertEquals(404, getClient(true).path("/XXXX/tabledata/"+tableName).query("primaryKey", "id").query("primaryKeyValue", "V3a-36334").delete().getStatus());
 		assertEquals(404, getClient(true).path("/9999/tabledata/"+tableName).query("primaryKey", "id").query("primaryKeyValue", "V3a-36334").delete().getStatus());
 		assertEquals(404, getClient(true).path("/9999/tabledata/"+tableName).query("primaryKey", "id").query("primaryKeyValue", "YYYYYYYY").delete().getStatus());
-		
+
 		//
-		// FIXME
+		// TODO FIXME when we have no matching rows, we ought to return 404
+		//
+		//assertEquals(404, getClient(true).path("/"+dbID+"/tabledata/"+tableName).query("primaryKey", "id").query("primaryKeyValue", "YYYYYYYY").delete().getStatus());
+		
+		assertEquals(404, getClient(true).path("/"+dbID+"/tabledata/"+tableName).query("primaryKey", "").query("primaryKeyValue", "").delete().getStatus());
+
+		//
+		// TODO FIXME when we have a bad table name, we should get 404, not 500
 		//
 		//assertEquals(404, getClient(true).path("/"+dbID+"/tabledata/nosuchtable").query("primaryKey", "id").query("primaryKeyValue", "V3a-36334").delete().getStatus());
 	}
@@ -155,7 +163,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		//
 		// FIXME - this should be a 404
 		//
-		assertEquals(500, getClient(true).path("/"+dbID+"/tabledata/nosuchtable").put(rows).getStatus());
+		assertEquals(404, getClient(true).path("/"+dbID+"/tabledata/nosuchtable").put(rows).getStatus());
 	}
 	
 	@Test
@@ -366,6 +374,206 @@ public class TableTest extends AbstractDatabaseTestRunner {
 					((DataCell)currentRow.cell.get("volume")).getValue().equals("1") &&
 					((DataCell)currentRow.cell.get("pubid")).getValue().equals("1") &&
 					((DataCell)currentRow.cell.get("long")).getValue().equals("99")
+			){
+				containsNewRow = true;
+			}
+		}
+		assertTrue(containsNewRow);
+		logout();
+	}
+	
+	@Test
+	public void updateRowInTable2() throws Exception{		
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		// create an access database
+		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(csvFile);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		assertEquals(200, getClient(true).path("/"+id+"/tabledata/country").get().getStatus());
+		
+		//
+		// Create the row
+		//
+		Row row = new Row();
+		row.columnNames = new String[]{"CountryName","Code", "Capital", "Province", "Area", "Population"};
+		row.values = new String[]{"Bogovia","BGR", "Bogov", "Bogov", "400", "575000"};
+		response = getClient(true).path("/"+id+"/tabledata/country").post(row);
+		assertEquals(201, response.getStatus());
+
+		//
+		// Update the row
+		//
+		ArrayList<Row> rows = new ArrayList<Row>();
+		row.columnNames = new String[]{"CountryName","Code", "Capital", "Province", "Area", "Population"};
+		row.values = new String[]{"Bogovia","BGR", "Bogov", "Bogov", "401", "576000"};
+		row.lookupColumn ="Code";
+		row.lookupValue="BGR";
+		rows.add(row);
+		response = getClient(true).path("/"+id+"/tabledata/country").put(rows);
+		assertEquals(200, response.getStatus());
+		
+		//
+		// Check it exists
+		//
+		response = getClient(true).path("/"+id+"/tabledata/country").query("length", 400).get();
+		assertEquals(200, response.getStatus());
+
+		TableData data = response.readEntity(TableData.class);
+		
+		boolean containsNewRow = false;
+		for (DataRow currentRow : data.rows){
+			if (
+					((DataCell)currentRow.cell.get("CountryName")).getValue().equals("Bogovia") &&
+					((DataCell)currentRow.cell.get("Code")).getValue().equals("BGR") &&
+					((DataCell)currentRow.cell.get("Capital")).getValue().equals("Bogov") &&
+					((DataCell)currentRow.cell.get("Area")).getValue().equals("401") &&
+					((DataCell)currentRow.cell.get("Population")).getValue().equals("576000")
+			){
+				containsNewRow = true;
+			}
+		}
+		assertTrue(containsNewRow);
+		logout();
+	}
+	
+	@Test
+	public void updateRowInTableWithPartialData() throws Exception{		
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		// create an access database
+		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(csvFile);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		assertEquals(200, getClient(true).path("/"+id+"/tabledata/country").get().getStatus());
+		
+		//
+		// Create the row
+		//
+		Row row = new Row();
+		row.columnNames = new String[]{"CountryName","Code", "Capital", "Province", "Area", "Population"};
+		row.values = new String[]{"Bogovia","BGR", "Bogov", "Bogov", "400", "575000"};
+		response = getClient(true).path("/"+id+"/tabledata/country").post(row);
+		assertEquals(201, response.getStatus());
+
+		//
+		// Update the row - we'll leave out some values to check these aren't affected by the update
+		//
+		ArrayList<Row> rows = new ArrayList<Row>();
+		row.columnNames = new String[]{"CountryName","Code", "Capital", "Province"};
+		row.values = new String[]{"Bogovia","BGR", "Bogov", "Bogov"};
+		row.lookupColumn ="Code";
+		row.lookupValue="BGR";
+		rows.add(row);
+		response = getClient(true).path("/"+id+"/tabledata/country").put(rows);
+		assertEquals(200, response.getStatus());
+		
+		//
+		// Check it exists
+		//
+		response = getClient(true).path("/"+id+"/tabledata/country").query("length", 400).get();
+		assertEquals(200, response.getStatus());
+
+		TableData data = response.readEntity(TableData.class);
+		
+		boolean containsNewRow = false;
+		for (DataRow currentRow : data.rows){
+			if (
+					((DataCell)currentRow.cell.get("CountryName")).getValue().equals("Bogovia") &&
+					((DataCell)currentRow.cell.get("Code")).getValue().equals("BGR") &&
+					((DataCell)currentRow.cell.get("Capital")).getValue().equals("Bogov") &&
+					((DataCell)currentRow.cell.get("Area")).getValue().equals("400") &&
+					((DataCell)currentRow.cell.get("Population")).getValue().equals("575000")
+			){
+				containsNewRow = true;
+			}
+		}
+		assertTrue(containsNewRow);
+		logout();
+	}
+	@Test
+	public void updateRowInTableWithInvalidData() throws Exception{		
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		// create an access database
+		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(csvFile);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		assertEquals(200, getClient(true).path("/"+id+"/tabledata/country").get().getStatus());
+		
+		//
+		// Create the row
+		//
+		Row row = new Row();
+		row.columnNames = new String[]{"CountryName","Code", "Capital", "Province", "Area", "Population"};
+		row.values = new String[]{"Bogovia","BGR", "Bogov", "Bogov", "400", "575000"};
+		response = getClient(true).path("/"+id+"/tabledata/country").post(row);
+		assertEquals(201, response.getStatus());
+
+		//
+		// Update the row - we've used strings instead of numbers
+		//
+		ArrayList<Row> rows = new ArrayList<Row>();
+		row.columnNames = new String[]{"CountryName","Code", "Capital", "Province", "Area", "Population"};
+		row.values = new String[]{"Bogovia","BGR", "Bogov", "Bogot", "Small", "Not many"};
+		row.lookupColumn ="Code";
+		row.lookupValue="BGR";
+		rows.add(row);
+		response = getClient(true).path("/"+id+"/tabledata/country").put(rows);
+		assertEquals(400, response.getStatus());
+		
+		//
+		// Check it exists
+		//
+		response = getClient(true).path("/"+id+"/tabledata/country").query("length", 400).get();
+		assertEquals(200, response.getStatus());
+
+		TableData data = response.readEntity(TableData.class);
+		
+		boolean containsNewRow = false;
+		for (DataRow currentRow : data.rows){
+			if (
+					((DataCell)currentRow.cell.get("CountryName")).getValue().equals("Bogovia") &&
+					((DataCell)currentRow.cell.get("Code")).getValue().equals("BGR") &&
+					((DataCell)currentRow.cell.get("Capital")).getValue().equals("Bogov") &&
+					((DataCell)currentRow.cell.get("Area")).getValue().equals("400") &&
+					((DataCell)currentRow.cell.get("Population")).getValue().equals("575000")
 			){
 				containsNewRow = true;
 			}

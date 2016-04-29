@@ -16,8 +16,12 @@
 
 package uk.ac.ox.it.ords.api.database.services.impl.hibernate;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.ws.rs.NotFoundException;
 
@@ -26,16 +30,19 @@ import org.apache.shiro.subject.Subject;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
 
+import uk.ac.ox.it.ords.api.database.data.DataRow;
+import uk.ac.ox.it.ords.api.database.data.DataTypeMap;
 import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.data.TableViewInfo;
 import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
+import uk.ac.ox.it.ords.api.database.exceptions.DBEnvironmentException;
 import uk.ac.ox.it.ords.api.database.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.TableView;
 import uk.ac.ox.it.ords.api.database.model.User;
-import uk.ac.ox.it.ords.api.database.queries.DatabaseQueries;
-import uk.ac.ox.it.ords.api.database.queries.GeneralSQLQueries;
+import uk.ac.ox.it.ords.api.database.queries.ORDSPostgresDB;
+import uk.ac.ox.it.ords.api.database.queries.ParameterList;
 import uk.ac.ox.it.ords.api.database.queries.QueryRunner;
 import uk.ac.ox.it.ords.api.database.services.TableViewService;
 
@@ -123,7 +130,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 			throw new NotFoundException();
 		}
 		
-		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(null,database.getDbConsumedName() );
+		ORDSPostgresDB sqlQueries = new ORDSPostgresDB(null,database.getDbConsumedName() );
 		boolean direction = false;
 		if (sortDirection != null && sortDirection.equalsIgnoreCase("ASC") ){
 			direction = true;
@@ -142,38 +149,187 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		if ( database == null ) {
 			throw new NotFoundException();
 		}
-
-		String server = database.getDatabaseServer();
-
-		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(server, database.getDbConsumedName() );
-		// create a database queries that points by default to the local ordsdb
-		DatabaseQueries dq = new DatabaseQueries(server, database.getDbConsumedName());
-		sqlQueries.addRowToTable(tableName, newData.columnNames, newData.values, dq);
+		
+		addRowToTable(database, tableName, newData.columnNames, newData.values);
 		
 		return 0;
 	}
+	
+	/**
+	 * Add a row of data to a table
+	 *
+	 * @param tableName
+	 *            the table where the row data should be added
+	 * @param cols
+	 *            an array of columns where the data is to reside
+	 * @param cellData
+	 *            an array of the data values. If a cell contains
+	 *            Vars.NULL_VALUE then it is assumed to be a null value.
+	 * @return true if successful
+	 * @throws Exception 
+	 */
+	private boolean addRowToTable(OrdsPhysicalDatabase database, String tableName, String[] cols,
+			String[] cellData) throws Exception {
+		if (log.isDebugEnabled()) {
+			log.debug(String.format("addRowToTable(%s)", tableName));
+		}
+		
+		ORDSPostgresDB sqlQueries = new ORDSPostgresDB( database.getDatabaseServer(), database.getDbConsumedName() );
+
+		String primaryKey = sqlQueries.getSingularPrimaryKeyColumn(tableName);
+
+		if (cols == null) {
+			log.error("No cols to add");
+			return false;
+		} else if (cellData == null) {
+			log.error("No cellData to add");
+			return false;
+		}
+
+		if (cellData.length == 0) {
+			cellData = new String[cols.length];
+		}
+
+		/*
+		 * If the user specifies '' then a blank is added. If the user specifies
+		 * Vars.NULL_VALUE then a null is added. If the user specifies nothing
+		 * (i.e.
+		 * 
+		 * Then the default value is used
+		 */
+		ArrayList<String> colList = new ArrayList<String>(Arrays.asList(cols));
+		ArrayList<String> dataList = new ArrayList<String>(Arrays.asList(cellData));
+		ArrayList<String> empties = new ArrayList<String>();
+		String columns = "";
+		String values = "";
+		for (int index = 0; index < cols.length; index++) {
+			if ((cellData[index] != null)
+					&& (cellData[index].equals("[null value]"))) {
+				log.warn("Null value in cell data");
+				/*
+				 * Null value
+				 */
+			}
+			if (cellData[index] == null) {
+				/*
+				 * When data is passed in to ORDS, if nothing has been specified
+				 * by the user then the values should be blank. However I
+				 * sometimes see them as NULL. I don't currently know why.
+				 */
+				//TODO What is going on here???
+				log.warn("Unexpected value of null here. This should not happen - let's make the value a blank for now.");
+				cellData[index] = null;
+//				continue;
+			} else if (cellData[index].isEmpty()) {
+				// Ignore this - let the database use the default value
+				colList.remove(cols[index]);
+				empties.add(cellData[index]);
+				continue;
+			}
+			columns += "\"" + cols[index].trim() + "\",";
+			values += "?,";
+		}
+		dataList.removeAll(empties);
+
+		if (columns.isEmpty()) {
+			/*
+			 * This is a special case. Normally, if the user omits data in a
+			 * column, the default value for that column will be used. However,
+			 * That cannot happen for cases where the user omits all data in all
+			 * columns, because then out insert command becomes invalid. So we
+			 * assume this is a no-op and return true.
+			 */
+			log.info("No data entered - blanks needed");
+			String command = String.format("insert into \"%s\" default values",
+					tableName);
+			return sqlQueries.runDBQuery(command);
+		}
+
+		if (columns.endsWith(",")) {
+			columns = columns.substring(0, columns.length() - 1);
+		}
+		if (values.endsWith(",")) {
+			values = values.substring(0, values.length() - 1);
+		}
+
+		//
+		// Note that "values" here is actually "? ? ?" placeholders to be replaced in a prepared statement
+		//
+		String command = String.format("insert into \"%s\" (%s) values (%s)",
+				tableName, columns, values);
+
+		//
+		// Get the map of datatypes for this row and populate it with values for the row
+		//		
+		ParameterList parameterList = this.createParameterList(database, tableName, colList, dataList);
+
+		// Insert blank - insert into table1 (col1,col2,col3,col4) values
+		// ('a','b','c','');
+		// Insert null - insert into table1 (col1,col2,col3) values
+		// ('a','b','c');
+		// or insert into table1 (col1,col2,col3,col4) values
+		// ('a','b','c',null);
+
+		boolean ret = false;
+		
+		QueryRunner dq = new QueryRunner(database.getDatabaseServer(), database.getDbConsumedName());
+		
+		ret = dq.createAndExecuteStatement(command, parameterList, tableName);
+
+		if (!ret) {
+			log.warn("Unable to update table successfully due to error.");
+			log.warn("Trying again after resetting the sequence");
+			if (!resetSequence(dq.getCurrentDbName(), tableName, primaryKey)) {
+				log.error("Unable to reset the sequence - will try the insert again, just in case");
+			}
+			ret = dq.createAndExecuteStatement(command, parameterList, tableName);
+		}
+
+		return ret;
+
+	}
+	
+	private boolean resetSequence(String databaseName, String tableName, String index)
+			throws ClassNotFoundException, DBEnvironmentException {
+		if (log.isDebugEnabled()) {
+			log.debug(String.format("resetSequence(%s, %s)", tableName, index));
+		}
+
+		// Example:
+		// SELECT setval(pg_get_serial_sequence('tblinvdetail','invdetailinvnum'),(SELECT GREATEST(MAX(invdetailinvnum)+1,nextval(pg_get_serial_sequence('tblinvdetail','invdetailinvnum')))-1 FROM tblinvdetail))
+//		String sequenceResetCommand = String
+//				.format("SELECT pg_catalog.setval(pg_get_serial_sequence('%s', '%s'), (SELECT MAX(%s) FROM \"%s\"));",
+//						tableName, index, index, tableName);
+		String sequenceResetCommand = String
+				.format("SELECT setval(pg_get_serial_sequence('%s','%s'),(SELECT GREATEST(MAX(%s)+1,nextval(pg_get_serial_sequence('%s','%s')))-1 FROM %s));",
+						tableName, index, index, tableName, index, tableName);
+		boolean ret = false;
+		try {
+			ret = new ORDSPostgresDB(null, databaseName).runDBQuery(sequenceResetCommand);
+		} catch (SQLException ex) {
+			log.error("Exception", ex);
+		}
+
+		return ret;
+	}
+
 
 	@Override
 	public int updateTableRow(int dbId, String tableName, List<Row> rowDataList)
 			throws Exception {
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
+		
 		if ( database == null ) {
 			throw new NotFoundException();
 		}
-		String server = database.getDatabaseServer();
+
 		for ( Row rowData: rowDataList ) {
-			int i = 0;
 			String command = "UPDATE \""+ tableName + "\" SET ";
+			
 			for ( String colName: rowData.columnNames) {
-				command += "\""+colName + "\"=";
-				String colVal = rowData.values[i++];
-				if ( isInt(colVal) || isNumber(colVal) ) {
-					command += colVal+",";
-				}
-				else {
-					command += "\'"+ colVal + "\',";
-				}
+				command += "\""+colName + "\"= ?,";
 			}
+			
 			// take off last comma
 			command = command.substring(0, command.length()-1);
 			
@@ -185,9 +341,34 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 				command += "'"+rowData.lookupValue+"'";
 			}
 			
-			QueryRunner q = new QueryRunner ( server, database.getDbConsumedName());
+			//
+			// Get the map of datatypes for this row and populate it with values for the row
+			//		
+			List<String> colList = Arrays.asList(rowData.columnNames);
+			List<String> dataList = Arrays.asList(rowData.values);			
+			ParameterList parameterList;
 			
-			q.runDBQuery(command);
+			try {
+				
+				parameterList = this.createParameterList(database, tableName, colList, dataList);
+				
+			} catch (Exception e) {
+				
+				log.error(e.getMessage());
+				
+				throw new NotFoundException();
+				
+			}
+			
+			QueryRunner dq = new QueryRunner(database.getDatabaseServer(), database.getDbConsumedName());
+			try {
+				dq.createAndExecuteStatement(command, parameterList, tableName);
+			} catch (Exception e) {
+				
+				log.error(e.getMessage());
+				
+				throw new BadParameterException(command);
+			}
 		}
 
 		return 0;
@@ -200,13 +381,159 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		if ( database == null ) {
 			throw new NotFoundException();
 		}
-		GeneralSQLQueries sqlQueries = new GeneralSQLQueries(null, database.getDbConsumedName() );
+		if (primaryKey == null || primaryKey.isEmpty() || primaryKeyValue == null || primaryKeyValue.isEmpty()){
+			throw new BadParameterException("Missing primary key data in delete row request");
+		}
 		Row rowToRemove = new Row();
 		rowToRemove.columnNames = new String[]{primaryKey};
 		rowToRemove.values = new String[]{primaryKeyValue};
-		sqlQueries.deleteTableRow(tableName, rowToRemove);
+		deleteTableRow(database, tableName, rowToRemove);
 	}
 	
+	/**
+	 * Delete a row from a table
+	 * @param database 
+	 * 			  the database to delete the row from
+	 * @param tableName
+	 *            the name of the table to operate on
+	 * @param row
+	 *            the row to delete
+	 * @return true if successful, else false
+	 * @throws Exception 
+	 *            if there is a problem deleting the row
+	 */
+	private boolean deleteTableRow(OrdsPhysicalDatabase database, String tableName, Row row) throws Exception {
+		if (tableName == null) {
+			log.error("Null table name - can't be having that");
+			return false;
+		}
+				
+		if (log.isDebugEnabled()) {
+			log.debug("deleteTableRow for table " + tableName);
+			log.debug("These are the data columns to be deleted");
+			log.debug("This is the data to be deleted");
+			int i = 0;
+			for (String name : row.columnNames) {
+				log.debug("Deleting column: " + name + "data: "+row.values[i++]);
+			}
+		}
+
+		String command = String.format("delete from \"%s\" where ", tableName);
+		String whereString = "";
+		int index = 0;
+
+		for (String columnName : row.columnNames) {
+
+			//log.debug("Calling replace from delete row routine");
+			//whereString += String.format("\"%s\" = '%s' ", columnName,
+			//			this.replaceSpecialCharacters(row.values[index++]));
+			index++;
+			whereString += String.format("\"%s\" = ? ",columnName);
+			
+			if (index < row.columnNames.length) {
+				whereString += " and ";
+			}
+			else {
+				whereString += ";";
+			}
+		}
+		command += whereString;
+
+		if (log.isDebugEnabled()) {
+			log.debug("Command to run:" + command);
+		}
+
+		boolean ret = false;
+		
+		//
+		// Convert column names and values into Lists so we can iterate through them more easily
+		//
+		ArrayList<String> colList = new ArrayList<String>(Arrays.asList(row.columnNames));
+		ArrayList<String> dataList = new ArrayList<String>(Arrays.asList(row.values));
+
+		//
+		// Get the map of datatypes for this row and populate it with values for the row
+		//		
+		ParameterList parameterList = this.createParameterList(database, tableName, colList, dataList);
+		
+		//
+		// Execute the delete statement
+		//
+		new QueryRunner(database.getDatabaseServer(), database.getDbConsumedName()).createAndExecuteStatement(command, parameterList, tableName);
+
+		return ret;
+	}
+	
+	/**
+	 * Populates a parameter lisst with processed values. Used when constructing parameter lists
+	 * for a prepared statement from arrays of values for a row.
+	 * @param dataTypeMaps
+	 * @param columns
+	 * @param data
+	 * @return
+	 */
+	private ParameterList createParameterList(OrdsPhysicalDatabase database, String table, List<String> columns, List<String> data) throws Exception{
+
+		ParameterList parameterList = new ParameterList();
+
+		Map<String, DataTypeMap> dataTypeMaps = getDataTypeMaps(database, table);
+
+		if (dataTypeMaps == null || dataTypeMaps.isEmpty()) throw new NotFoundException();
+
+		for (DataTypeMap dataTypeMap : dataTypeMaps.values()) {
+			
+			//
+			// get the index of the column
+			//
+			int colIndex = columns.indexOf(dataTypeMap.colName);
+			
+			if (colIndex > -1) {
+				
+				//
+				// Set the index of the parameter. Note that
+				// indexes of parameters start at 1 not 0.
+				//
+				dataTypeMap.index = colIndex + 1;
+				if ("[null value]".equals(
+						data.get(colIndex))) {
+					dataTypeMap.stringValue = null;
+				} else {
+					dataTypeMap.stringValue = data.get(colIndex);
+				}
+				parameterList.addParameter(dataTypeMap);
+			}
+		}
+		
+		return parameterList;
+	}
+	
+	/**
+	 * Returns the data type map (a map of types for values) for a table
+	 * @param tableName
+	 * @return
+	 * @throws Exception if the type map cannot be obtained - this is usually because the table specified does not exist
+	 */
+	private Map<String, DataTypeMap> getDataTypeMaps(OrdsPhysicalDatabase database, String tableName)
+			throws Exception {
+		if (log.isDebugEnabled()) {
+			log.debug(String.format("getDataTypeMaps(%s)", tableName));
+		}
+
+		Map<String, DataTypeMap> dataTypeMappingList = new ConcurrentHashMap<String, DataTypeMap>();
+		QueryRunner qr = new QueryRunner(database.getDatabaseServer(), database.getDbConsumedName());
+		qr.runDBQuery("SELECT column_name, data_type FROM information_schema.columns where table_name=\'"
+				+ tableName + "\'");
+
+		for (DataRow rows : qr.getTableData().rows) {
+			DataTypeMap dtm = new DataTypeMap();
+			dtm.colName = rows.cell.get("column_name").getValue();
+			dtm.dt = QueryRunner.getDataType(rows.cell.get("data_type")
+					.getValue());
+			dataTypeMappingList.put(dtm.colName, dtm);
+		}		
+
+		return dataTypeMappingList;
+	}
 
 	protected int createStaticRecordAndDB(int dbId, int datasetId,
 			TableViewInfo viewInfo) throws Exception {
