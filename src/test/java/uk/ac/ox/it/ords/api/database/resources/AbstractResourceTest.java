@@ -26,11 +26,8 @@ import org.apache.cxf.jaxrs.lifecycle.ResourceProvider;
 import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.apache.cxf.transport.local.LocalConduit;
 import org.apache.shiro.SecurityUtils;
-import org.apache.shiro.authc.AuthenticationToken;
-import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.config.IniSecurityManagerFactory;
 import org.apache.shiro.mgt.SecurityManager;
-import org.apache.shiro.subject.Subject;
 import org.apache.shiro.util.Factory;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
@@ -38,12 +35,9 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
-import javax.ws.rs.core.Response;
-
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 
 import uk.ac.ox.it.ords.api.database.model.User;
-import uk.ac.ox.it.ords.api.database.services.DatabaseRoleService;
 import uk.ac.ox.it.ords.api.database.services.DatabaseUploadService;
 import uk.ac.ox.it.ords.api.database.services.impl.hibernate.HibernateUtils;
 import uk.ac.ox.it.ords.security.AbstractShiroTest;
