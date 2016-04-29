@@ -2,7 +2,6 @@ package uk.ac.ox.it.ords.api.database.queries;
 
 import java.util.ArrayList;
 
-import uk.ac.ox.it.ords.api.database.data.DataCell;
 import uk.ac.ox.it.ords.api.database.data.DataTypeMap;
 import uk.ac.ox.it.ords.api.database.data.DataCell.DataType;
 
