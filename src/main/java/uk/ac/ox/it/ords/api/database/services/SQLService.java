@@ -2,7 +2,6 @@ package uk.ac.ox.it.ords.api.database.services;
 
 import java.util.ServiceLoader;
 
-import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.services.impl.hibernate.SQLServicePostgresImpl;
 
 public interface SQLService {
