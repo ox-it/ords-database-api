@@ -2,7 +2,6 @@ package uk.ac.ox.it.ords.api.database.queries;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -64,9 +63,9 @@ public class ORDSPostgresDB extends QueryRunner {
     }
     
     
-    public TableData getColumnDataTypesForTableTest(String tableName) throws ClassNotFoundException, SQLException {
-    	return getColumnDataTypesForTable(tableName);
-    }
+//    public TableData getColumnDataTypesForTableTest(String tableName) throws ClassNotFoundException, SQLException {
+//    	return getColumnDataTypesForTable(tableName);
+//    }
     
     
     private TableData getColumnDataTypesForTable(String tableName) throws ClassNotFoundException, SQLException {
@@ -401,176 +400,176 @@ public class ORDSPostgresDB extends QueryRunner {
         return sequences;
     }
 
-    /**
-     * Returns the data from a table. This does a lot more than just querying the data. It also understands the
-     * structure of the table and is able to cross reference other tables for their data if necessary.
-     *
-     * @param tableName the table whose data is to be returned
-     * @param rowStart initial row of data that needs to be viewed
-     * @param tableColumnReferences A HashMap of foreign keys from the table, and the foreign values to display in their place
-     * @param rowsPerPage the number of rows of data to be displayed per page
-     * @param sort the name of the column to sort by, or null if no sorting needed
-     * @param direction if sort is specified then this boolean will show if sorting is in normal or reverse order
-     * @return a TableData object containing all the data for a specific table or null if there has been a problem
-     * @throws SQLException 
-     */
-    public TableData getTableDataForTable(String tableName, int rowStart, HashMap<String, String> tableColumnReferences, int rowsPerPage, String sort, boolean direction) throws ClassNotFoundException, SQLException {
-        if (log.isDebugEnabled()) {
-            String tcr;
-            try {
-                tcr = tableColumnReferences.toString();
-            } catch (NullPointerException e) {
-                tcr = "null";
-            }
-            log.debug(String.format("getTableDataForTable(%s, %s, %d)",
-                    tableName, tcr, rowStart));
-        }
-        if (tableName == null) {
-            log.error("Null table name - cannot proceed");
-            return null;
-        }
-
-        /*
-         * First up, let's get the data that would be viewed
-         */
-        TableData baseTableData = getTableDataForTable(tableName, rowStart, rowsPerPage, sort, direction);
-        if (baseTableData == null) {
-            log.error("Null tabledata - this is bad");
-            return null;
-        }
-        if (!baseTableData.tableName.equals(tableName)) {
-            log.error("Coding error - table name set incorrectly. Correcting ...");
-            baseTableData.tableName = tableName;
-        }
-        
-        /*
-         * We need to understand if there are any foreign keys associated with this table and, if so, add
-         * them to the data.
-         */
-        if (tableColumnReferences != null) {
-        	addTableColumnReferences(tableName, baseTableData,tableColumnReferences);
-        }
-
-        baseTableData.logData();
-        baseTableData.setCurrentRow(rowStart);
-        return baseTableData;
-    }
+//    /**
+//     * Returns the data from a table. This does a lot more than just querying the data. It also understands the
+//     * structure of the table and is able to cross reference other tables for their data if necessary.
+//     *
+//     * @param tableName the table whose data is to be returned
+//     * @param rowStart initial row of data that needs to be viewed
+//     * @param tableColumnReferences A HashMap of foreign keys from the table, and the foreign values to display in their place
+//     * @param rowsPerPage the number of rows of data to be displayed per page
+//     * @param sort the name of the column to sort by, or null if no sorting needed
+//     * @param direction if sort is specified then this boolean will show if sorting is in normal or reverse order
+//     * @return a TableData object containing all the data for a specific table or null if there has been a problem
+//     * @throws SQLException 
+//     */
+//    public TableData getTableDataForTable(String tableName, int rowStart, HashMap<String, String> tableColumnReferences, int rowsPerPage, String sort, boolean direction) throws ClassNotFoundException, SQLException {
+//        if (log.isDebugEnabled()) {
+//            String tcr;
+//            try {
+//                tcr = tableColumnReferences.toString();
+//            } catch (NullPointerException e) {
+//                tcr = "null";
+//            }
+//            log.debug(String.format("getTableDataForTable(%s, %s, %d)",
+//                    tableName, tcr, rowStart));
+//        }
+//        if (tableName == null) {
+//            log.error("Null table name - cannot proceed");
+//            return null;
+//        }
+//
+//        /*
+//         * First up, let's get the data that would be viewed
+//         */
+//        TableData baseTableData = getTableDataForTable(tableName, rowStart, rowsPerPage, sort, direction);
+//        if (baseTableData == null) {
+//            log.error("Null tabledata - this is bad");
+//            return null;
+//        }
+//        if (!baseTableData.tableName.equals(tableName)) {
+//            log.error("Coding error - table name set incorrectly. Correcting ...");
+//            baseTableData.tableName = tableName;
+//        }
+//        
+//        /*
+//         * We need to understand if there are any foreign keys associated with this table and, if so, add
+//         * them to the data.
+//         */
+//        if (tableColumnReferences != null) {
+//        	addTableColumnReferences(tableName, baseTableData,tableColumnReferences);
+//        }
+//
+//        baseTableData.logData();
+//        baseTableData.setCurrentRow(rowStart);
+//        return baseTableData;
+//    }
 
     
-    /**
-     * Adds foreign key references to a table result
-     * @param tableName the table
-     * @param baseTableData the base table data (results)
-     * @param tableColumnReferences A HashMap of foreign keys from the table, and the foreign values to display in their place
-     * @throws ClassNotFoundException
-     * @throws SQLException
-     */
-    public void addTableColumnReferences(String tableName, TableData baseTableData, HashMap<String, String> tableColumnReferences) throws ClassNotFoundException, SQLException{
-    	{
-            TableData constraintData = getForeignConstraintsForTable(tableName);
-
-            /*
-             * The constraintData object now contains constraint data. Due to the nature of
-             * result sets, this constraint data is contained within the row information of
-             * the object.
-             */
-            if (constraintData.rows != null) {
-                /*
-                 * Look at each row to get the constraint information
-                 */
-                if (log.isDebugEnabled()) {
-                    log.debug(String.format("There are %d constraint rows", constraintData.rows.size()));
-                }
-                for (int index = 0; index < constraintData.rows.size(); index++) {
-                    // Get the name of the referree table
-                    String requiredReferencedTable = constraintData.rows.get(index).cell.get("foreign_table_name").getValue();
-                    String requiredReferencingTableIndex = constraintData.rows.get(index).cell.get("foreign_column_name").getValue();
-                    String referencingColumn = constraintData.rows.get(index).cell.get("column_name").getValue();
-
-                    if (log.isDebugEnabled()) {
-                        log.debug(String.format("Req ref table is %s", requiredReferencedTable));
-                        log.debug(String.format("Req ref table index is %s", requiredReferencingTableIndex));
-                    }
-                    // find the reference column
-                    OrdsTableColumn col = null;
-                    for (OrdsTableColumn column: baseTableData.columns) {
-                    	if ( column.columnName.equals(referencingColumn)) {
-                    		col = column;
-                    		break;
-                    	}
-                    }
-                    if (col == null) {
-                        log.error("Null column information for " + referencingColumn);
-                        continue;
-                    }
-                    //sort it here
-                    boolean b1 = false, b2 = false;
-                    if ( (requiredReferencedTable != null) && (requiredReferencedTable.equals(col.referencedTable))) {
-                        b1 = true;
-                    }
-                    if ( (requiredReferencingTableIndex != null) && (col.referencedColumn != null)){
-                    	if (requiredReferencingTableIndex.endsWith(col.referencedColumn)) {
-                        b2 = true;
-                    	}
-                    }
-
-
-                    /*
-                     * Now we need to replace all the data in referencingColumn with the data in requiredReferencedColumn.
-                     * First, we need to get the relevant data from the target table.
-                     */
-                    String command;
-                    if (b1 && b2) {
-                        if (log.isDebugEnabled()) {
-                            log.debug(String.format("RefTable is %s", requiredReferencedTable));
-                            log.debug(String.format("RefIndex is %s", requiredReferencingTableIndex));
-                        }
-
-                        /*
-                         * Now we should set up column information
-                         */
-                        String requiredReferencedColumn = tableColumnReferences.get(referencingColumn);
-                        if (requiredReferencedColumn != null) {
-                            command = String.format("select \"%s\" from \"%s\"", requiredReferencedColumn, requiredReferencedTable);
-                            TableData td;
-                            runDBQuery(command);
-                            List<String> alternativeOptions = new ArrayList<>();
-                            if (getTableData() == null) {
-                                log.error("No table data present. Something has gone wrong. Unable to continue here!");
-                                break;
-                            }
-                            for (DataRow row : getTableData().rows) {
-                                alternativeOptions.add(row.cell.get(requiredReferencedColumn).getValue());
-                            }
-
-                            td = getColumnNamesForTable(requiredReferencedTable);
-                            List<String> alternateColumns = new ArrayList<String>();
-                            for (DataRow row : td.rows) {
-                                alternateColumns.add(row.cell.get("column_name").getValue());
-                            }
-
-                            log.debug("Looping through columns");
-                            for (OrdsTableColumn otc : baseTableData.columns) {
-                                if (otc.columnName.equals(referencingColumn)) {
-                                    otc.alternativeOptions = alternativeOptions;
-                                    otc.alternateColumns = alternateColumns;
-                                    otc.referencedColumn = requiredReferencedColumn;
-                                    otc.referencedTable = requiredReferencedTable;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    else {
-                        if (log.isDebugEnabled()) {
-                            log.debug(String.format("%s == %s?", requiredReferencedTable, col.referencedTable));
-                            log.debug(String.format("%s == %s?", requiredReferencingTableIndex, col.referencedColumn));
-                        }
-                    }
-                }
-            }
-        }
-    }
+//    /**
+//     * Adds foreign key references to a table result
+//     * @param tableName the table
+//     * @param baseTableData the base table data (results)
+//     * @param tableColumnReferences A HashMap of foreign keys from the table, and the foreign values to display in their place
+//     * @throws ClassNotFoundException
+//     * @throws SQLException
+//     */
+//    public void addTableColumnReferences(String tableName, TableData baseTableData, HashMap<String, String> tableColumnReferences) throws ClassNotFoundException, SQLException{
+//    	{
+//            TableData constraintData = getForeignConstraintsForTable(tableName);
+//
+//            /*
+//             * The constraintData object now contains constraint data. Due to the nature of
+//             * result sets, this constraint data is contained within the row information of
+//             * the object.
+//             */
+//            if (constraintData.rows != null) {
+//                /*
+//                 * Look at each row to get the constraint information
+//                 */
+//                if (log.isDebugEnabled()) {
+//                    log.debug(String.format("There are %d constraint rows", constraintData.rows.size()));
+//                }
+//                for (int index = 0; index < constraintData.rows.size(); index++) {
+//                    // Get the name of the referree table
+//                    String requiredReferencedTable = constraintData.rows.get(index).cell.get("foreign_table_name").getValue();
+//                    String requiredReferencingTableIndex = constraintData.rows.get(index).cell.get("foreign_column_name").getValue();
+//                    String referencingColumn = constraintData.rows.get(index).cell.get("column_name").getValue();
+//
+//                    if (log.isDebugEnabled()) {
+//                        log.debug(String.format("Req ref table is %s", requiredReferencedTable));
+//                        log.debug(String.format("Req ref table index is %s", requiredReferencingTableIndex));
+//                    }
+//                    // find the reference column
+//                    OrdsTableColumn col = null;
+//                    for (OrdsTableColumn column: baseTableData.columns) {
+//                    	if ( column.columnName.equals(referencingColumn)) {
+//                    		col = column;
+//                    		break;
+//                    	}
+//                    }
+//                    if (col == null) {
+//                        log.error("Null column information for " + referencingColumn);
+//                        continue;
+//                    }
+//                    //sort it here
+//                    boolean b1 = false, b2 = false;
+//                    if ( (requiredReferencedTable != null) && (requiredReferencedTable.equals(col.referencedTable))) {
+//                        b1 = true;
+//                    }
+//                    if ( (requiredReferencingTableIndex != null) && (col.referencedColumn != null)){
+//                    	if (requiredReferencingTableIndex.endsWith(col.referencedColumn)) {
+//                        b2 = true;
+//                    	}
+//                    }
+//
+//
+//                    /*
+//                     * Now we need to replace all the data in referencingColumn with the data in requiredReferencedColumn.
+//                     * First, we need to get the relevant data from the target table.
+//                     */
+//                    String command;
+//                    if (b1 && b2) {
+//                        if (log.isDebugEnabled()) {
+//                            log.debug(String.format("RefTable is %s", requiredReferencedTable));
+//                            log.debug(String.format("RefIndex is %s", requiredReferencingTableIndex));
+//                        }
+//
+//                        /*
+//                         * Now we should set up column information
+//                         */
+//                        String requiredReferencedColumn = tableColumnReferences.get(referencingColumn);
+//                        if (requiredReferencedColumn != null) {
+//                            command = String.format("select \"%s\" from \"%s\"", requiredReferencedColumn, requiredReferencedTable);
+//                            TableData td;
+//                            runDBQuery(command);
+//                            List<String> alternativeOptions = new ArrayList<>();
+//                            if (getTableData() == null) {
+//                                log.error("No table data present. Something has gone wrong. Unable to continue here!");
+//                                break;
+//                            }
+//                            for (DataRow row : getTableData().rows) {
+//                                alternativeOptions.add(row.cell.get(requiredReferencedColumn).getValue());
+//                            }
+//
+//                            td = getColumnNamesForTable(requiredReferencedTable);
+//                            List<String> alternateColumns = new ArrayList<String>();
+//                            for (DataRow row : td.rows) {
+//                                alternateColumns.add(row.cell.get("column_name").getValue());
+//                            }
+//
+//                            log.debug("Looping through columns");
+//                            for (OrdsTableColumn otc : baseTableData.columns) {
+//                                if (otc.columnName.equals(referencingColumn)) {
+//                                    otc.alternativeOptions = alternativeOptions;
+//                                    otc.alternateColumns = alternateColumns;
+//                                    otc.referencedColumn = requiredReferencedColumn;
+//                                    otc.referencedTable = requiredReferencedTable;
+//                                    break;
+//                                }
+//                            }
+//                        }
+//                    }
+//                    else {
+//                        if (log.isDebugEnabled()) {
+//                            log.debug(String.format("%s == %s?", requiredReferencedTable, col.referencedTable));
+//                            log.debug(String.format("%s == %s?", requiredReferencingTableIndex, col.referencedColumn));
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
 
     
 
