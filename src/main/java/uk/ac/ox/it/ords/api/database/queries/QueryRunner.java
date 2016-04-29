@@ -89,20 +89,6 @@ public class QueryRunner {
     	return dbc.getDbServer();
     }
     
-    public String getCurrentDbUser() {
-    	if (dbc == null) {
-    		return null;
-    	}
-    	return dbc.getUser();
-    }
-    
-    public String getCurrentDbPw() {
-    	if (dbc == null) {
-    		return null;
-    	}
-    	return dbc.getPassword();
-    }
-    
     protected void setCredentials(String dbServer, String dbName) {
     	dbc = new DBCredentials(dbServer, dbName);
     }
@@ -449,7 +435,6 @@ public class QueryRunner {
      * @return the datatype or DataType.OTHER if unknown
      */
     public static DataType getDataType(String type) {
-        DataType dt;
         if (type == null) {
         	return null;
         }
@@ -681,6 +666,52 @@ public class QueryRunner {
         return tableData;
     }
     
+	/**
+	 * Creates and executes a prepared statement with a supplied map of typed values; used when no return is expected
+	 * 
+	 * @param updateString the command to execute
+	 * @param dataTypeMap a map of datatypes and values
+	 * @param tableName the table
+	 * @param primKey the primary key of the table TODO why?
+	 * @param originalKeyValue the original value of the primary key TODO why?
+	 * @return true if the statement executes successfully
+	 * @throws ClassNotFoundException if there is a problem with the database driver
+	 * @throws SQLException if there is a problem executing the SQL, typically a type validation problem, or a syntax error in the command
+	 */
+	public boolean createAndExecuteStatement(String updateString, ParameterList parameters, String tableName) throws ClassNotFoundException, SQLException {
+        boolean ret = false;
+
+        PreparedStatement pst = null;
+        Connection conn = initialiseConnection();
+                
+        try {
+        	pst = conn.prepareStatement(updateString);
+            addParametersToPreparedStatement(pst, parameters);                
+            pst.executeUpdate();
+
+            ret = true;
+        } 
+        catch (SQLException ex) {
+            log.error("Exception", ex);
+            dbErrorMessage = "" + ex;
+            log.error("SQLState: " + ex.getSQLState());
+            log.error("VendorError: " + ex.getErrorCode());
+        }
+        finally {
+        	if (pst != null) {
+            	pst.close();
+            }
+            if (conn != null) {
+            	conn.close();
+            }
+        }
+        
+        if(dbErrorMessage != null) throw new SQLException(dbErrorMessage);
+                        
+        return ret;
+    }
+
+    
     /**
      * Apply a ParameterList to a PreparedStatement
      * @param pstmt
@@ -691,8 +722,7 @@ public class QueryRunner {
     	if (parameters != null ){
     		for (int i=0; i<parameters.size(); i++){
     			DataTypeMap parameter = parameters.getParameter(i);
-    			log.debug(String.format("adding parameter %s", parameter.stringValue));
-    			addParameterToPreparedStatement(pstmt, i + 1, parameter);
+    			addParameterToPreparedStatement(pstmt, parameter.index, parameter);
     		}
     	}
     }
@@ -761,7 +791,7 @@ public class QueryRunner {
                 }
             }
             catch (NumberFormatException e) {
-                log.error("Unable to get data - internal corruption");
+                log.error("Invalid data - probably an attempt to use a non-numeric value for a numeric field");
                 throw new SQLException(e.getMessage());
             }
         } else if (dtm.dt.equals(DataType.BIT) || dtm.dt.equals(DataType.BOOLEAN)) {
@@ -802,27 +832,4 @@ public class QueryRunner {
         
         return fullCommand;
     }
-
-	
-	
-	/*
-	 * For Mark's Rest stuff
-	 */
-	public PreparedStatement getPreparedStatement(String query) throws SQLException, ClassNotFoundException {
-		Connection conn = null;
-
-		PreparedStatement pst = null;
-		try {
-			conn = initialiseConnection();
-			pst = conn.prepareStatement(query);
-		}
-		catch (SQLException e) {
-			if (conn != null) {
-				conn.close();
-			}
-		}
-		
-		
-		return pst;
-	}
 }
