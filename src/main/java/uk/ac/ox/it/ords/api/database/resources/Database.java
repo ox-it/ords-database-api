@@ -548,6 +548,18 @@ public class Database {
 			
 			// TODO audit
 			
+		} catch (BadParameterException ex) {
+			
+			log.error(ex);
+				
+			return Response.status(400).build();
+			
+		} catch (NotFoundException ex) {
+			
+			log.error(ex);
+				
+			return Response.status(Response.Status.NOT_FOUND).build();
+			
 		} catch (Exception e) {
 						
 			log.error(e);
