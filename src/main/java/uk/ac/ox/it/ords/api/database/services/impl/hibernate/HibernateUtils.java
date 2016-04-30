@@ -17,7 +17,6 @@ package uk.ac.ox.it.ords.api.database.services.impl.hibernate;
 
 import java.io.File;
 
-import org.hibernate.HibernateException;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.service.ServiceRegistry;
@@ -31,8 +30,10 @@ import uk.ac.ox.it.ords.api.database.model.TableView;
 import uk.ac.ox.it.ords.api.database.model.User;
 import uk.ac.ox.it.ords.security.SimplePersistentSession;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
+import uk.ac.ox.it.ords.security.model.DatabaseServer;
 import uk.ac.ox.it.ords.security.model.Permission;
 import uk.ac.ox.it.ords.security.model.UserRole;
+import uk.ac.ox.it.ords.security.services.ServerConfigurationService;
 
 
 public class HibernateUtils {
@@ -55,9 +56,16 @@ public class HibernateUtils {
 	}
 	
 	private static void init() {
+		
+		String hibernateConfigLocation;
+		try {
+			hibernateConfigLocation = MetaConfiguration.getConfiguration().getString(HIBERNATE_CONFIGURATION_PROPERTY);
+		} catch (Exception e) {
+			hibernateConfigLocation = null;
+		}
+		
 		try {
 			Configuration configuration = new Configuration();
-			String hibernateConfigLocation = MetaConfiguration.getConfiguration().getString(HIBERNATE_CONFIGURATION_PROPERTY);
 
 			if (hibernateConfigLocation == null) {
 				configuration.configure();
@@ -65,13 +73,21 @@ public class HibernateUtils {
 				configuration.configure(new File(hibernateConfigLocation));
 			}
 			
+			//
+			// Add server connection details
+			//
+			DatabaseServer databaseServer = ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer();
+			configuration.setProperty("hibernate.connection.url", databaseServer.getUrl());
+			configuration.setProperty("hibernate.connection.username", databaseServer.getUsername());
+			configuration.setProperty("hibernate.connection.password", databaseServer.getPassword());
+			
 			addMappings(configuration);
 
 			serviceRegistry = new ServiceRegistryBuilder().applySettings(
 					configuration.getProperties()).buildServiceRegistry();
 
 			sessionFactory = configuration.buildSessionFactory(serviceRegistry);
-		} catch (HibernateException he) {
+		} catch (Exception he) {
 			System.err.println("Error creating Session: " + he);
 			throw new ExceptionInInitializerError(he);
 		}
