@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
-import java.sql.SQLException;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.io.FileUtils;
@@ -33,16 +32,14 @@ import org.junit.Test;
 import uk.ac.ox.it.ords.api.database.conf.CommonVars;
 import uk.ac.ox.it.ords.api.database.data.OrdsTableColumn;
 import uk.ac.ox.it.ords.api.database.data.TableData;
-import uk.ac.ox.it.ords.api.database.exceptions.DBEnvironmentException;
 import uk.ac.ox.it.ords.api.database.queries.ORDSPostgresDB;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
+import uk.ac.ox.it.ords.security.services.ServerConfigurationService;
 
 public class CSVServiceImplTest {
 	
 	Configuration properties = MetaConfiguration.getConfiguration();
 
-	protected static String ORDS_DATABASE_NAME = "ords.database.name";
-	protected static String ORDS_DATABASE_HOST = "ords.database.server.host";
 
 	@BeforeClass
 	public static void setUp(){
@@ -50,13 +47,13 @@ public class CSVServiceImplTest {
 	}
 	
 	@After
-	public void tearDown() throws ClassNotFoundException, SQLException, DBEnvironmentException{		
+	public void tearDown() throws Exception{		
 		//
 		// Delete the table afterwards
 		//
 		new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				).runDBQuery("DROP TABLE IF EXISTS assetsimportcompletesample");
 	}
 
@@ -64,8 +61,8 @@ public class CSVServiceImplTest {
 	public void exportProjectTable() throws Exception{
 		CSVService csvService = CSVService.Factory.getInstance();
 		File csvFile = csvService.exportTable(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				"user"
 		);
 		assertTrue(csvFile.exists());
@@ -83,8 +80,8 @@ public class CSVServiceImplTest {
 		assertTrue(file.exists());
 
 		TableData tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				null, 
 				file, 
 				true, 
@@ -93,8 +90,8 @@ public class CSVServiceImplTest {
 		assertNotNull(tableData);
 		
 		TableData results = new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				)
 		.getTableDataForTable("assetsimportcompletesample", null, false);
 
@@ -105,8 +102,8 @@ public class CSVServiceImplTest {
 		//
 		String sql = "SELECT * FROM assetsimportcompletesample WHERE age = ' 77'";
 		File exportFile = CSVService.Factory.getInstance().exportQuery(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				sql
 		);
 		
@@ -114,8 +111,8 @@ public class CSVServiceImplTest {
 		// Now import - should be one row only
 		//
 		tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME), 
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				null,
 				exportFile, 
 				true, 
@@ -124,8 +121,8 @@ public class CSVServiceImplTest {
 		assertNotNull(tableData);
 		
 		results = new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				)
 		.getTableDataForTable(tableData.tableName, null, false);
 		
@@ -135,8 +132,8 @@ public class CSVServiceImplTest {
 		// Clean up
 		//		
 		new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				).runDBQuery("DROP TABLE " + tableData.tableName);
 		
 		exportFile.deleteOnExit();
@@ -147,8 +144,8 @@ public class CSVServiceImplTest {
 		CSVService csvService = CSVService.Factory.getInstance();
 		try {
 			csvService.exportTable(
-					properties.getString(ORDS_DATABASE_HOST),
-					properties.getString(ORDS_DATABASE_NAME),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 					"banana");
 
 			fail();
@@ -162,8 +159,8 @@ public class CSVServiceImplTest {
 		CSVService csvService = CSVService.Factory.getInstance();
 		try {
 			csvService.exportTable(
-					properties.getString(ORDS_DATABASE_HOST),
-					properties.getString(ORDS_DATABASE_NAME), 
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 					new TableData());
 
 			fail();
@@ -178,8 +175,8 @@ public class CSVServiceImplTest {
 		String tableName = null;
 		try {
 			csvService.exportTable(
-					properties.getString(ORDS_DATABASE_HOST),
-					properties.getString(ORDS_DATABASE_NAME),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 					tableName);
 
 			fail();
@@ -194,8 +191,8 @@ public class CSVServiceImplTest {
 		TableData tableName = null;
 		try {
 			csvService.exportTable(
-					properties.getString(ORDS_DATABASE_HOST),
-					properties.getString(ORDS_DATABASE_NAME),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 					tableName);
 
 			fail();
@@ -207,8 +204,8 @@ public class CSVServiceImplTest {
 	@Test
 	public void exportProjectTableToFile() throws Exception{		
 		TableData tableData = new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				).getColumnNamesForTable("user");
 		
 		
@@ -216,8 +213,8 @@ public class CSVServiceImplTest {
         
 		CSVService csvService = CSVService.Factory.getInstance();
 		File csvFile = csvService.exportTable(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				tableData);
 
 		assertTrue(csvFile.exists());
@@ -231,16 +228,16 @@ public class CSVServiceImplTest {
 		File file = new File("./src/test/resources/databases/AssetsImportCompleteSample.Commas.csv");
 		assertTrue(file.exists());
 		TableData tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				file, 
 				true);
 
 		assertNotNull(tableData);
 		
 		TableData results = new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				)
 		.getTableDataForTable("assetsimportcompletesample", null, false);
 		
@@ -254,16 +251,16 @@ public class CSVServiceImplTest {
 		File file = new File("./src/test/resources/databases/AssetsImportCompleteSample.Reserved.csv");
 		assertTrue(file.exists());
 		TableData tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				file, 
 				true);
 		
 		assertNotNull(tableData);
 		
 		TableData results = new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				)
 		.getTableDataForTable("assetsimportcompletesample", null, false);
 		
@@ -278,16 +275,16 @@ public class CSVServiceImplTest {
 		assertTrue(file.exists());
 		
 		TableData tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				file, 
 				true);
 		
 		assertNotNull(tableData);
 		
 		TableData results = new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				)
 		.getTableDataForTable("assetsimportcompletesample", null, false);
 		
@@ -300,15 +297,15 @@ public class CSVServiceImplTest {
 		File file = new File("./src/test/resources/databases/AssetsImportCompleteSample.EmptyColumnName.csv");
 		assertTrue(file.exists());
 		TableData tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				file, 
 				true);
 		assertNotNull(tableData);
 
 		TableData results = new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				)
 		.getTableDataForTable("assetsimportcompletesample", null, false);
 		
@@ -328,16 +325,16 @@ public class CSVServiceImplTest {
 		File file = new File("./src/test/resources/databases/AssetsImportCompleteSample.csv");
 		assertTrue(file.exists());
 		TableData tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				file, 
 				true);
 		
 		assertNotNull(tableData);
 		
 		TableData results = new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				)
 		.getTableDataForTable("assetsimportcompletesample", null, false);
 		
@@ -350,24 +347,24 @@ public class CSVServiceImplTest {
 		File file = new File("./src/test/resources/databases/AssetsImportCompleteSample.csv");
 		assertTrue(file.exists());
 		TableData tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				"banana",
 				file, 
 				true);		assertNotNull(tableData);
 		assertEquals("banana", tableData.tableName);
 		
 		TableData results = new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				)
 		.getTableDataForTable("banana", null, false);		
 		
 		assertEquals(4, results.getNumberOfRowsInEntireTable());
 				
 		new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				).runDBQuery("DROP TABLE banana");
 		
 	}
@@ -378,16 +375,16 @@ public class CSVServiceImplTest {
 		File file = new File("./src/test/resources/databases/AssetsImportCompleteSample.csv");
 		assertTrue(file.exists());
 		TableData tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				file, 
 				true);		
 		
 		assertNotNull(tableData);
 				
 		TableData results = new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				)
 		.getTableDataForTable("assetsimportcompletesample", null, false);		
 		
@@ -397,16 +394,16 @@ public class CSVServiceImplTest {
 		// Now another
 		//		
 		tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				file, 
 				true);
 		
 		assertNotNull(tableData);
 		
 		results = new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				)
 		.getTableDataForTable("assetsimportcompletesample", null, false);		
 		
@@ -414,8 +411,8 @@ public class CSVServiceImplTest {
 		assertEquals("assetsimportcompletesample_2", tableData.tableName);
 		
 		new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				).runDBQuery("DROP TABLE assetsimportcompletesample_2");
 	}
 	
@@ -425,16 +422,16 @@ public class CSVServiceImplTest {
 		File file = new File("./src/test/resources/databases/AssetsImportCompleteSample.csv");
 		assertTrue(file.exists());
 		TableData tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				file, 
 				false);
 		
 		assertNotNull(tableData);
 		
 		TableData results = new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				)
 		.getTableDataForTable("assetsimportcompletesample", null, false);
 		
@@ -450,8 +447,8 @@ public class CSVServiceImplTest {
 		File file = new File("./src/test/resources/databases/AssetsImportCompleteSample.csv");
 		assertTrue(file.exists());
 		TableData tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				file, 
 				true);
 		assertNotNull(tableData);
@@ -460,8 +457,8 @@ public class CSVServiceImplTest {
 		// Export
 		//
 		File csvFile = csvService.exportTable(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				tableData);
 
 		String output = FileUtils.readFileToString(csvFile);
@@ -480,8 +477,8 @@ public class CSVServiceImplTest {
 		File file = new File("./src/test/resources/databases/AssetsImportCompleteSample.csv");
 		assertTrue(file.exists());
 		TableData tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				file, 
 				true);
 		assertNotNull(tableData);
@@ -490,8 +487,8 @@ public class CSVServiceImplTest {
 		// Export
 		//
 		File csvFile = csvService.exportTable(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME), 
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(), 
 				tableData);
 
 		String output = FileUtils.readFileToString(csvFile);
@@ -513,16 +510,16 @@ public class CSVServiceImplTest {
 		File file = new File("./src/test/resources/databases/AssetsImportCompleteSample.csv");
 		assertTrue(file.exists());
 		TableData tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				file, 
 				true);
 		
 		assertNotNull(tableData);
 		
 		TableData results = new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				)
 		.getTableDataForTable("assetsimportcompletesample", null, false);
 		
@@ -533,8 +530,8 @@ public class CSVServiceImplTest {
 		// Export to CSV file
 		//
 		File csvFile = csvService.exportTable(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				tableData);
 
 		String output = FileUtils.readFileToString(csvFile);
@@ -548,16 +545,16 @@ public class CSVServiceImplTest {
 		String tableName = removeBadCharsFromName(csvFile.getName()).toLowerCase();
 		
 		tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				csvFile, 
 				true);
 		
 		assertNotNull(tableData);
 		
 		results = new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				)
 		.getTableDataForTable(tableName, null, false);
 		
@@ -568,8 +565,8 @@ public class CSVServiceImplTest {
 		// Delete the table
 		//	
 		new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				).runDBQuery("DROP TABLE " + tableName);
 		
 		csvFile.deleteOnExit();
@@ -581,8 +578,8 @@ public class CSVServiceImplTest {
 		File file = new File("./src/test/resources/databases/AssetsImportCompleteSample.csv");
 		assertTrue(file.exists());
 		TableData tableData = csvService.newTableDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				null, 
 				file, 
 				true, 
@@ -591,15 +588,15 @@ public class CSVServiceImplTest {
 		assertNotNull(tableData);
 		
 		csvService.appendDataFromFile(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				"assetsimportcompletesample", 
 				file);
 
 		
 		TableData results = new ORDSPostgresDB(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME)
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 				)
 		.getTableDataForTable("assetsimportcompletesample", null, false);
 		
@@ -613,8 +610,8 @@ public class CSVServiceImplTest {
 		assertTrue(file.exists());
 		try {
 			csvService.newTableDataFromFile(
-					properties.getString(ORDS_DATABASE_HOST),
-					properties.getString(ORDS_DATABASE_NAME),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 					file, true);
 
 			fail();
@@ -630,8 +627,8 @@ public class CSVServiceImplTest {
 		assertFalse(file.exists());
 		try {
 			csvService.newTableDataFromFile(
-					properties.getString(ORDS_DATABASE_HOST),
-					properties.getString(ORDS_DATABASE_NAME),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 					file, 
 					true);
 
@@ -647,8 +644,8 @@ public class CSVServiceImplTest {
 		File file = null;
 		try {
 			csvService.newTableDataFromFile(
-					properties.getString(ORDS_DATABASE_HOST),
-					properties.getString(ORDS_DATABASE_NAME),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 					file, 
 					true);
 
@@ -664,8 +661,8 @@ public class CSVServiceImplTest {
 		File file = new File("./src/test/resources/databases/AssetsImportCompleteSample.csv");
 		try {
 			csvService.appendDataFromFile(
-					properties.getString(ORDS_DATABASE_HOST),
-					properties.getString(ORDS_DATABASE_NAME),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 					"assetsimportcompletesample", 
 					file);
 
