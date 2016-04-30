@@ -130,7 +130,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 			throw new NotFoundException();
 		}
 		
-		ORDSPostgresDB sqlQueries = new ORDSPostgresDB(null,database.getDbConsumedName() );
+		ORDSPostgresDB sqlQueries = new ORDSPostgresDB(database.getDatabaseServer(), database.getDbConsumedName() );
 		boolean direction = false;
 		if (sortDirection != null && sortDirection.equalsIgnoreCase("ASC") ){
 			direction = true;
@@ -282,7 +282,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		if (!ret) {
 			log.warn("Unable to update table successfully due to error.");
 			log.warn("Trying again after resetting the sequence");
-			if (!resetSequence(dq.getCurrentDbName(), tableName, primaryKey)) {
+			if (!resetSequence(database.getDatabaseServer(), database.getDbConsumedName(), tableName, primaryKey)) {
 				log.error("Unable to reset the sequence - will try the insert again, just in case");
 			}
 			ret = dq.createAndExecuteStatement(command, parameterList, tableName);
@@ -292,7 +292,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 
 	}
 	
-	private boolean resetSequence(String databaseName, String tableName, String index)
+	private boolean resetSequence(String server, String databaseName, String tableName, String index)
 			throws ClassNotFoundException, DBEnvironmentException {
 		if (log.isDebugEnabled()) {
 			log.debug(String.format("resetSequence(%s, %s)", tableName, index));
@@ -308,7 +308,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 						tableName, index, index, tableName, index, tableName);
 		boolean ret = false;
 		try {
-			ret = new ORDSPostgresDB(null, databaseName).runDBQuery(sequenceResetCommand);
+			ret = new ORDSPostgresDB(server, databaseName).runDBQuery(sequenceResetCommand);
 		} catch (SQLException ex) {
 			log.error("Exception", ex);
 		}
