@@ -28,7 +28,6 @@ import java.util.Properties;
 import javax.sql.rowset.CachedRowSet;
 import javax.sql.rowset.RowSetProvider;
 
-import org.apache.commons.configuration.ConfigurationException;
 import org.hibernate.Criteria;
 import org.hibernate.SQLQuery;
 import org.hibernate.Session;
@@ -42,17 +41,11 @@ import org.slf4j.LoggerFactory;
 import uk.ac.ox.it.ords.api.database.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.User;
-import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
+import uk.ac.ox.it.ords.security.services.ServerConfigurationService;
 
 public class DatabaseServiceImpl {
 
 	Logger log = LoggerFactory.getLogger(DatabaseServiceImpl.class);
-
-	protected static String ODBC_MASTER_PASSWORD_PROPERTY = "ords.odbc.masterpassword";
-	protected static String ORDS_DATABASE_NAME = "ords.database.name";
-	protected static String ORDS_DATABASE_USER = "ords.database.user";
-	protected static String ORDS_DATABASE_PASSWORD = "ords.database.password";
-	protected static String ORDS_DATABASE_HOST = "ords.database.server.host";
 
 	private SessionFactory sessionFactory;
 
@@ -103,24 +96,20 @@ public class DatabaseServiceImpl {
 	// }
 	//
 
-	public String getORDSDatabaseUser() throws ConfigurationException {
-		return MetaConfiguration.getConfiguration().getString(
-				DatabaseServiceImpl.ORDS_DATABASE_USER);
+	public String getORDSDatabaseUser() throws Exception {
+		return ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getUsername();
 	}
 
-	public String getORDSDatabasePassword() throws ConfigurationException {
-		return MetaConfiguration.getConfiguration().getString(
-				DatabaseServiceImpl.ORDS_DATABASE_PASSWORD);
+	public String getORDSDatabasePassword() throws Exception {
+		return ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getPassword();
 	}
 
-	public String getORDSDatabaseName() throws ConfigurationException {
-		return MetaConfiguration.getConfiguration().getString(
-				DatabaseServiceImpl.ORDS_DATABASE_NAME);
+	public String getORDSDatabaseName() throws Exception {
+		return ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName();
 	}
 
-	public String getORDSDatabaseHost() throws ConfigurationException {
-		return MetaConfiguration.getConfiguration().getString(
-				DatabaseServiceImpl.ORDS_DATABASE_HOST);
+	public String getORDSDatabaseHost() throws Exception {
+		return ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost();
 	}
 
 	protected User getUserByPrincipal(String principalName) {
@@ -415,7 +404,7 @@ public class DatabaseServiceImpl {
 	}
 
 	private Connection createConnection(String server, String databaseName,
-			boolean readOnly) throws SQLException, ConfigurationException {
+			boolean readOnly) throws SQLException, Exception {
 		Connection connection = null;
 		Properties connectionProperties = new Properties();
 		if (server == null) {
