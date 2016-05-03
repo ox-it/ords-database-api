@@ -12,6 +12,9 @@ import uk.ac.ox.it.ords.api.database.services.impl.hibernate.TableViewServiceImp
 public interface TableViewService {
 
 	// static data sets
+	
+	public List<TableViewInfo> searchDataSets(String term) throws Exception;
+	
 	/**
 	 * 
 	 * @param dbId

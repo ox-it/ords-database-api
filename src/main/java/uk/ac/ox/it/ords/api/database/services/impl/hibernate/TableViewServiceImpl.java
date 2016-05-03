@@ -27,6 +27,8 @@ import javax.ws.rs.NotFoundException;
 
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.subject.Subject;
+import org.hibernate.Criteria;
+import org.hibernate.Session;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
 
@@ -109,6 +111,68 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		viewInfo.setViewTable(tableView.getAssociatedTable());
 		
 		return viewInfo;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<TableViewInfo> searchDataSets(String query) throws Exception {
+
+		List<TableView> datasets;
+
+		//
+        // If the search has not specified any terms they will just get all open projects.
+		//
+		String[] terms = {};
+		if ((query != null) && (query.trim().length() != 0)) {
+			terms = query.split(",");
+		}
+		
+		/*
+	     * Since the user has specified search terms, we need to display all datasets that match the search terms.
+		 */
+		
+		//
+		// Get matching datasets
+		//
+		Session session = this.getOrdsDBSessionFactory().getCurrentSession();
+		
+		try {
+			session.beginTransaction();
+			
+			Criteria searchCriteria = session.createCriteria(TableView.class)
+					.add(Restrictions.eq("tvAuthorization", "public"));
+			
+			
+			for (String term : terms) {
+				searchCriteria.add(
+						Restrictions.and(
+								Restrictions.or(
+										Restrictions.ilike("viewName", "%"+term.trim()+"%"),
+										Restrictions.ilike("viewDescription", "%"+term.trim()+"%")
+										)
+								)
+						);		
+			}
+			
+			datasets = searchCriteria.list();
+			session.getTransaction().commit();
+		} catch (Exception e) {
+			log.error("Error getting dataset list", e);
+			session.getTransaction().rollback();
+			throw e;
+		} finally {
+			  HibernateUtils.closeSession();
+		}		
+
+		List<TableViewInfo> response = new ArrayList<TableViewInfo>();
+		
+		for (TableView dataset : datasets){
+			TableViewInfo info = new TableViewInfo(dataset);
+			response.add(info);
+		}
+		
+		return response;
+		
 	}
 	
 	

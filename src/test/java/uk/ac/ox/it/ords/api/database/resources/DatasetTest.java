@@ -20,6 +20,7 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.Collection;
 
 import javax.ws.rs.core.Response;
 
@@ -257,6 +258,90 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		
 		AbstractResourceTest.databases.add(r);
 
+		logout();
+
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Test
+	public void searchDatasets() throws Exception{
+		
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		//
+		// Import a database
+		//
+		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		//
+		// Create the first dataset
+		//
+		TableViewInfo dataset = new TableViewInfo();
+		dataset.setViewName("test one");
+		dataset.setViewTable("City");
+		dataset.setViewQuery("SELECT 'CityName', 'Population' from City");
+		dataset.setViewDescription("test");
+		dataset.setViewAuthorization("private");
+		response = getClient(true).path("/"+id+"/dataset/").post(dataset);	
+		assertEquals(201, response.getStatus());
+		path = response.getLocation().getPath();
+		String viewId1 = path.substring(path.lastIndexOf('/')+1);
+		
+		//
+		// Create the second dataset
+		//
+		dataset = new TableViewInfo();
+		dataset.setViewName("test two");
+		dataset.setViewTable("City");
+		dataset.setViewQuery("SELECT 'CityName', 'Population' from City");
+		dataset.setViewDescription("test");
+		dataset.setViewAuthorization("public");
+		response = getClient(true).path("/"+id+"/dataset/").post(dataset);	
+		assertEquals(201, response.getStatus());
+		path = response.getLocation().getPath();
+		String viewId2 = path.substring(path.lastIndexOf('/')+1);
+		
+		//
+		// Search
+		//
+		response = getClient(true).path("dataset").query("q", "test").get();
+		assertEquals(200, response.getStatus());
+
+		//
+		// Returns "test two"
+		//
+		Collection<TableViewInfo> results = (Collection<TableViewInfo>) getClient(true).path("dataset").query("q", "two").getCollection(TableViewInfo.class);
+		assertEquals(1, results.size());
+
+		//
+		// "test one" is private, so should be no results
+		//
+		results = (Collection<TableViewInfo>) getClient(true).path("dataset").query("q", "one").getCollection(TableViewInfo.class);
+		assertEquals(0, results.size());
+		
+		//
+		// Returns "test two"
+		//
+		results = (Collection<TableViewInfo>) getClient(true).path("dataset").query("q", "test").getCollection(TableViewInfo.class);
+		assertEquals(1, results.size());
+		
+		// Cleanup
+		loginUsingSSO("pingu@nowhere.co", "");
+		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId1).delete().getStatus());
+		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId2).delete().getStatus());
+		
 		logout();
 
 	}

@@ -131,8 +131,29 @@ public class Database {
 		}
 
 	}
-	
-	
+
+	@ApiOperation(
+			value="Gets the meta data for matching public datasets",
+			notes="This returns the data transfer objects used to create the dataset",
+			response=uk.ac.ox.it.ords.api.database.data.TableViewInfo.class
+	)
+	@ApiResponses(value = { 
+			@ApiResponse(code = 200, message = "Query results retrieved."),
+	})
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	@Path("/dataset/")
+	public Response searchPublicDatasets(
+			@QueryParam("q") String term
+			) throws Exception
+	{
+		
+		List<TableViewInfo> datasets;
+		
+		datasets = TableViewService.Factory.getInstance().searchDataSets(term);
+		
+		return Response.ok(datasets).build();
+	}
 	
 	@ApiOperation(
 			value="Gets the meta data for a specified dataset",
