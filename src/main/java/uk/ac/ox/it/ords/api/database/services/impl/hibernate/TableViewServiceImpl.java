@@ -27,6 +27,8 @@ import javax.ws.rs.NotFoundException;
 
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.subject.Subject;
+import org.hibernate.Criteria;
+import org.hibernate.Session;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
 
@@ -111,6 +113,68 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		return viewInfo;
 	}
 	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<TableViewInfo> searchDataSets(String query) throws Exception {
+
+		List<TableView> datasets;
+
+		//
+        // If the search has not specified any terms they will just get all open projects.
+		//
+		String[] terms = {};
+		if ((query != null) && (query.trim().length() != 0)) {
+			terms = query.split(",");
+		}
+		
+		/*
+	     * Since the user has specified search terms, we need to display all datasets that match the search terms.
+		 */
+		
+		//
+		// Get matching datasets
+		//
+		Session session = this.getOrdsDBSessionFactory().getCurrentSession();
+		
+		try {
+			session.beginTransaction();
+			
+			Criteria searchCriteria = session.createCriteria(TableView.class)
+					.add(Restrictions.eq("tvAuthorization", "public"));
+			
+			
+			for (String term : terms) {
+				searchCriteria.add(
+						Restrictions.and(
+								Restrictions.or(
+										Restrictions.ilike("viewName", "%"+term.trim()+"%"),
+										Restrictions.ilike("viewDescription", "%"+term.trim()+"%")
+										)
+								)
+						);		
+			}
+			
+			datasets = searchCriteria.list();
+			session.getTransaction().commit();
+		} catch (Exception e) {
+			log.error("Error getting dataset list", e);
+			session.getTransaction().rollback();
+			throw e;
+		} finally {
+			  HibernateUtils.closeSession();
+		}		
+
+		List<TableViewInfo> response = new ArrayList<TableViewInfo>();
+		
+		for (TableView dataset : datasets){
+			TableViewInfo info = new TableViewInfo(dataset);
+			response.add(info);
+		}
+		
+		return response;
+		
+	}
+	
 	
 
 	@Override
@@ -130,7 +194,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 			throw new NotFoundException();
 		}
 		
-		ORDSPostgresDB sqlQueries = new ORDSPostgresDB(null,database.getDbConsumedName() );
+		ORDSPostgresDB sqlQueries = new ORDSPostgresDB(database.getDatabaseServer(), database.getDbConsumedName() );
 		boolean direction = false;
 		if (sortDirection != null && sortDirection.equalsIgnoreCase("ASC") ){
 			direction = true;
@@ -143,16 +207,14 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	}
 
 	@Override
-	public int appendTableData(int dbId, String tableName,
+	public boolean appendTableData(int dbId, String tableName,
 			Row newData) throws Exception {
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
 		if ( database == null ) {
 			throw new NotFoundException();
 		}
 		
-		addRowToTable(database, tableName, newData.columnNames, newData.values);
-		
-		return 0;
+		return addRowToTable(database, tableName, newData.columnNames, newData.values);
 	}
 	
 	/**
@@ -188,6 +250,11 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 
 		if (cellData.length == 0) {
 			cellData = new String[cols.length];
+		}
+		
+		if (cellData.length != cols.length){
+			log.error("Input contained different lengths for data and columns");
+			return false;
 		}
 
 		/*
@@ -279,7 +346,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		if (!ret) {
 			log.warn("Unable to update table successfully due to error.");
 			log.warn("Trying again after resetting the sequence");
-			if (!resetSequence(dq.getCurrentDbName(), tableName, primaryKey)) {
+			if (!resetSequence(database.getDatabaseServer(), database.getDbConsumedName(), tableName, primaryKey)) {
 				log.error("Unable to reset the sequence - will try the insert again, just in case");
 			}
 			ret = dq.createAndExecuteStatement(command, parameterList, tableName);
@@ -289,7 +356,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 
 	}
 	
-	private boolean resetSequence(String databaseName, String tableName, String index)
+	private boolean resetSequence(String server, String databaseName, String tableName, String index)
 			throws ClassNotFoundException, DBEnvironmentException {
 		if (log.isDebugEnabled()) {
 			log.debug(String.format("resetSequence(%s, %s)", tableName, index));
@@ -305,7 +372,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 						tableName, index, index, tableName, index, tableName);
 		boolean ret = false;
 		try {
-			ret = new ORDSPostgresDB(null, databaseName).runDBQuery(sequenceResetCommand);
+			ret = new ORDSPostgresDB(server, databaseName).runDBQuery(sequenceResetCommand);
 		} catch (SQLException ex) {
 			log.error("Exception", ex);
 		}

@@ -26,11 +26,6 @@ public class ORDSPostgresDB extends QueryRunner {
     private static Logger log = LoggerFactory.getLogger(ORDSPostgresDB.class);
     public static final String MAIN_DB_DOES_NOT_EXIST_DEPRICATED = "Main database does not exist.";
     
-
-	public String getDbError() {
-    	return getDbErrorMessage();
-    }
-    
     /*
      * Constructors ...
      */

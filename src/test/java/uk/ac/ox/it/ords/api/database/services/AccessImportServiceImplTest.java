@@ -30,13 +30,11 @@ import uk.ac.ox.it.ords.api.database.data.DataRow;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.queries.ORDSPostgresDB;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
+import uk.ac.ox.it.ords.security.services.ServerConfigurationService;
 
 public class AccessImportServiceImplTest {
 	
 	Configuration properties = MetaConfiguration.getConfiguration();
-
-	protected static String ORDS_DATABASE_NAME = "ords.database.name";
-	protected static String ORDS_DATABASE_HOST = "ords.database.server.host";
 	
 	@Test
 	public void preflightNull() throws Exception {
@@ -46,8 +44,8 @@ public class AccessImportServiceImplTest {
 	@Test
 	public void createSchemaNull() throws Exception {
 		Map<String, TableImportResult> schemaResult = AccessImportService.Factory.getInstance().createSchema(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				null);
 		assertNull(schemaResult);
 	}
@@ -60,8 +58,8 @@ public class AccessImportServiceImplTest {
 	@Test
 	public void createSchemaNoFile() throws Exception {
 		Map<String, TableImportResult> schemaResult = AccessImportService.Factory.getInstance().createSchema(
-				properties.getString(ORDS_DATABASE_HOST),
-				properties.getString(ORDS_DATABASE_NAME),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+				ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 				new File("banana"));
 		assertNull(schemaResult);
 	}
@@ -128,8 +126,8 @@ public class AccessImportServiceImplTest {
 			// Create schema
 			// 
 			Map<String, TableImportResult> schemaResult = svc.createSchema(
-					properties.getString(ORDS_DATABASE_HOST),
-					properties.getString(ORDS_DATABASE_NAME),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 					file);
 			
 			//
@@ -146,8 +144,8 @@ public class AccessImportServiceImplTest {
 			//			
 			
 			TableData tableData = new ORDSPostgresDB(
-					properties.getString(ORDS_DATABASE_HOST),
-					properties.getString(ORDS_DATABASE_NAME)
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 					)
 			.getTableDataForDatabase();
 			
@@ -165,8 +163,8 @@ public class AccessImportServiceImplTest {
 			// Import the data
 			//
 			results = svc.importData(
-					properties.getString(ORDS_DATABASE_HOST),
-					properties.getString(ORDS_DATABASE_NAME), 
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName(),
 					file);
 			assertEquals(tableNames.length, results.size());
 			
@@ -207,9 +205,11 @@ public class AccessImportServiceImplTest {
 			}
 			sql = sql.substring(0, sql.lastIndexOf(","));
 			
+			
+			
 			new ORDSPostgresDB(
-					properties.getString(ORDS_DATABASE_HOST),
-					properties.getString(ORDS_DATABASE_NAME)
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getHost(),
+					ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getMasterDatabaseName()
 					).runDBQuery(sql);
 		}
 		if (!success) fail();

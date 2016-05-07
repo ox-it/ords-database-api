@@ -22,13 +22,14 @@ import java.text.SimpleDateFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.ox.it.ords.api.database.conf.DBCredentials;
 import uk.ac.ox.it.ords.api.database.data.DataCell;
 import uk.ac.ox.it.ords.api.database.data.DataRow;
 import uk.ac.ox.it.ords.api.database.data.DataTypeMap;
 import uk.ac.ox.it.ords.api.database.data.OrdsTableColumn;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.data.DataCell.DataType;
+import uk.ac.ox.it.ords.security.model.DatabaseServer;
+import uk.ac.ox.it.ords.security.services.ServerConfigurationService;
 
 /**
  *
@@ -38,7 +39,8 @@ public class QueryRunner {
     private static Logger log = LoggerFactory.getLogger(QueryRunner.class);
     
     protected String dbErrorMessage;
-    protected DBCredentials dbc;
+    protected DatabaseServer dbc;
+    protected String databaseName;
     private TableData tableData = null;
     
     
@@ -47,14 +49,6 @@ public class QueryRunner {
             log.debug(String.format("QR Constructor:%s,%s", dbServer, dbName ));
         }
     	setCredentials(dbServer, dbName);
-    }
-    
-
-    public QueryRunner(String dbServer) {
-        if (log.isDebugEnabled()) {
-            log.debug("Instantiating with server " + dbServer);
-        }
-    	setCredentials(dbServer);
     }
     
     /**
@@ -69,33 +63,33 @@ public class QueryRunner {
     public TableData getTableData() {
     	return tableData;
     }
-
-    public String getDbErrorMessage() {
-        return dbErrorMessage;
-    }
-    
     
     public String getCurrentDbName() {
-    	if (dbc == null) {
-    		return null;
-    	}
-    	return dbc.getDbName();
+    	return this.databaseName;
     }
     
     public String getCurrentDbServer() {
     	if (dbc == null) {
     		return null;
     	}
-    	return dbc.getDbServer();
+    	return dbc.getHost();
     }
     
     protected void setCredentials(String dbServer, String dbName) {
-    	dbc = new DBCredentials(dbServer, dbName);
-    }
-    
-    private void setCredentials(String dbServer) {
-    	dbc = new DBCredentials(dbServer, "");
-    }    
+    	this.databaseName = dbName;
+    	
+    	try {
+			if (dbServer == null){
+				this.dbc = ServerConfigurationService.Factory.getInstance().getDatabaseServer();    		
+			} else {
+				this.dbc = ServerConfigurationService.Factory.getInstance().getDatabaseServer(dbServer);    		
+			}
+		} catch (Exception e) {
+			
+			log.error("Error locating database server",e);
+
+		}
+    } 
     
     protected Connection initialiseConnection() throws ClassNotFoundException, SQLException {
         return initialiseConnection(true);
@@ -110,28 +104,16 @@ public class QueryRunner {
      * @throws SQLException 
      */
     protected Connection initialiseConnection(boolean logException) throws ClassNotFoundException, SQLException {
-        if (log.isTraceEnabled()) {
-            log.trace("initialiseConnection");
-            log.trace("jdbc driver is " + dbc.getJDBC_DRIVER());
-            log.trace("dbUrl value is " + dbc.getDbUrl());
-            log.trace("creds user value is " + dbc.getUser());
-        }
-        
-        Class clazz = Class.forName(dbc.getJDBC_DRIVER());
-            
-        if (clazz == null) {
-            log.warn("Null clazz");
-        }
 
         Connection conn = null;
         try {
-            conn = DriverManager.getConnection(dbc.getDbUrl(), dbc.getUser(), dbc.getPassword());
+            conn = DriverManager.getConnection(dbc.getUrl(databaseName), dbc.getUsername(), dbc.getPassword());
             conn.setAutoCommit(true);
         }
         catch (SQLException e) {
             if (logException) {
                 log.error(String.format("Unable to initialise connection for user <%s> url <%s> with password %s",
-                        dbc.getUser(), dbc.getDbUrl(), //dbc.getPassword(),
+                        dbc.getUsername(), dbc.getUrl(), //dbc.getPassword(),
                         dbc.getPassword() == null ? "null" : "not null"));
                 log.error("Exception", e);
             }
@@ -169,13 +151,6 @@ public class QueryRunner {
             }
             else {
                 log.debug("runDBQuery: about to run command: " + query);
-            }
-            if (log.isTraceEnabled()) {
-	            log.trace("Number of records required:" + numberOfRecordsRequired);
-	            log.trace("Starting record:" + startRecord);
-	            log.trace("User:" + dbc.getUser());
-	            log.trace("Server:" + dbc.getDbServer());
-	            log.trace("DB:" + dbc.getDbName());
             }
         }
         boolean ret = false;
@@ -282,8 +257,8 @@ public class QueryRunner {
 	        }
 	        catch (SQLException ex) {
 	            log.error("Exception", ex);
-	            log.error("Database: " + dbc.getDbName());
-	            log.error("User: " + dbc.getUser());
+	            log.error("Database: " + databaseName);
+	            log.error("User: " + dbc.getUsername());
 	            log.error("Command: " + query);
 	            dbErrorMessage = "" + ex;
 	            log.error("SQLState: " + ex.getSQLState());
@@ -501,14 +476,6 @@ public class QueryRunner {
      * @throws ClassNotFoundException
      */
     public TableData runDBQuery(String query, ParameterList parameters, int startRecord, int numberOfRecordsRequired) throws ClassNotFoundException {
-        if (log.isDebugEnabled()) {
-            log.debug("runDBQuery: about to run command: " + query);
-            log.debug("Number of records required:" + numberOfRecordsRequired);
-            log.debug("Starting record:" + startRecord);
-            log.debug("User:" + dbc.getUser());
-            log.debug("Server:" + dbc.getDbServer());
-            log.debug("DB:" + dbc.getDbName());
-        }
         
         TableData tableData = new TableData();
         boolean pagination = true;
@@ -624,8 +591,8 @@ public class QueryRunner {
 	        }
 	        catch (SQLException ex) {
 	            log.error("Exception", ex);
-	            log.error("Database: " + dbc.getDbName());
-	            log.error("User: " + dbc.getUser());
+	            log.error("Database: " + databaseName);
+	            log.error("User: " + dbc.getUsername());
 	            log.error("Command: " + query);
 	            dbErrorMessage = "" + ex;
 	            log.error("SQLState: " + ex.getSQLState());

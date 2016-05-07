@@ -16,6 +16,8 @@
 
 package uk.ac.ox.it.ords.api.database.data;
 
+import uk.ac.ox.it.ords.api.database.model.TableView;
+
 public class TableViewInfo {
 	private String viewName;
 	private String viewTable;
@@ -23,6 +25,17 @@ public class TableViewInfo {
 	private String viewQuery;
 	private String viewAuthorization;
 
+	public TableViewInfo(){
+		
+	}
+	
+	public TableViewInfo(TableView dataset){
+		this.setViewAuthorization(dataset.getTvAuthorization());
+		this.setViewDescription(dataset.getViewDescription());
+		this.setViewName(dataset.getViewName());
+		this.setViewQuery(dataset.getQuery());
+		this.setViewTable(dataset.getAssociatedTable());
+	}
 	
 	public String getViewName() {
 		return viewName;
