@@ -61,6 +61,7 @@ import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.TableView;
 import uk.ac.ox.it.ords.api.database.permissions.DatabasePermissions;
+import uk.ac.ox.it.ords.api.database.services.DatabaseAuditService;
 import uk.ac.ox.it.ords.api.database.services.DatabaseRecordService;
 import uk.ac.ox.it.ords.api.database.services.DatabaseUploadService;
 import uk.ac.ox.it.ords.api.database.services.QueryService;
@@ -110,7 +111,7 @@ public class Database {
 			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
 			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))){
 				
-				// TODO audit
+				DatabaseAuditService.Factory.getInstance().createNotAuthRecord("GET " + id + "/datasetdata/"+datasetID, id);
 				
 				return Response.status(Response.Status.FORBIDDEN).build();
 			}
@@ -130,8 +131,29 @@ public class Database {
 		}
 
 	}
-	
-	
+
+	@ApiOperation(
+			value="Gets the meta data for matching public datasets",
+			notes="This returns the data transfer objects used to create the dataset",
+			response=uk.ac.ox.it.ords.api.database.data.TableViewInfo.class
+	)
+	@ApiResponses(value = { 
+			@ApiResponse(code = 200, message = "Query results retrieved."),
+	})
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	@Path("/dataset/")
+	public Response searchPublicDatasets(
+			@QueryParam("q") String term
+			) throws Exception
+	{
+		
+		List<TableViewInfo> datasets;
+		
+		datasets = TableViewService.Factory.getInstance().searchDataSets(term);
+		
+		return Response.ok(datasets).build();
+	}
 	
 	@ApiOperation(
 			value="Gets the meta data for a specified dataset",
@@ -159,8 +181,8 @@ public class Database {
 		// Check permissions
 		//
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
-
-			// TODO audit
+			
+			DatabaseAuditService.Factory.getInstance().createNotAuthRecord("GET " + id + "/dataset/" + datasetId, id);
 
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
@@ -171,7 +193,7 @@ public class Database {
 		try {
 			TableViewInfo tableViewInfo = tableViewService().getStaticDataSet(datasetId);
 
-			// TODO audit
+			DatabaseAuditService.Factory.getInstance().createDataQueryRecord(id);
 
 			return Response.ok(tableViewInfo).build();
 
@@ -209,8 +231,8 @@ public class Database {
 		if (physicalDatabase == null) return Response.status(404).build();
 
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
-
-			// TODO audit
+			
+			DatabaseAuditService.Factory.getInstance().createNotAuthRecord("PUT " + id + "/dataset/"+datasetId, id);
 			
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
@@ -220,7 +242,7 @@ public class Database {
 			
 			tableViewService().updateStaticDataSet(id, datasetId, tableViewInfo);	
 			
-			// TODO audit
+			DatabaseAuditService.Factory.getInstance().createDataChangeRecord(id);
 			
 			return Response.status(Response.Status.OK).build();
 
@@ -265,6 +287,9 @@ public class Database {
 		// Check permission
 		//
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
+
+			DatabaseAuditService.Factory.getInstance().createNotAuthRecord("POST " + id + "/dataset/", id);
+
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		
@@ -284,7 +309,9 @@ public class Database {
 			int staticDataSetId = tableViewService().createStaticDataSetOnQuery(id, tableViewInfo);
 		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
 		    builder.path(Integer.toString(staticDataSetId));
-		    
+		   
+			DatabaseAuditService.Factory.getInstance().createDatasetCreateRecord(id, staticDataSetId);
+
 		    return Response.created(builder.build()).build();
 		    
 		} 	catch (Exception e) {
@@ -322,15 +349,15 @@ public class Database {
 		// Check permission
 		//
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_DELETE(physicalDatabase.getLogicalDatabaseId()))) {
-
-			// TODO audit
+			
+			DatabaseAuditService.Factory.getInstance().createNotAuthRecord("DELETE " + id + "/dataset/"+datasetID, id);
 
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		try {
 			tableViewService().deleteStaticDataSet(datasetID);
 
-			// TODO audit
+			DatabaseAuditService.Factory.getInstance().createDatasetDeleteRecord(id, datasetID);
 
 			return Response.status(Response.Status.OK).build();
 
@@ -401,7 +428,9 @@ public class Database {
 		// Check permission
 		//
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
-			// TODO audit this
+			
+			DatabaseAuditService.Factory.getInstance().createNotAuthRecord("GET " + id + "/tabledata/" + tableName, dbId);
+
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		
@@ -468,8 +497,8 @@ public class Database {
 		// Check permissions
 		//
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
-			
-			// TODO audit
+						
+			DatabaseAuditService.Factory.getInstance().createNotAuthRecord("POST " + id + "/tabledata/" + tableName, id);
 			
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
@@ -483,13 +512,22 @@ public class Database {
 		// Append the data
 		//
 		try {
-			tableViewService().appendTableData(id, tableName, newData);
+			 if (!tableViewService().appendTableData(id, tableName, newData)){
+				 
+				 //
+				 // If the method returns false, there was a problem with the input
+				 //
+				 return Response.status(400).build();
+			 };
+			 
 		} catch (Exception e) {
 			
 			log.error(e);
-			
+						
 			return Response.status(500).build();
 		}
+		
+		DatabaseAuditService.Factory.getInstance().createDataInsertRecord(id);
 		
 		return Response.status(Response.Status.CREATED).build();
 	}
@@ -527,7 +565,7 @@ public class Database {
 		//
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
 			
-			// TODO audit
+			DatabaseAuditService.Factory.getInstance().createNotAuthRecord("PUT " + id + "/tabledata/" + tableName, id);
 	
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
@@ -546,7 +584,7 @@ public class Database {
 			
 			tableViewService().updateTableRow(id, tableName, rowData);
 			
-			// TODO audit
+			DatabaseAuditService.Factory.getInstance().createDataChangeRecord(id);
 			
 		} catch (BadParameterException ex) {
 			
@@ -603,8 +641,8 @@ public class Database {
 		// Check permissions
 		// 
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
-
-			// TODO audit
+			
+			DatabaseAuditService.Factory.getInstance().createNotAuthRecord("DELETE " + id + "/tabledata/" + tableName, id);
 			
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
@@ -619,7 +657,7 @@ public class Database {
 			
 			tableViewService().deleteTableData(id, tableName, primaryKey, primaryKeyValue);
 			
-			// TODO audit
+			DatabaseAuditService.Factory.getInstance().createDataDeleteRecord(id);
 			
 			return Response.status(Response.Status.OK).build();
 
@@ -669,7 +707,7 @@ public class Database {
 		//
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
 			
-			//TODO audit
+			DatabaseAuditService.Factory.getInstance().createNotAuthRecord("GET " + id + "/table/" + tableName +"/column/" + foreignKeyColumn + "/related", id);
 			
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
@@ -714,13 +752,16 @@ public class Database {
 
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
 			
-			// TODO audit
+			DatabaseAuditService.Factory.getInstance().createNotAuthRecord("GET" + id + "/query/", id);
 			
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		
 		try {
 			data = queryService().performQuery(id, theQuery, startIndex, rowsPerPage, null, null);
+			
+			DatabaseAuditService.Factory.getInstance().createDataQueryRecord(id);
+			
 			return Response.status(Response.Status.OK).entity(data).build();
 		}
 		//
@@ -755,15 +796,22 @@ public class Database {
 	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("{id}/{instance}/data")
+	@Path("{id}/data")
 	public Response exportDataBase(@PathParam("id") final int id) {
 		String sql = "";
 		try {
 			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
+			
 			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
+				
+				DatabaseAuditService.Factory.getInstance().createNotAuthRecord("GET " + id + "/data/", id);
+				
 				return Response.status(Response.Status.FORBIDDEN).build();
 			}
+			
 			sql = SQLService.Factory.getInstance().buildSQLExportForDatabase(id);
+			
+			DatabaseAuditService.Factory.getInstance().createExportRecord(id);
 		}
 		catch (BadParameterException ex) {
 			Response.status(Response.Status.NOT_FOUND).entity(ex)
@@ -795,9 +843,14 @@ public class Database {
 			@Multipart("databaseFile") Attachment fileAttachment,
 			@Context ServletContext context,
 			@Context UriInfo uriInfo) {
+		
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_CREATE)) {
+			
+			DatabaseAuditService.Factory.getInstance().createNotAuthRecord("POST " + dbId + "/data/" + server, dbId);
+
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
+		
 		//MediaType contentType = fileAttachment.getContentType();
 		//contentType.
 		int newDbId = 0;
@@ -826,7 +879,10 @@ public class Database {
 		try {
 			InputStream stream = handler.getInputStream();
 			saveFile(dbFile, stream);
-			newDbId = DatabaseUploadService.Factory.getInstance().createNewDatabaseFromFile(dbId, dbFile, extension, server);		}
+			newDbId = DatabaseUploadService.Factory.getInstance().createNewDatabaseFromFile(dbId, dbFile, extension, server);
+		
+			DatabaseAuditService.Factory.getInstance().createImportRecord(newDbId);
+		}
 		catch (Exception e ) {
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
 		}
@@ -848,6 +904,9 @@ public class Database {
 		try {
 			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(dbId);
 			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_DELETE(physicalDatabase.getLogicalDatabaseId()))) {
+				
+				DatabaseAuditService.Factory.getInstance().createNotAuthRecord("DELETE " + dbId + "/test/delete/" + staging, dbId);
+
 				return Response.status(Response.Status.FORBIDDEN).build();
 			}
 			DatabaseUploadService.Factory.getInstance().testDeleteDatabase(dbId, staging.value);
