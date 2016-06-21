@@ -19,6 +19,7 @@ package uk.ac.ox.it.ords.api.database.services;
 import java.io.File;
 import java.util.ServiceLoader;
 
+import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.services.impl.hibernate.DatabaseUploadServiceImpl;
 
 public interface DatabaseUploadService {
@@ -28,11 +29,17 @@ public interface DatabaseUploadService {
 
 	public int appendCSVToDatabase(int physicalDatabaseId, File csvFile,
 			String server) throws Exception;
+	
+	
+	public int importToExistingDatabase(int dbId, File sqlFile, String server) throws Exception;
 
 	public void init() throws Exception;
 
 	public void testDeleteDatabase(int dbId, boolean staging)
 			throws Exception;
+	
+	
+	public void setImportProgress ( int id, OrdsPhysicalDatabase.ImportType progress ) throws Exception;
 
 	public static class Factory {
 		private static DatabaseUploadService provider;

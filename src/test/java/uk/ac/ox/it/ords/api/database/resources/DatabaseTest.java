@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.junit.Test;
@@ -19,6 +20,7 @@ import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.cxf.jaxrs.ext.multipart.ContentDisposition;
 import org.apache.cxf.jaxrs.ext.multipart.MultipartBody;
 
+import uk.ac.ox.it.ords.api.database.data.ImportProgress;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.data.TableViewInfo;
 
@@ -95,8 +97,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
 			assertEquals(201, response.getStatus());
 			
-			String path = response.getLocation().getPath();
-			String id = path.substring(path.lastIndexOf('/')+1);
+			String id = getIdFromResponse(response);
 			DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
 			AbstractResourceTest.databases.add(r);
 			
@@ -121,11 +122,45 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
 			assertEquals(201, response.getStatus());
 			
-			path = response.getLocation().getPath();
-			id = path.substring(path.lastIndexOf('/')+1);
+			id = getIdFromResponse(response);
 			r = new DatabaseReference(Integer.parseInt(id), false);
 			AbstractResourceTest.databases.add(r);
 			
+			
+			// test export and import
+			
+			client = getClient(true);
+			client.accept("application/octet-stream");
+			String exportPath = "/"+id+"/export";
+			response = client.path(exportPath).get();
+			assertEquals(200, response.getStatus());
+			InputStream stream = (InputStream) response.getEntity();
+			this.getResponseFromInputStream(stream, "/tmp/mondial.sql");
+			
+			File sqlFile = new File ("/tmp/mondial.sql");
+			inputStream = new FileInputStream(sqlFile);
+			cd = new ContentDisposition("attachement;filename=mondial.sql");
+			att = new Attachment("databaseFile", inputStream, cd);
+			client = getClient(false);
+			client.type("multipart/form-data");
+			response = client.path("/"+id+"/import/localhost").post(new MultipartBody(att));
+			assertEquals(201, response.getStatus());
+			id = getIdFromResponse(response);
+			// check import progress
+			
+			ImportProgress prg;
+			client = getClient(true);
+			response = client.path("/"+id+"/import").get();
+			assertEquals(200,response.getStatus());
+			prg = response.readEntity(ImportProgress.class);
+			while ( "QUEUED".equals(prg.getStatus())|| "IN_PROGRESS".equals(prg.getStatus())) {
+				System.out.println("Import Status: " + prg.getStatus());
+				client = getClient(true);
+				response = client.path("/"+id+"/import").get();
+				prg = response.readEntity(ImportProgress.class);
+				assertEquals(200,response.getStatus());				
+			}
+			assertEquals(prg.getStatus(), "FINISHED");
 			
 			// test view
 			TableViewInfo viewInfo = new TableViewInfo();
@@ -169,7 +204,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			client = getClient(false);
 			response = client.path("/"+id+"/tabledata/country").get();
 			assertEquals(200, response.getStatus());
-			InputStream stream = (InputStream) response.getEntity();
+			stream = (InputStream) response.getEntity();
 			this.getResponseFromInputStream(stream, "mondial.json");
 			//tableData = response.readEntity(TableData.class);
 			
@@ -181,11 +216,19 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 	}
 	
 	
+	
+	private String getIdFromResponse( Response response ) {
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		return id;
+	}
+	
+	
 	private void getResponseFromInputStream(InputStream is, String fileName) {
         try {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(is));
                 String next = null;
-                PrintWriter writer = new PrintWriter("/tmp/"+fileName);
+                PrintWriter writer = new PrintWriter(fileName);
                 while ((next = reader.readLine()) != null) {
                         writer.println(next);
                 }

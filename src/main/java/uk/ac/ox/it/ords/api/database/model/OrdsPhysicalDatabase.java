@@ -39,7 +39,7 @@ public class OrdsPhysicalDatabase implements Cloneable {
 
     public enum ImportType {
 
-        QUEUED, SECONDARY_CSV_QUEUED, SECONDARY_CSV_IN_PROGRESS, IN_PROGRESS, FINISHED;
+        QUEUED, SECONDARY_CSV_QUEUED, SECONDARY_CSV_IN_PROGRESS, IN_PROGRESS, FINISHED, FAILED;
     }
     @Id
     @GeneratedValue

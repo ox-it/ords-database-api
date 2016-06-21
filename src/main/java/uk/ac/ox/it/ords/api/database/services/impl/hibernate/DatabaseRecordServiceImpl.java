@@ -16,6 +16,7 @@
 
 package uk.ac.ox.it.ords.api.database.services.impl.hibernate;
 
+import java.awt.List;
 import java.util.ArrayList;
 
 import org.hibernate.criterion.Restrictions;
@@ -32,19 +33,19 @@ public class DatabaseRecordServiceImpl extends DatabaseServiceImpl implements Da
 			throws Exception {
 		ArrayList<SimpleExpression> exprs = new ArrayList<SimpleExpression>();
 		exprs.add(Restrictions.eq("dbName", givenName));
-		OrdsDB odb = this.getModelObject(exprs, OrdsDB.class);
+		OrdsDB odb = this.getModelObject(exprs, OrdsDB.class, false);
 		
 		exprs.clear();
 		exprs.add(Restrictions.eq("logicalDatabaseId", odb.getLogicalDatabaseId()));
 		
-		return this.getModelObject(exprs, OrdsPhysicalDatabase.class);
+		return this.getModelObject(exprs, OrdsPhysicalDatabase.class, true);
 	}
 
 	@Override
 	public OrdsPhysicalDatabase getRecordFromId(int id) {
 		ArrayList<SimpleExpression> exprs = new ArrayList<SimpleExpression>();
 		exprs.add(Restrictions.eq("physicalDatabaseId", id));
-		return this.getModelObject(exprs, OrdsPhysicalDatabase.class);
+		return this.getModelObject(exprs, OrdsPhysicalDatabase.class, true);
 	}
 	
 

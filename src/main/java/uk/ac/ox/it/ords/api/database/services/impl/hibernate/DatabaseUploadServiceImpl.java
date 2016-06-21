@@ -18,6 +18,9 @@ package uk.ac.ox.it.ords.api.database.services.impl.hibernate;
 
 import java.io.File;
 
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+
 import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase.EntityType;
@@ -27,6 +30,7 @@ import uk.ac.ox.it.ords.api.database.services.AccessImportService;
 import uk.ac.ox.it.ords.api.database.services.CSVService;
 import uk.ac.ox.it.ords.api.database.services.DatabaseRoleService;
 import uk.ac.ox.it.ords.api.database.services.DatabaseUploadService;
+import uk.ac.ox.it.ords.api.database.services.SQLService;
 import uk.ac.ox.it.ords.security.model.Permission;
 import uk.ac.ox.it.ords.security.services.PermissionsService;
 
@@ -50,6 +54,10 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		if (type.equalsIgnoreCase("csv")) {
 			CSVService service = CSVService.Factory.getInstance();
 			service.newTableDataFromFile(server, databaseName, dbFile, true);
+		}
+		else if ( type.equalsIgnoreCase("sql")) {
+			SQLService service = SQLService.Factory.getInstance();
+			service.importSQLFileToDatabase(server, databaseName, dbFile, db.getPhysicalDatabaseId());
 		} else {
 			AccessImportService service = AccessImportService.Factory
 					.getInstance();
@@ -77,6 +85,38 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		service.newTableDataFromFile(server, databaseName, csvFile, true);
 		return 0;
 	}
+	
+	@Override
+	public int importToExistingDatabase(int dbId, File sqlFile, String server)
+			throws Exception {
+		OrdsPhysicalDatabase physicalDatabase = this.getPhysicalDatabaseFromID(dbId);
+		String databaseName = physicalDatabase.getDbConsumedName();
+		SQLService service = SQLService.Factory.getInstance();
+		service.importSQLFileToDatabase(server, databaseName, sqlFile, dbId);
+		return dbId;
+	}
+	
+		@Override
+	public void setImportProgress(int id, ImportType progress) throws Exception {
+
+		OrdsPhysicalDatabase physicalDatabase = this.getPhysicalDatabaseFromID(id);
+		Session session = this.getOrdsDBSessionFactory().openSession();
+		try {
+			Transaction transaction = session.beginTransaction();
+			session.evict(physicalDatabase);
+			physicalDatabase.setImportProgress(progress);
+			session.update(physicalDatabase);
+			session.flush();
+			transaction.commit();
+		} catch (Exception e) {
+			log.debug(e.getMessage());
+			session.getTransaction().rollback();
+			throw e;
+		} finally {
+			session.close();
+		}
+	}
+
 
 	private OrdsPhysicalDatabase createPhysicalDatabase(int logicalDatabaseId,
 			String databaseFileType, String fileName, long fileSize,
@@ -84,7 +124,7 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		OrdsPhysicalDatabase db = new OrdsPhysicalDatabase();
 		db.setLogicalDatabaseId(logicalDatabaseId);
 		db.setEntityType(EntityType.MAIN);
-		db.setImportProgress(ImportType.IN_PROGRESS);
+		db.setImportProgress(ImportType.QUEUED);
 		db.setDatabaseServer(server);
 		db.setFileName(fileName);
 		db.setFileSize(fileSize);
@@ -178,5 +218,8 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		this.runSQLStatementOnOrdsDB(statement);
 
 	}
+
+
+
 
 }

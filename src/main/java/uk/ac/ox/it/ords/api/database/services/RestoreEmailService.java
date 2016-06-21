@@ -1,32 +1,25 @@
 package uk.ac.ox.it.ords.api.database.services;
 
-import java.io.File;
 import java.util.ServiceLoader;
 
-import uk.ac.ox.it.ords.api.database.services.impl.hibernate.SQLServicePostgresImpl;
+import uk.ac.ox.it.ords.api.database.services.impl.RestoreEmailServiceImpl;
 
-public interface SQLService {
-	
-	/**
-	 * 
-	 * @param id
-	 * @param instance
-	 * @return
-	 * @throws Exception
-	 */
-	public File exportSQLFileFromDatabase( int dbId ) throws Exception;
-	
-	/**
-	 * 
-	 * @param sql
-	 * @return
-	 */
-	public long importSQLFileToDatabase ( String databaseServer, String databaseName, File sqlFile, int databaseId ) throws Exception;
-	
+public interface RestoreEmailService {
 
+	public void setEmail ( String email );
+	
+	public void setDatabaseName ( String databaseName );
+	
+	public void sendStartRestoreMessage ( ) throws Exception;
+	
+	public void sendRestoreSuccessfulMessage ( ) throws Exception;
+	
+	public void sendRestoreUnsuccessfulMessage ( String error ) throws Exception;
+	
+	
     public static class Factory {
-		private static SQLService provider;
-	    public static SQLService getInstance() {
+		private static RestoreEmailService provider;
+	    public static RestoreEmailService getInstance() {
 	    	//
 	    	// Use the service loader to load an implementation if one is available
 	    	// Place a file called uk.ac.ox.it.ords.api.structure.service.CommentService in src/main/resources/META-INF/services
@@ -34,8 +27,8 @@ public interface SQLService {
 	    	// By default we load the Hibernate/Postgresql implementation.
 	    	//
 	    	if (provider == null){
-	    		ServiceLoader<SQLService> ldr = ServiceLoader.load(SQLService.class);
-	    		for (SQLService service : ldr) {
+	    		ServiceLoader<RestoreEmailService> ldr = ServiceLoader.load(RestoreEmailService.class);
+	    		for (RestoreEmailService service : ldr) {
 	    			// We are only expecting one
 	    			provider = service;
 	    		}
@@ -44,7 +37,7 @@ public interface SQLService {
 	    	// If no service provider is found, use the default
 	    	//
 	    	if (provider == null){
-	    		provider = new SQLServicePostgresImpl();
+	    		provider = new RestoreEmailServiceImpl();
 	    	}
 	    	
 	    	return provider;

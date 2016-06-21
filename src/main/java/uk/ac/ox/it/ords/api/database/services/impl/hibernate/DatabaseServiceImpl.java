@@ -137,36 +137,14 @@ public class DatabaseServiceImpl {
 	protected OrdsDB getLogicalDatabaseFromID(int id) {
 		ArrayList<SimpleExpression> exprs = new ArrayList<SimpleExpression>();
 		exprs.add(Restrictions.eq("logicalDatabaseId", id));
-		return this.getModelObject(exprs, OrdsDB.class);
+		return this.getModelObject(exprs, OrdsDB.class, false);
 
 	}
 
 	protected OrdsPhysicalDatabase getPhysicalDatabaseFromID(int dbId) {
 		ArrayList<SimpleExpression> exprs = new ArrayList<SimpleExpression>();
 		exprs.add(Restrictions.eq("physicalDatabaseId", dbId));
-		// exprs.add(Restrictions.eq("instance", instance));
-		return this.getModelObject(exprs, OrdsPhysicalDatabase.class);
-
-		// Session session = this.getOrdsDBSessionFactory().openSession();
-		// try {
-		// Transaction transaction = session.beginTransaction();
-		//
-		// @SuppressWarnings("unchecked")
-		// List<OrdsPhysicalDatabase> users = (List<OrdsPhysicalDatabase>)
-		// session.createCriteria(OrdsPhysicalDatabase.class).add(Restrictions.eq("physicalDatabaseId",
-		// dbId)).list();
-		// transaction.commit();
-		// if (users.size() == 1){
-		// return users.get(0);
-		// }
-		// return null;
-		// } catch (Exception e) {
-		// session.getTransaction().rollback();
-		// throw e;
-		// }
-		// finally {
-		// session.close();
-		// }
+		return this.getModelObject(exprs, OrdsPhysicalDatabase.class, true);
 	}
 
 	protected void saveModelObject(Object objectToSave) throws Exception {
@@ -174,6 +152,7 @@ public class DatabaseServiceImpl {
 		try {
 			Transaction transaction = session.beginTransaction();
 			session.save(objectToSave);
+			session.flush();
 			transaction.commit();
 		} catch (Exception e) {
 			log.debug(e.getMessage());
@@ -188,7 +167,8 @@ public class DatabaseServiceImpl {
 		Session session = this.getOrdsDBSessionFactory().openSession();
 		try {
 			Transaction transaction = session.beginTransaction();
-			session.update(objectToUpdate);
+			session.saveOrUpdate(objectToUpdate);
+			session.flush();
 			transaction.commit();
 		} catch (Exception e) {
 			log.debug(e.getMessage());
@@ -200,10 +180,13 @@ public class DatabaseServiceImpl {
 	}
 
 	protected <T> T getModelObject(List<SimpleExpression> restrictions,
-			Class<T> cls) {
+			Class<T> cls, boolean clearSession) {
 		Session session = this.getOrdsDBSessionFactory().openSession();
 		try {
 			Transaction transaction = session.beginTransaction();
+			if ( clearSession ) {
+				session.clear();
+			}
 			Criteria c = session.createCriteria(cls);
 			for (SimpleExpression exp : restrictions) {
 				c.add(exp);
@@ -213,6 +196,9 @@ public class DatabaseServiceImpl {
 			transaction.commit();
 			if (objects.size() == 1) {
 				return objects.get(0);
+				//T obj =  objects.get(0);
+				//session.refresh(obj);
+				//return obj;
 			}
 			return null;
 		} finally {
@@ -257,6 +243,7 @@ public class DatabaseServiceImpl {
 		}
 	}
 
+
 	@SuppressWarnings("rawtypes")
 	protected List runSQLQuery(String query) {
 		Session session;
@@ -264,6 +251,28 @@ public class DatabaseServiceImpl {
 		try {
 			Transaction transaction = session.beginTransaction();
 			SQLQuery sqlQuery = session.createSQLQuery(query);
+			List results = sqlQuery.list();
+			transaction.commit();
+			return results;
+
+		} catch (Exception e) {
+			log.debug(e.getMessage());
+			session.getTransaction().rollback();
+			throw e;
+		} finally {
+			session.close();
+		}
+	}
+
+	
+	@SuppressWarnings("rawtypes")
+	protected List runSQLQuery(String query, Class entity) {
+		Session session;
+		session = this.getOrdsDBSessionFactory().openSession();
+		try {
+			Transaction transaction = session.beginTransaction();
+			SQLQuery sqlQuery = session.createSQLQuery(query);
+			sqlQuery.addEntity(entity);
 			List results = sqlQuery.list();
 			transaction.commit();
 			return results;

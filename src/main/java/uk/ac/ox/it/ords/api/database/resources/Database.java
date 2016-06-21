@@ -24,6 +24,7 @@ import io.swagger.annotations.ApiResponses;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
@@ -46,6 +47,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
@@ -54,6 +56,7 @@ import org.apache.cxf.jaxrs.ext.multipart.Multipart;
 import org.apache.log4j.Logger;
 import org.apache.shiro.SecurityUtils;
 
+import uk.ac.ox.it.ords.api.database.data.ImportProgress;
 import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.data.TableViewInfo;
@@ -795,10 +798,9 @@ public class Database {
 	})
 	
 	@GET
-	@Produces(MediaType.APPLICATION_JSON)
-	@Path("{id}/data")
+	@Path("{id}/export")
 	public Response exportDataBase(@PathParam("id") final int id) {
-		String sql = "";
+		File sql = null;
 		try {
 			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
 			
@@ -809,25 +811,25 @@ public class Database {
 				return Response.status(Response.Status.FORBIDDEN).build();
 			}
 			
-			sql = SQLService.Factory.getInstance().buildSQLExportForDatabase(id);
+			sql = SQLService.Factory.getInstance().exportSQLFileFromDatabase(id);
 			
 			DatabaseAuditService.Factory.getInstance().createExportRecord(id);
 		}
 		catch (BadParameterException ex) {
-			Response.status(Response.Status.NOT_FOUND).entity(ex)
-					.build();
+			return Response.status(Response.Status.NOT_FOUND).build();
 		} 
 		catch (Exception e) {
-			Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(e).build();
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
 		}
-		return Response.status(Response.Status.OK).entity(sql).build();
+		ResponseBuilder response = Response.ok(sql, "application/octet-stream");
+		response.header("Content-Disposition", "attachment; filename="+sql.getName());
+		return response.build();
 	}
 	
 
 	@ApiOperation(
 		value="Handles file upload for and existing database file",
-		notes="CSV and Access are currently supported"
+		notes="CSV, Access and sql dump files are currently supported"
 	)
 	@ApiResponses(value = { 
 		@ApiResponse(code = 201, message = "Database successfully imported."),
@@ -862,26 +864,16 @@ public class Database {
 				!extension.equalsIgnoreCase("accdb"))) {
 			return Response.status(Response.Status.UNSUPPORTED_MEDIA_TYPE).build();
 		}
-		File tempDirectory;
-		if ( context == null ) {
-			tempDirectory = new File("/tmp");
-		}
-		else {
-			tempDirectory = (File)context.getAttribute("javax.servlet.context.tmpdir");
-		}
-		if (tempDirectory == null ) {
-			// try with tmp again
-			tempDirectory = new File("/tmp");
-		}
-		File dbFile = new File(tempDirectory, fileName);
-		
-		DataHandler handler = fileAttachment.getDataHandler();
 		try {
-			InputStream stream = handler.getInputStream();
-			saveFile(dbFile, stream);
-			newDbId = DatabaseUploadService.Factory.getInstance().createNewDatabaseFromFile(dbId, dbFile, extension, server);
-		
-			DatabaseAuditService.Factory.getInstance().createImportRecord(newDbId);
+			File dbFile = this.saveFileAttachment(fileAttachment, context, fileName);
+			if ( extension.equalsIgnoreCase("sql")) {
+				newDbId = DatabaseUploadService.Factory.getInstance().importToExistingDatabase(dbId, dbFile, server);
+				DatabaseAuditService.Factory.getInstance().createImportRecord(dbId);
+			}
+			else {
+				newDbId = DatabaseUploadService.Factory.getInstance().createNewDatabaseFromFile(dbId, dbFile, extension, server);
+				DatabaseAuditService.Factory.getInstance().createImportRecord(newDbId);
+			}
 		}
 		catch (Exception e ) {
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
@@ -889,6 +881,106 @@ public class Database {
 	    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
 	    builder.path(Integer.toString(newDbId));
 	    return Response.created(builder.build()).build();
+	}
+	
+	
+	// ------------------------------------------------------------------------------
+	// SQL and CSV file import
+	// ------------------------------------------------------------------------------
+	@ApiOperation(
+			value="Handles file import to an existing database",
+			notes="CSV and sql dump files are currently supported"
+		)
+		@ApiResponses(value = { 
+			@ApiResponse(code = 201, message = "Database successfully imported."),
+			@ApiResponse(code = 415, message = "Database type not supported."),
+			@ApiResponse(code = 403, message = "Not authorized to create databases.")
+		})
+	
+	@POST
+	@Path("{id}/import/{server}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response importFile(@PathParam("id") int dbId,
+			@PathParam("server") String server,
+			@Multipart("databaseFile") Attachment fileAttachment,
+			@Context ServletContext context, @Context UriInfo uriInfo) {
+		try {
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService()
+					.getRecordFromId(dbId);
+
+			if (!SecurityUtils.getSubject()
+					.isPermitted(DatabasePermissions.DATABASE_MODIFY(
+							physicalDatabase.getLogicalDatabaseId()))) {
+
+				DatabaseAuditService.Factory.getInstance()
+						.createNotAuthRecord("POST " + dbId + "/import/", dbId);
+
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
+			MultivaluedMap<String, String> map = fileAttachment.getHeaders();
+			String fileName = getFileName(map);
+			String extension = getFileExtension(fileName);
+			if (!extension.equalsIgnoreCase("sql")
+					&& !extension.contentEquals("csv")) {
+				return Response.status(Response.Status.UNSUPPORTED_MEDIA_TYPE)
+						.build();
+			}
+			File importFile = this.saveFileAttachment(fileAttachment, context,
+					fileName);
+			int newDbId;
+			if (extension.equalsIgnoreCase("sql")) {
+				newDbId = DatabaseUploadService.Factory.getInstance()
+						.importToExistingDatabase(dbId, importFile, server);
+				DatabaseAuditService.Factory.getInstance()
+						.createImportRecord(dbId);
+			} else {
+				newDbId = DatabaseUploadService.Factory.getInstance()
+						.createNewDatabaseFromFile(dbId, importFile, extension,
+								server);
+				DatabaseAuditService.Factory.getInstance()
+						.createImportRecord(newDbId);
+			}
+			UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+			builder.path(Integer.toString(newDbId));
+			return Response.created(builder.build()).build();
+
+		} catch (BadParameterException ex) {
+			return Response.status(Response.Status.NOT_FOUND).build();
+		} catch (Exception e) {
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+					.build();
+		}
+	}
+
+	
+	@ApiOperation(
+			value="Checks progress of import",
+			notes="CSV and sql dump files are currently supported"
+		)
+		@ApiResponses(value = { 
+			@ApiResponse(code = 200, message = "Call successful."),
+			@ApiResponse(code = 403, message = "Not authorized to view database.")
+		})
+
+	@GET
+	@Path("{id}/import")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response importProgress( @PathParam("id") int dbId) {
+		try {
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(dbId);
+			if ( !SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
+				DatabaseAuditService.Factory.getInstance().createNotAuthRecord("VIEW " + dbId + "/import", dbId);
+				
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
+			OrdsPhysicalDatabase db = DatabaseRecordService.Factory.getInstance().getRecordFromId(dbId);
+			ImportProgress progress = new ImportProgress();
+			progress.setStatus(db.getImportProgress().toString());
+			return Response.ok(progress).build();
+		}
+		catch (Exception e ) {
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
+		}
 	}
 	
 	
@@ -964,6 +1056,27 @@ public class Database {
     		return null;
     	}
     	return fileName.substring(fileName.lastIndexOf('.')+1);
+    }
+    
+    
+    private File saveFileAttachment ( Attachment fileAttachment, ServletContext context, String fileName  ) throws Exception {
+		File tempDirectory;
+		if ( context == null ) {
+			tempDirectory = new File("/tmp");
+		}
+		else {
+			tempDirectory = (File)context.getAttribute("javax.servlet.context.tmpdir");
+		}
+		if (tempDirectory == null ) {
+			// try with tmp again
+			tempDirectory = new File("/tmp");
+		}
+		File dbFile = new File(tempDirectory, fileName);
+		
+		DataHandler handler = fileAttachment.getDataHandler();
+		InputStream stream = handler.getInputStream();
+		saveFile(dbFile, stream);
+		return dbFile;
     }
     
     

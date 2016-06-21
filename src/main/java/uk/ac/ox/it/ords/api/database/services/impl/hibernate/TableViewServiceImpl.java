@@ -181,7 +181,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	public TableView getTableViewRecord(int tableViewId) {
 		ArrayList<SimpleExpression> exprs = new ArrayList<SimpleExpression>();
 		exprs.add(Restrictions.eq("id", tableViewId));
-		return this.getModelObject(exprs, TableView.class);
+		return this.getModelObject(exprs, TableView.class, false);
 	}
 	
 
