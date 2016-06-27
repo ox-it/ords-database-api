@@ -244,47 +244,47 @@ public class DatabaseServiceImpl {
 	}
 
 
-	@SuppressWarnings("rawtypes")
-	protected List runSQLQuery(String query) {
-		Session session;
-		session = this.getOrdsDBSessionFactory().openSession();
-		try {
-			Transaction transaction = session.beginTransaction();
-			SQLQuery sqlQuery = session.createSQLQuery(query);
-			List results = sqlQuery.list();
-			transaction.commit();
-			return results;
-
-		} catch (Exception e) {
-			log.debug(e.getMessage());
-			session.getTransaction().rollback();
-			throw e;
-		} finally {
-			session.close();
-		}
-	}
+//	@SuppressWarnings("rawtypes")
+//	protected List runSQLQuery(String query) {
+//		Session session;
+//		session = this.getOrdsDBSessionFactory().openSession();
+//		try {
+//			Transaction transaction = session.beginTransaction();
+//			SQLQuery sqlQuery = session.createSQLQuery(query);
+//			List results = sqlQuery.list();
+//			transaction.commit();
+//			return results;
+//
+//		} catch (Exception e) {
+//			log.debug(e.getMessage());
+//			session.getTransaction().rollback();
+//			throw e;
+//		} finally {
+//			session.close();
+//		}
+//	}
 
 	
-	@SuppressWarnings("rawtypes")
-	protected List runSQLQuery(String query, Class entity) {
-		Session session;
-		session = this.getOrdsDBSessionFactory().openSession();
-		try {
-			Transaction transaction = session.beginTransaction();
-			SQLQuery sqlQuery = session.createSQLQuery(query);
-			sqlQuery.addEntity(entity);
-			List results = sqlQuery.list();
-			transaction.commit();
-			return results;
-
-		} catch (Exception e) {
-			log.debug(e.getMessage());
-			session.getTransaction().rollback();
-			throw e;
-		} finally {
-			session.close();
-		}
-	}
+//	@SuppressWarnings("rawtypes")
+//	protected List runSQLQuery(String query, Class entity) {
+//		Session session;
+//		session = this.getOrdsDBSessionFactory().openSession();
+//		try {
+//			Transaction transaction = session.beginTransaction();
+//			SQLQuery sqlQuery = session.createSQLQuery(query);
+//			sqlQuery.addEntity(entity);
+//			List results = sqlQuery.list();
+//			transaction.commit();
+//			return results;
+//
+//		} catch (Exception e) {
+//			log.debug(e.getMessage());
+//			session.getTransaction().rollback();
+//			throw e;
+//		} finally {
+//			session.close();
+//		}
+//	}
 
 	public boolean checkDatabaseExists(String databaseName) throws Exception {
 		String sql = "SELECT COUNT(*) as count from pg_database WHERE datname = ?";
@@ -370,22 +370,23 @@ public class DatabaseServiceImpl {
 		return above;
 	}
 
-	protected void createOBDCUserRole(String username, String password)
-			throws Exception {
-
-		// check if role exists already
-		String sql = String.format("SELECT 1 FROM pg_roles WHERE rolname='%s'",
-				username);
-		@SuppressWarnings("rawtypes")
-		List r = this.runSQLQuery(sql);
-		if (r.size() == 0) {
-			// role doesn't exist
-			String command = String
-					.format("create role \"%s\" nosuperuser login createdb inherit nocreaterole password '%s' valid until '2045-01-01'",
-							username, password);
-			this.runSQLStatementOnOrdsDB(command);
-		}
-	}
+//	protected void createOBDCUserRole(String username, String password)
+//			throws Exception {
+//
+//		// check if role exists already
+//		String sql = String.format("SELECT 1 FROM pg_roles WHERE rolname='%s'",
+//				username);
+//		@SuppressWarnings("rawtypes")
+//		List r = this.runSQLQuery(sql);
+//		if (r.size() == 0) {
+//			// role doesn't exist
+//			String command = String
+//					.format("create role \"%s\" nosuperuser login createdb inherit nocreaterole password '%s' valid until '2045-01-01'",
+//							username, password);
+//			this.runSQLStatementOnOrdsDB(command);
+//		}
+//	}
+	
 	/**
 	 * Mimicks the postgres function, surrounding a table or column name in
 	 * quotes, escaping existing quotes by doubling them.
@@ -473,25 +474,25 @@ public class DatabaseServiceImpl {
 		}
 	}
 
-	protected CachedRowSet runReadOnlyJDBCQuery(String query,
-			List<Object> parameters, String server, String databaseName)
-			throws Exception {
-		Connection connection = null;
-		try {
-			connection = createConnection(server, databaseName, true);
-			return runPreparedStatement(query, parameters, connection);
-
-		} catch (SQLException e) {
-			log.error("Error with this command", e);
-			log.error("Query:" + query);
-			throw e;
-		} finally {
-			if (connection != null) {
-				connection.close();
-			}
-		}
-
-	}
+//	protected CachedRowSet runReadOnlyJDBCQuery(String query,
+//			List<Object> parameters, String server, String databaseName)
+//			throws Exception {
+//		Connection connection = null;
+//		try {
+//			connection = createConnection(server, databaseName, true);
+//			return runPreparedStatement(query, parameters, connection);
+//
+//		} catch (SQLException e) {
+//			log.error("Error with this command", e);
+//			log.error("Query:" + query);
+//			throw e;
+//		} finally {
+//			if (connection != null) {
+//				connection.close();
+//			}
+//		}
+//
+//	}
 
 	protected CachedRowSet runJDBCQuery(String query, List<Object> parameters,
 			String server, String databaseName) throws Exception {
