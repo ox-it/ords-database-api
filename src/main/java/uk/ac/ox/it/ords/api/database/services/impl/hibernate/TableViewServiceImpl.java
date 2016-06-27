@@ -63,7 +63,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		// run as ords superuser because this might be accessed by an unauthenticated user.
 		
 		QueryRunner qr = new QueryRunner(server,databaseName);
-		qr.runDBQuery(query, startIndex, rowsPerPage);
+		qr.runDBQuery(query, startIndex, rowsPerPage, true);
 		TableData tableData =  qr.getTableData();
 		
 		

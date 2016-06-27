@@ -133,32 +133,22 @@ public class QueryRunner {
     
     
     public boolean runDBQuery(String query) throws ClassNotFoundException, SQLException {
-        return runDBQuery(query, 1, 0);
+        return runDBQuery(query, 1, 0, false);
     }
     
     
     
     
-    public boolean runDBQuery(String query, int startRecord, int numberOfRecordsRequired) throws ClassNotFoundException, SQLException {
-        if (query == null) {
+    public boolean runDBQuery(String query, int startRecord, int numberOfRecordsRequired, boolean readOnly) throws ClassNotFoundException, SQLException {
+        if (query == null || query.trim().isEmpty()) {
             log.error("Null query - returning");
             return false;
-        }
-        if (log.isDebugEnabled()) {
-            if (query.toLowerCase().contains("password")) {
-                int index = query.toLowerCase().indexOf("password");
-                log.debug(String.format("runDBQuery: about to run command %s ...", query.substring(0, index)));
-            }
-            else {
-                log.debug("runDBQuery: about to run command: " + query);
-            }
         }
         boolean ret = false;
         tableData = null;
         boolean pagination = true;
         
         if (numberOfRecordsRequired == 0) {
-            //log.debug("All records needed");
             pagination = false;
         }
         else {
@@ -172,6 +162,7 @@ public class QueryRunner {
         Connection conn = null;
         try {
         	conn = initialiseConnection();
+        	conn.setReadOnly(readOnly);
         }
         catch (SQLException e) {
             log.error("No connection set", e);
@@ -474,8 +465,9 @@ public class QueryRunner {
      * @param numberOfRecordsRequired
      * @return
      * @throws ClassNotFoundException
+     * @throws SQLException 
      */
-    public TableData runDBQuery(String query, ParameterList parameters, int startRecord, int numberOfRecordsRequired) throws ClassNotFoundException {
+    public TableData runDBQuery(String query, ParameterList parameters, int startRecord, int numberOfRecordsRequired, boolean readOnly) throws ClassNotFoundException, SQLException {
         
         TableData tableData = new TableData();
         boolean pagination = true;
@@ -494,6 +486,7 @@ public class QueryRunner {
         Connection conn = null;
         try {
         	conn = initialiseConnection();
+            conn.setReadOnly(readOnly);
         }
         catch (SQLException e) {
             log.error("No connection set", e);

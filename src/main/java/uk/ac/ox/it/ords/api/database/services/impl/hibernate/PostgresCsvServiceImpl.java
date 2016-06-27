@@ -419,12 +419,12 @@ public class PostgresCsvServiceImpl implements CSVService {
 		}
 		
 		String sql = String.format("alter table \"%s\" add column \"%s\" text", tableName, columnName.trim());
-		if (!new QueryRunner(dbServer, dbName).runDBQuery(sql, 0, 0)) {
+		if (!new QueryRunner(dbServer, dbName).runDBQuery(sql, 0, 0, false)) {
 			return false;
 		}
 		
 		sql = String.format("alter table \"%s\" alter column \"%s\" drop not null",tableName,columnName.trim());
-		if (!new QueryRunner(dbServer, dbName).runDBQuery(sql, 0, 0)) {
+		if (!new QueryRunner(dbServer, dbName).runDBQuery(sql, 0, 0, false)) {
 			return false;
 		}
 

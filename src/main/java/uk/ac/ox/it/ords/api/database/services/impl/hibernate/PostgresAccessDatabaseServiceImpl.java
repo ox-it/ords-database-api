@@ -488,7 +488,7 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 				table, columnName.trim(), dataType);
 		try {
 			return (new QueryRunner(server, database)
-					.runDBQuery(sql, 0, 0));
+					.runDBQuery(sql, 0, 0, false));
 		} catch (ClassNotFoundException | SQLException e) {
 			log.debug("Error creating table column", e);
 			return false;
@@ -537,7 +537,7 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 				"alter table \"%s\" ADD PRIMARY KEY (%s)", table, columns);
 		try {
 			return (new QueryRunner(server, database)
-					.runDBQuery(command, 0, 0));
+					.runDBQuery(command, 0, 0, false));
 		} catch (ClassNotFoundException | SQLException e) {
 			log.debug("Error creating primary key", e);
 			return false;

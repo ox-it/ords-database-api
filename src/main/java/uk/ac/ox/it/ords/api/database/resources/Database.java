@@ -775,7 +775,7 @@ public class Database {
 			
 			log.error(ex);
 			
-			return Response.status(Response.Status.NOT_FOUND).build();
+			return Response.status(Response.Status.BAD_REQUEST).build();
 		} 
 		catch (Exception e) {
 			

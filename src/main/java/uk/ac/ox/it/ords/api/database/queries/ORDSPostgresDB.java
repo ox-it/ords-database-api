@@ -308,11 +308,11 @@ public class ORDSPostgresDB extends QueryRunner {
             if (numberOfRowsRequired == 0) {
                 if (keyName == null) {
                     log.debug("No key specified - simple select");
-                    runDBQuery(String.format("select * from \"%s\"", tableName), databaseRowStart, numberOfRowsRequired);
+                    runDBQuery(String.format("select * from \"%s\"", tableName), databaseRowStart, numberOfRowsRequired, true);
                 }
                 else {
                     log.debug("Key specified");
-                    runDBQuery(String.format("select * from \"%s\" order by \"%s\"", tableName, keyName), databaseRowStart, numberOfRowsRequired);
+                    runDBQuery(String.format("select * from \"%s\" order by \"%s\"", tableName, keyName), databaseRowStart, numberOfRowsRequired, true);
                 }
             }
             else {
@@ -328,7 +328,7 @@ public class ORDSPostgresDB extends QueryRunner {
         }
         else {
             if (numberOfRowsRequired == 0) {
-                runDBQuery(String.format("select * from \"%s\" order by \"%s\" %s", tableName, sort, direction ? "asc" : "desc"), databaseRowStart, numberOfRowsRequired);
+                runDBQuery(String.format("select * from \"%s\" order by \"%s\" %s", tableName, sort, direction ? "asc" : "desc"), databaseRowStart, numberOfRowsRequired, true);
             }
             else {
                 runDBQuery(String.format("select * from \"%s\" order by \"%s\" %s limit %d offset %d", tableName, sort, direction ? "asc" : "desc", numberOfRowsRequired, databaseRowStart));
@@ -624,14 +624,14 @@ public class ORDSPostgresDB extends QueryRunner {
      * ... Constraints
      */
     
-    public boolean runGenericQuery(String query, int rowStart, int rowsPerPage) throws ClassNotFoundException, SQLException {
-    	return runDBQuery(query, rowStart, rowsPerPage);
-    }
+//    public boolean runGenericQuery(String query, int rowStart, int rowsPerPage) throws ClassNotFoundException, SQLException {
+//    	return runDBQuery(query, rowStart, rowsPerPage);
+//    }
     
     
-    public boolean runGenericQuery(String query) throws ClassNotFoundException, SQLException {
-    	return runDBQuery(query);
-    }
+//    public boolean runGenericQuery(String query) throws ClassNotFoundException, SQLException {
+//    	return runDBQuery(query);
+//    }
 
     /**
      * Gets a list of primary keys and the specified column from the specified table.
@@ -733,7 +733,7 @@ public class ORDSPostgresDB extends QueryRunner {
             //SELECT documents.docid AS id, sites.id AS value, sites.sitename AS label FROM documents LEFT OUTER JOIN sites ON sites.id = documents.docsite ORDER BY docsite ASC LIMIT 100 OFFSET 0 
             
             log.debug("Getting references values using SQL:" + sql);
-            referenceValues = runDBQuery(sql, parameters, offset, limit);
+            referenceValues = runDBQuery(sql, parameters, offset, limit, true);
         } catch (ClassNotFoundException e) {
             log.error(e.getMessage());
         } catch (SQLException e) {
@@ -820,7 +820,7 @@ public class ORDSPostgresDB extends QueryRunner {
         }
         String command = String.format("select c.relname FROM pg_catalog.pg_class c LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE c.relkind IN ('r','') AND n.nspname NOT IN ('pg_catalog', 'pg_toast') AND pg_catalog.pg_table_is_visible(c.oid) ORDER BY UPPER(c.relname);");
         ParameterList params = new ParameterList();
-        TableData tableData = runDBQuery(command, params,0,0);
+        TableData tableData = runDBQuery(command, params,0,0, true);
         log.debug("getTablesForDatabase:return");
         return tableData;
     }

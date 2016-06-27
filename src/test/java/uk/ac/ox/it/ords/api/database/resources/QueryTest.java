@@ -69,6 +69,12 @@ public class QueryTest extends AbstractDatabaseTestRunner{
 		assertEquals(2, data.rows.size());	
 		
 		//
+		// Query with null
+		//
+		response = getClient(true).path("/"+id+"/query/").query("q", "").get();
+		assertEquals(400, response.getStatus());
+		
+		//
 		// Now again, without permission
 		//
 		logout();
@@ -113,22 +119,45 @@ public class QueryTest extends AbstractDatabaseTestRunner{
 		// Prepare Cleanup
 		AbstractResourceTest.databases.add(r);
 		
-		//
-		// Query 1 - non-existing entities
-		//
-		// TODO FIXME - should be 400, is 500
-		//
-		//response = getClient(true).path("/"+id+"/query/").query("q", "select \"stuff\" from \"banana\"").get();
-		//assertEquals(400, response.getStatus());
+		response = getClient(true).path("/"+id+"/query/").query("q", "select \"stuff\" from \"banana\"").get();
+		assertEquals(400, response.getStatus());
+
+		logout();
+		
+	}
+	
+	@Test
+	public void queryWithInsert() throws Exception{
+		loginUsingSSO("pingu@nowhere.co", "");		
 		
 		//
-		// Query 2 - attempted insert using query service
+		// Import a database
 		//
-		// TODO FIXME - should be 400, is 200
-		// 
-		//response = getClient(true).path("/"+id+"/query/").query("q", "insert into country (\"Code\", \"CountryName\") values ('ZZ', 'Zebgonia')").get();
-		//assertEquals(400, response.getStatus());
+		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
 		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		
+		// Prepare Cleanup
+		AbstractResourceTest.databases.add(r);
+		
+		//
+		// Attempted insert using query service
+		//
+		response = getClient(true).path("/"+id+"/query/").query("q", "insert into country (\"Code\", \"CountryName\") values ('ZZ', 'Zebgonia')").get();
+		assertEquals(400, response.getStatus());
+		response = getClient(true).path("/"+id+"/query/").query("q", "select \"Code\", \"CountryName\" from country where \"CountryName\" LIKE '%Zebgon%'").get();
+		assertEquals(200, response.getStatus());
+		TableData data = response.readEntity(TableData.class);
+		assertEquals(0, data.rows.size());	
 		logout();
 		
 	}
