@@ -64,12 +64,14 @@ import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.TableView;
 import uk.ac.ox.it.ords.api.database.permissions.DatabasePermissions;
+import uk.ac.ox.it.ords.api.database.services.CSVService;
 import uk.ac.ox.it.ords.api.database.services.DatabaseAuditService;
 import uk.ac.ox.it.ords.api.database.services.DatabaseRecordService;
 import uk.ac.ox.it.ords.api.database.services.DatabaseUploadService;
 import uk.ac.ox.it.ords.api.database.services.QueryService;
 import uk.ac.ox.it.ords.api.database.services.SQLService;
 import uk.ac.ox.it.ords.api.database.services.TableViewService;
+import uk.ac.ox.it.ords.api.database.utils.FileUtilities;
 
 @Api(value="Database")
 @Path("/")
@@ -787,7 +789,7 @@ public class Database {
 	}
 
 	@ApiOperation(
-		value="Exports the database as sql",
+		value="Exports the database as sql, single csv or zipped csvs",
 		notes="",
 		response=String.class
 	)
@@ -796,11 +798,11 @@ public class Database {
 		@ApiResponse(code = 404, message = "Database does not exist."),
 		@ApiResponse(code = 403, message = "Not authorized to modify the database.")
 	})
-	
 	@GET
-	@Path("{id}/export")
-	public Response exportDataBase(@PathParam("id") final int id) {
-		File sql = null;
+	@Path("{id}/export/{type}")
+	public Response exportDatabase(@PathParam("id") final int id,
+			@PathParam("type") String exportType ) {
+		File output = null;
 		try {
 			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
 			
@@ -810,9 +812,20 @@ public class Database {
 				
 				return Response.status(Response.Status.FORBIDDEN).build();
 			}
-			
-			sql = SQLService.Factory.getInstance().exportSQLFileFromDatabase(id);
-			
+			if ( "sql".equalsIgnoreCase(exportType) ) {
+				output = SQLService.Factory.getInstance().exportSQLFileFromDatabase(id);
+			}
+			else if ("csv".equalsIgnoreCase(exportType ) ) {
+				output = CSVService.Factory.getInstance().exportDatabase(physicalDatabase.getDatabaseServer(),
+						physicalDatabase.getDbConsumedName(), false);
+			}
+			else if ("zip".equalsIgnoreCase(exportType ) ) {
+				output = CSVService.Factory.getInstance().exportDatabase(physicalDatabase.getDatabaseServer(),
+						physicalDatabase.getDbConsumedName(), true);
+			}
+			else {
+				throw new BadParameterException ( "Unable to create file type: "+exportType);
+			}
 			DatabaseAuditService.Factory.getInstance().createExportRecord(id);
 		}
 		catch (BadParameterException ex) {
@@ -821,8 +834,8 @@ public class Database {
 		catch (Exception e) {
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
 		}
-		ResponseBuilder response = Response.ok(sql, "application/octet-stream");
-		response.header("Content-Disposition", "attachment; filename="+sql.getName());
+		ResponseBuilder response = Response.ok(output, "application/octet-stream");
+		response.header("Content-Disposition", "attachment; filename="+output.getName());
 		return response.build();
 	}
 	
@@ -858,7 +871,7 @@ public class Database {
 		int newDbId = 0;
 		MultivaluedMap<String, String> map = fileAttachment.getHeaders();
 		String fileName = getFileName(map);
-		String extension = getFileExtension(fileName);
+		String extension = FileUtilities.getFileExtension(fileName);
 		if ( extension == null || (!extension.equalsIgnoreCase("csv") &&
 				!extension.equalsIgnoreCase("mdb") &&
 				!extension.equalsIgnoreCase("accdb"))) {
@@ -919,7 +932,7 @@ public class Database {
 			}
 			MultivaluedMap<String, String> map = fileAttachment.getHeaders();
 			String fileName = getFileName(map);
-			String extension = getFileExtension(fileName);
+			String extension = FileUtilities.getFileExtension(fileName);
 			if (!extension.equalsIgnoreCase("sql")
 					&& !extension.contentEquals("csv")) {
 				return Response.status(Response.Status.UNSUPPORTED_MEDIA_TYPE)
@@ -1051,48 +1064,17 @@ public class Database {
         return "unknown";
     }
 
-    private String getFileExtension(String fileName ) {
-    	if ( fileName.lastIndexOf('.') == -1 ) {
-    		return null;
-    	}
-    	return fileName.substring(fileName.lastIndexOf('.')+1);
-    }
-    
-    
     private File saveFileAttachment ( Attachment fileAttachment, ServletContext context, String fileName  ) throws Exception {
-		File tempDirectory;
-		if ( context == null ) {
-			tempDirectory = new File("/tmp");
-		}
-		else {
-			tempDirectory = (File)context.getAttribute("javax.servlet.context.tmpdir");
-		}
-		if (tempDirectory == null ) {
-			// try with tmp again
-			tempDirectory = new File("/tmp");
-		}
+		File tempDirectory = FileUtilities.createTemporaryDirectory();
 		File dbFile = new File(tempDirectory, fileName);
 		
 		DataHandler handler = fileAttachment.getDataHandler();
 		InputStream stream = handler.getInputStream();
-		saveFile(dbFile, stream);
+		FileUtilities.saveFile(dbFile, stream);
 		return dbFile;
     }
     
     
-    private void saveFile ( File f, InputStream stream ) throws Exception {
-        OutputStream out = new FileOutputStream(f);
-        
-        int read = 0;
-        byte[] bytes = new byte[1024];
-        while ((read = stream.read(bytes)) != -1) {
-            out.write(bytes, 0, read);
-        }
-        stream.close();
-        out.flush();
-        out.close();
-
-    }
     
  
 	// checks for a number of possible permutations for the staging part of the resource path

@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.sql.SQLException;
+import java.util.Arrays;
 
 import org.apache.commons.io.FileUtils;
 import org.postgresql.PGConnection;
@@ -23,6 +24,7 @@ import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.queries.ORDSPostgresDB;
 import uk.ac.ox.it.ords.api.database.queries.QueryRunner;
 import uk.ac.ox.it.ords.api.database.services.CSVService;
+import uk.ac.ox.it.ords.api.database.utils.FileUtilities;
 
 
 public class PostgresCsvServiceImpl implements CSVService {
@@ -59,6 +61,39 @@ public class PostgresCsvServiceImpl implements CSVService {
 		// 
 		return exportData(server, dbName, sql, file);
 	}
+
+	
+	
+	@Override
+	public File exportDatabase(String server, String database, boolean zipped) throws Exception {
+		ORDSPostgresDB dbr = new ORDSPostgresDB(server, database);
+		File tempDir = FileUtilities.createTemporaryDirectory();
+		try {
+			if ( dbr.checkDatabaseHasTables()) {
+				TableData tableNameData = dbr.getTableNamesForDatabase();
+				for (DataRow row: tableNameData.rows) {
+					String tableName = row.cell.get("relname").getValue();
+					File f = new File(tempDir.getAbsolutePath() + File.separatorChar + tableName + ".csv");
+					TableData tableData = new TableData();
+					tableData.tableName = tableName;
+					
+					exportTable ( server, database, tableData, f );
+				}
+				if ( zipped ) {
+					return FileUtilities.combineFilesToZip(tempDir);
+				}
+				else {
+					return FileUtilities.concatenateFiles(Arrays.asList(tempDir.listFiles()));
+				}
+			}
+		}
+		finally {
+			FileUtilities.deleteDir(tempDir);
+		}
+		return null;
+	}
+	
+	
 
 	@Override
 	public File exportTable(String server, String dbName, String tableName) throws Exception {
@@ -109,6 +144,9 @@ public class PostgresCsvServiceImpl implements CSVService {
 		// 
 		return exportData(server, dbName, sql, file);
 	}
+	
+	
+	
 	
 	/**
 	 * Executes a COPY operation and reads the output stream to a file

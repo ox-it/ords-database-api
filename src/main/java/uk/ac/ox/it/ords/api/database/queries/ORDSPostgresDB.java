@@ -149,6 +149,41 @@ public class ORDSPostgresDB extends QueryRunner {
     /*
      * ... Work on column information
      */
+   
+   
+   /**
+    * Get a list of all tables associated with a particular database
+    *
+    * @return true if the command has been successful
+    * @throws java.sql.SQLException
+    * @throws java.lang.ClassNotFoundException
+    */
+   public boolean checkDatabaseHasTables() throws SQLException, ClassNotFoundException {
+       if (log.isDebugEnabled()) {
+           log.debug(String.format("getTablesForDatabase()"));
+       }
+       String command = String.format("select c.relname FROM pg_catalog.pg_class c LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE c.relkind IN ('r','') AND n.nspname NOT IN ('pg_catalog', 'pg_toast') AND pg_catalog.pg_table_is_visible(c.oid) ORDER BY UPPER(c.relname);");
+       return runDBQuery(command);
+   }
+
+   
+   /**
+    * Get a list of table names for the database in a TableData object.  The table names are the
+    * @return
+    * @throws SQLException
+    * @throws ClassNotFoundException
+    */
+   public TableData getTableNamesForDatabase() throws SQLException, ClassNotFoundException {
+       if (log.isDebugEnabled()) {
+           log.debug(String.format("getTablesForDatabase()"));
+       }
+       String command = String.format("select c.relname FROM pg_catalog.pg_class c LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE c.relkind IN ('r','') AND n.nspname NOT IN ('pg_catalog', 'pg_toast') AND pg_catalog.pg_table_is_visible(c.oid) ORDER BY UPPER(c.relname);");
+       ParameterList params = new ParameterList();
+       TableData tableData = runDBQuery(command, params,0,0, true);
+       log.debug("getTablesForDatabase:return");
+       return tableData;
+   }
+
     		    
     /**
      * Get rows of data from the table. This function will get ALL table rows, which may be large.

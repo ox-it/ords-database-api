@@ -66,6 +66,17 @@ public interface CSVService {
 	 */
 	public abstract File exportQuery(String server, String database,
 			String query) throws Exception;
+	
+	
+	/**
+	 * Export a whole database either as a single CSV or a zipped folder of CSVs
+	 * @param server
+	 * @param database
+	 * @param zipped
+	 * @return
+	 * @throws Exception 
+	 */
+	public abstract File exportDatabase(String server, String database, boolean zipped) throws Exception;
 
 	/**
 	 * Export a database table as a CSV file

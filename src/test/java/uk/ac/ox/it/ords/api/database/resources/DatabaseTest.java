@@ -131,11 +131,24 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			
 			client = getClient(true);
 			client.accept("application/octet-stream");
-			String exportPath = "/"+id+"/export";
+			String exportPath = "/"+id+"/export/sql";
 			response = client.path(exportPath).get();
 			assertEquals(200, response.getStatus());
 			InputStream stream = (InputStream) response.getEntity();
 			this.getResponseFromInputStream(stream, "/tmp/mondial.sql");
+			
+			//quick test for csv and zip export
+			// TODO need to write a proper check for this
+			client = getClient(true);
+			client.accept("text/csv");
+			response = client.path("/"+id+"/export/csv").get();
+			assertEquals(200, response.getStatus());
+			
+			client = getClient(true);
+			client.accept("application/zip");
+			response = client.path("/"+id+"/export/zip").get();
+			assertEquals(200, response.getStatus());
+			
 			
 			File sqlFile = new File ("/tmp/mondial.sql");
 			inputStream = new FileInputStream(sqlFile);
