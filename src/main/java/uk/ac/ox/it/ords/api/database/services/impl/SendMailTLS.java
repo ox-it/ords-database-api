@@ -60,7 +60,8 @@ public class SendMailTLS {
 				!props.containsKey("mail.smtp.host")
 		) {
 			    log.error("Unable to send emails as email server configuration is missing");
-			    throw new Exception("Unable to send emails as email server configuration is missing");			
+			    //throw new Exception("Unable to send emails as email server configuration is missing");
+			    return; // 
 		}
 		
 		Session session = Session.getInstance(props,
