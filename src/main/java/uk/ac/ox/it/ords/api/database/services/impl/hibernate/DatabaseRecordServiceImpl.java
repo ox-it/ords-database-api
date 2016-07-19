@@ -16,15 +16,19 @@
 
 package uk.ac.ox.it.ords.api.database.services.impl.hibernate;
 
-import java.awt.List;
+import java.util.List;
 import java.util.ArrayList;
 
+import org.apache.shiro.SecurityUtils;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
 
 import uk.ac.ox.it.ords.api.database.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.services.DatabaseRecordService;
+import uk.ac.ox.it.ords.security.permissions.Permissions;
 
 public class DatabaseRecordServiceImpl extends DatabaseServiceImpl implements DatabaseRecordService {
 
@@ -47,6 +51,40 @@ public class DatabaseRecordServiceImpl extends DatabaseServiceImpl implements Da
 		exprs.add(Restrictions.eq("physicalDatabaseId", id));
 		return this.getModelObject(exprs, OrdsPhysicalDatabase.class, true);
 	}
+	
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<OrdsPhysicalDatabase> getDatabaseList() throws Exception {
+		
+		List<OrdsPhysicalDatabase> databases = null;
+		ArrayList<OrdsPhysicalDatabase> visibleDatabases = new ArrayList<OrdsPhysicalDatabase>();
+		
+		Session session = this.getOrdsDBSessionFactory().openSession();
+		try {
+			Transaction transaction = session.beginTransaction();
+			databases = session
+					.createCriteria(OrdsPhysicalDatabase.class)
+					.list();
+			transaction.commit();
+		} catch (Exception e) {
+			log.debug(e.getMessage());
+			session.getTransaction().rollback();
+			throw e;
+		}
+		finally {
+			session.close();
+		}
+
+		for (OrdsPhysicalDatabase database : databases){
+			if (SecurityUtils.getSubject().isPermitted(Permissions.DATABASE_VIEW(database.getLogicalDatabaseId()))){
+				visibleDatabases.add(database);
+			}
+		}
+		
+		return visibleDatabases;
+	}	
+
 	
 
 }

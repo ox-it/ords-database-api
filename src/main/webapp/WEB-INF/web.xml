@@ -44,7 +44,7 @@
          <init-param>
 		  <param-name>jaxrs.serviceClasses</param-name>
 		  <param-value>
-		    uk.ac.ox.it.ords.api.database.resources.Database         
+		    uk.ac.ox.it.ords.api.database.resources.Database    
 		  </param-value>
  		</init-param>
  		 <init-param>	

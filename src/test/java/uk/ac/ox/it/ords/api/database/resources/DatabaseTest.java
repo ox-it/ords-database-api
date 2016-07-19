@@ -126,55 +126,6 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			r = new DatabaseReference(Integer.parseInt(id), false);
 			AbstractResourceTest.databases.add(r);
 			
-			
-			// test export and import
-			
-			client = getClient(true);
-			client.accept("application/octet-stream");
-			String exportPath = "/"+id+"/export/sql";
-			response = client.path(exportPath).get();
-			assertEquals(200, response.getStatus());
-			InputStream stream = (InputStream) response.getEntity();
-			this.getResponseFromInputStream(stream, "/tmp/mondial.sql");
-			
-			//quick test for csv and zip export
-			// TODO need to write a proper check for this
-			client = getClient(true);
-			client.accept("text/csv");
-			response = client.path("/"+id+"/export/csv").get();
-			assertEquals(200, response.getStatus());
-			
-			client = getClient(true);
-			client.accept("application/zip");
-			response = client.path("/"+id+"/export/zip").get();
-			assertEquals(200, response.getStatus());
-			
-			
-			File sqlFile = new File ("/tmp/mondial.sql");
-			inputStream = new FileInputStream(sqlFile);
-			cd = new ContentDisposition("attachement;filename=mondial.sql");
-			att = new Attachment("databaseFile", inputStream, cd);
-			client = getClient(false);
-			client.type("multipart/form-data");
-			response = client.path("/"+id+"/import/localhost").post(new MultipartBody(att));
-			assertEquals(201, response.getStatus());
-			id = getIdFromResponse(response);
-			// check import progress
-			
-			ImportProgress prg;
-			client = getClient(true);
-			response = client.path("/"+id+"/import").get();
-			assertEquals(200,response.getStatus());
-			prg = response.readEntity(ImportProgress.class);
-			while ( "QUEUED".equals(prg.getStatus())|| "IN_PROGRESS".equals(prg.getStatus())) {
-				System.out.println("Import Status: " + prg.getStatus());
-				client = getClient(true);
-				response = client.path("/"+id+"/import").get();
-				prg = response.readEntity(ImportProgress.class);
-				assertEquals(200,response.getStatus());				
-			}
-			assertEquals(prg.getStatus(), "FINISHED");
-			
 			// test view
 			TableViewInfo viewInfo = new TableViewInfo();
 			viewInfo.setViewQuery("SELECT CityName, Population from City");
@@ -212,6 +163,31 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			response = client.path("/"+id+"/dataset/"+viewId).delete();
 			assertEquals(200, response.getStatus());
 			
+			// test export and import
+			
+			client = getClient(true);
+			client.accept("application/octet-stream");
+			String exportPath = "/"+id+"/export/sql";
+			response = client.path(exportPath).get();
+			assertEquals(200, response.getStatus());
+			InputStream stream = (InputStream) response.getEntity();
+			this.getResponseFromInputStream(stream, "/tmp/mondial.sql");
+			
+			//quick test for csv and zip export
+			// TODO need to write a proper check for this
+			client = getClient(true);
+			client.accept("text/csv");
+			response = client.path("/"+id+"/export/csv").get();
+			assertEquals(200, response.getStatus());
+			
+			client = getClient(true);
+			client.accept("application/zip");
+			response = client.path("/"+id+"/export/zip").get();
+			assertEquals(200, response.getStatus());
+			
+			
+			
+			
 			
 			
 			client = getClient(false);
@@ -220,6 +196,32 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			stream = (InputStream) response.getEntity();
 			this.getResponseFromInputStream(stream, "mondial.json");
 			//tableData = response.readEntity(TableData.class);
+			
+			File sqlFile = new File ("/tmp/mondial.sql");
+			inputStream = new FileInputStream(sqlFile);
+			cd = new ContentDisposition("attachement;filename=mondial.sql");
+			att = new Attachment("databaseFile", inputStream, cd);
+			client = getClient(false);
+			client.type("multipart/form-data");
+			response = client.path("/"+id+"/import/localhost").post(new MultipartBody(att));
+			assertEquals(201, response.getStatus());
+			id = getIdFromResponse(response);
+			// check import progress
+			
+			ImportProgress prg;
+			client = getClient(true);
+			response = client.path("/"+id+"/import").get();
+			assertEquals(200,response.getStatus());
+			prg = response.readEntity(ImportProgress.class);
+			while ( "QUEUED".equals(prg.getStatus())|| "IN_PROGRESS".equals(prg.getStatus())) {
+				System.out.println("Import Status: " + prg.getStatus());
+				client = getClient(true);
+				response = client.path("/"+id+"/import").get();
+				prg = response.readEntity(ImportProgress.class);
+				assertEquals(200,response.getStatus());				
+			}
+			assertEquals(prg.getStatus(), "FINISHED");
+
 			
 			//System.out.println("Number of Rows: "+tableData.getNumberOfRowsInEntireTable());
 			

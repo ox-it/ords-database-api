@@ -16,6 +16,7 @@
 
 package uk.ac.ox.it.ords.api.database.services;
 
+import java.util.List;
 import java.util.ServiceLoader;
 
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
@@ -26,6 +27,10 @@ public interface DatabaseRecordService {
 	OrdsPhysicalDatabase getRecordFromGivenName(String givenName) throws Exception;
 	
 	OrdsPhysicalDatabase getRecordFromId ( int id);
+	
+	
+	List<OrdsPhysicalDatabase> getDatabaseList() throws Exception;
+
 	
 	   public static class Factory {
 			private static DatabaseRecordService provider;
@@ -53,6 +58,7 @@ public interface DatabaseRecordService {
 		    	return provider;
 		    }
 	   }
+
 
 
 

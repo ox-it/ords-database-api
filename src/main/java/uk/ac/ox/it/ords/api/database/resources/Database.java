@@ -23,10 +23,7 @@ import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.List;
 
 import javax.activation.DataHandler;
@@ -83,8 +80,6 @@ public class Database {
 	public void init() throws Exception {
 		DatabaseUploadService.Factory.getInstance().init();
 	}
-	
-	
 	
 	@ApiOperation(
 		value="Gets the data for a specified dataset",
@@ -909,7 +904,6 @@ public class Database {
 			@ApiResponse(code = 415, message = "Database type not supported."),
 			@ApiResponse(code = 403, message = "Not authorized to create databases.")
 		})
-	
 	@POST
 	@Path("{id}/import/{server}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -1039,6 +1033,7 @@ public class Database {
 	
 	private boolean isInt ( String intString ) {
 		try {
+			@SuppressWarnings("unused")
 			int i = Integer.parseInt(intString);
 			return true;
 		}
