@@ -143,7 +143,7 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 					"rollback transaction;create database %s;",
 					dbName);
 
-			this.runSQLStatementOnOrdsDB(statement);
+			this.runJDBCQuery(statement, null, server, null);
 			String createSequence = "CREATE SEQUENCE ords_constraint_seq";
 			this.runJDBCQuery(createSequence, null, server, dbName);
 
@@ -215,7 +215,7 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		String statement = this.getTerminateStatement(databaseName);
 		this.singleResultQuery(statement);
 		statement = "rollback transaction; drop database " + databaseName + ";";
-		this.runSQLStatementOnOrdsDB(statement);
+		this.runJDBCQuery(statement, null, database.getDatabaseServer(), null);
 
 	}
 

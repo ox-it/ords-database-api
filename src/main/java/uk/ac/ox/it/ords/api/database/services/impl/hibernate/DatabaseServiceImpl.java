@@ -513,20 +513,4 @@ public class DatabaseServiceImpl {
 
 	}
 
-	protected void runSQLStatementOnOrdsDB(String statement) {
-		Session session = this.getOrdsDBSessionFactory().openSession();
-		try {
-			Transaction transaction = session.beginTransaction();
-			SQLQuery query = session.createSQLQuery(statement);
-			query.executeUpdate();
-			transaction.commit();
-		} catch (Exception e) {
-			log.debug(e.getMessage());
-			session.getTransaction().rollback();
-			throw e;
-		} finally {
-			session.close();
-		}
-	}
-
 }

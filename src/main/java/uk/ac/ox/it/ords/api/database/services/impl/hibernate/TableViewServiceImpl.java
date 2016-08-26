@@ -634,7 +634,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 
 		viewRecord.setTvAuthorization(viewInfo.getViewAuthorization());
 		// create a copy of the database
-		this.copyStatic(physicalDatabase.getDbConsumedName(), staticDBName);
+		this.copyStatic(physicalDatabase.getDbConsumedName(), staticDBName, physicalDatabase.getDatabaseServer());
 		viewRecord.setOriginalDatabase(physicalDatabase.getDbConsumedName());
 		if ( datasetId == 0 ) {
 			this.saveModelObject(viewRecord);
@@ -710,22 +710,22 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
     }
     
     
-	private void copyStatic (String from, String to ) throws Exception {
+	private void copyStatic (String from, String to, String server ) throws Exception {
 //		String userName = this.getODBCUser();
 //		String password = this.getODBCPassword();
 //		this.createOBDCUserRole(userName, password);
 		
 		if (this.checkDatabaseExists(to)) {
 			String statement = this.getTerminateStatement(to);
-			this.runSQLStatementOnOrdsDB(statement);
+			this.runJDBCQuery(statement, null, server, null);
 			statement = "rollback transaction; drop database " + to + ";";
-			this.runSQLStatementOnOrdsDB(statement);
+			this.runJDBCQuery(statement, null, server, null);
 		}
 		String clonedb = String.format(
 				"ROLLBACK TRANSACTION; CREATE DATABASE %s WITH TEMPLATE %s",
 				quote_ident(to),
 				quote_ident(from));
-		this.runSQLStatementOnOrdsDB(clonedb);
+		this.runJDBCQuery(clonedb, null, server, null);
 	
 	}
 	
