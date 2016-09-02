@@ -32,6 +32,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import uk.ac.ox.it.ords.api.database.data.Row;
+
 public class TableTestComplex extends AbstractDatabaseTestRunner{
 	
 	private String dbID;
@@ -40,9 +42,8 @@ public class TableTestComplex extends AbstractDatabaseTestRunner{
 	public void setupTable() throws FileNotFoundException{
 		loginUsingSSO("pingu@nowhere.co", "");
 		
-		// create a csv file database
-		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());
-		FileInputStream inputStream = new FileInputStream(csvFile);
+		File file = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(file);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
 		Attachment att = new Attachment("databaseFile", inputStream, cd);
 
@@ -74,6 +75,26 @@ public class TableTestComplex extends AbstractDatabaseTestRunner{
 		//
 		assertEquals(409, getClient(true).path("/"+dbID+"/tabledata/country").query("primaryKey", "Code").query("primaryKeyValue", "AFG").delete().getStatus());
 
+
+		logout();
+
+	}
+	
+	@Test
+	public void insertRowWithPKandAutonumber() throws Exception{
+
+		loginUsingSSO("pingu@nowhere.co", "");
+
+		assertEquals(200, getClient(true).path("/"+dbID+"/tabledata/city").get().getStatus());
+		
+		//
+		// Create the row
+		//
+		Row row = new Row();
+		row.columnNames = new String[]{"CityName", "Population"};
+		row.values = new String[]{"XXXX","XXXX"};
+		Response response = getClient(true).path("/"+dbID+"/tabledata/city").post(row);
+		assertEquals(201, response.getStatus());
 
 		logout();
 

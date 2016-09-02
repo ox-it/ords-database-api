@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +38,10 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 			.getLogger(PostgresAccessDatabaseServiceImpl.class);
 
 	public PostgresAccessDatabaseServiceImpl() {
+		sequences = new ArrayList<Pair<String, String>>();
 	}
+	
+	public ArrayList<Pair<String, String>> sequences;
 
 	@Override
 	public boolean preflightImport(File database) {
@@ -146,6 +150,18 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 				int rowsVerified = Integer.parseInt(tableData.rows.iterator()
 						.next().cell.get("count").getValue());
 				results.get(tableName).setRowsVerified(rowsVerified);
+			}
+			
+			//
+			// Finally, we have to update the sequences
+			//
+			for (Pair<String, String> sequence : sequences){
+				System.out.println(sequence.getLeft() + ":" + sequence.getRight());
+				QueryRunner qr = new QueryRunner(databaseServer, databaseName);
+				String key = getNormalisedColumnName(sequence.getLeft());
+				String table = getNormalisedTableName(sequence.getRight());
+				String sql = "SELECT pg_catalog.setval(pg_get_serial_sequence('%s', '%s'), MAX(\"%s\")) FROM \"%s\";";
+				qr.runDBQuery(String.format(sql, table, key, key, table));
 			}
 
 		} catch (IOException | SQLException | ClassNotFoundException
@@ -601,6 +617,13 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 					if (column.isAutoNumber()) {
 						addColumnToTable(serverName, databaseName, tableName,
 								column.getName(), "SERIAL");
+						
+						//
+						// Autonumber columns need some extra work, so we flag them
+						// for later
+						//
+						Pair<String, String> sequence = Pair.of(column.getName(), tableName);
+						sequences.add(sequence);
 					} else {
 						addColumnToTable(serverName, databaseName,tableName,
 								column.getName(),
