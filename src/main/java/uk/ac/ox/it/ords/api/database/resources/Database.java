@@ -58,6 +58,7 @@ import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.data.TableViewInfo;
 import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
+import uk.ac.ox.it.ords.api.database.exceptions.ConstraintViolationException;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.TableView;
 import uk.ac.ox.it.ords.api.database.permissions.DatabasePermissions;
@@ -666,6 +667,16 @@ public class Database {
 			log.error(ex);
 				
 			return Response.status(Response.Status.NOT_FOUND).build();
+			
+		} catch (ConstraintViolationException cex){
+			
+			//
+			// If the row is part of a relationship, we can't delete it
+			//
+			
+			log.error(cex);
+			
+			return Response.status(Response.Status.CONFLICT).build();
 				
 		} catch (Exception e) {
 			

@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.ws.rs.NotFoundException;
+import javax.ws.rs.core.Response;
 
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.subject.Subject;
@@ -38,6 +39,7 @@ import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.data.TableViewInfo;
 import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
+import uk.ac.ox.it.ords.api.database.exceptions.ConstraintViolationException;
 import uk.ac.ox.it.ords.api.database.exceptions.DBEnvironmentException;
 import uk.ac.ox.it.ords.api.database.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
@@ -526,7 +528,24 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		//
 		// Execute the delete statement
 		//
-		new QueryRunner(database.getDatabaseServer(), database.getDbConsumedName()).createAndExecuteStatement(command, parameterList, tableName);
+		try {
+			new QueryRunner(database.getDatabaseServer(), database.getDbConsumedName()).createAndExecuteStatement(command, parameterList, tableName);
+		} catch (Exception e) {
+			
+			//
+			// If we get an SQL exception, if its one we recognise, wrap it in a custom exception to throw back up the chain
+			//
+			if (e instanceof SQLException){
+				if (e.getMessage().contains("violates foreign key constraint")){
+					throw new ConstraintViolationException(e.getMessage());
+				}
+			} else {
+				//
+				// Otherwise just throw the exception
+				//
+				throw e;
+			}
+		}
 
 		return ret;
 	}
