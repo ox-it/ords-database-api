@@ -22,6 +22,7 @@ import uk.ac.ox.it.ords.api.database.data.DataRow;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
+import uk.ac.ox.it.ords.api.database.queries.ParameterList;
 import uk.ac.ox.it.ords.api.database.queries.QueryRunner;
 import uk.ac.ox.it.ords.api.database.services.QueryService;
 
@@ -44,12 +45,14 @@ public class QueryServiceImpl extends DatabaseServiceImpl
 		String server = db.getDatabaseServer();
 		
 		QueryRunner qr = new QueryRunner(server,dbName);
+		TableData data;
 		try {
-			qr.runDBQuery(q, startIndex, rowsPerPage, true);
+			ParameterList params = new ParameterList();
+			data = qr.runDBQuery(q, params, startIndex, rowsPerPage, true);
 		} catch (Exception e) {
 			throw new BadParameterException("Invalid query");
 		}
-		return qr.getTableData();
+		return data;
 	}
 
 	@Override
