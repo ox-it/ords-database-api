@@ -24,6 +24,7 @@ import io.swagger.annotations.ApiResponses;
 
 import java.io.File;
 import java.io.InputStream;
+import java.sql.SQLException;
 import java.util.List;
 
 import javax.activation.DataHandler;
@@ -156,6 +157,29 @@ public class Database {
 		return Response.ok(datasets).build();
 	}
 	
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	@Path("/{id}/datasets")
+	public Response getDatasetsForDatabase(@PathParam("id") final int id) {
+		// Obtain the database
+		OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
+		if (physicalDatabase == null) return Response.status(404).build();
+		// Check permissions
+		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
+			DatabaseAuditService.Factory.getInstance().createNotAuthRecord("GET " + id + "/datasets/", id);
+			return Response.status(Response.Status.FORBIDDEN).build();
+		}
+		try {
+			List<TableViewInfo> datasetList = tableViewService().listDatasetsForDatabase(id);
+			return Response.ok(datasetList).build();
+		}
+		catch ( Exception e ) {
+			log.error(e);
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+		}
+	}
+	
+	
 	@ApiOperation(
 			value="Gets the meta data for a specified dataset",
 			notes="This returns the data transfer object used to create the dataset",
@@ -271,7 +295,6 @@ public class Database {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path("{id}/dataset")
 	public Response createDatabaseDataset(@PathParam("id") final int id,
-			@PathParam("instance") String instance,
 			TableViewInfo tableViewInfo,
 			@Context UriInfo uriInfo) {
 		

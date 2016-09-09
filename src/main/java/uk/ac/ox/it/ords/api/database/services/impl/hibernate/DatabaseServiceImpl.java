@@ -178,6 +178,27 @@ public class DatabaseServiceImpl {
 			session.close();
 		}
 	}
+	
+	
+	protected List<?> getModelObjects (List<SimpleExpression> restrictions, Class<?> cls,  boolean clearSession) {
+		Session session = this.getOrdsDBSessionFactory().openSession();
+		try {
+			Transaction transaction = session.beginTransaction();
+			if ( clearSession ) {
+				session.clear();
+			}
+			Criteria c = session.createCriteria(cls);
+			for (SimpleExpression exp : restrictions) {
+				c.add(exp);
+			}
+			List<?> objects = (List<?>) c.list();
+			transaction.commit();
+			return objects;
+		}
+		finally {
+			session.close();
+		}
+	}
 
 	protected <T> T getModelObject(List<SimpleExpression> restrictions,
 			Class<T> cls, boolean clearSession) {
@@ -442,7 +463,7 @@ public class DatabaseServiceImpl {
 				int paramCount = 1;
 				for (Object parameter : parameters) {
 					@SuppressWarnings("rawtypes")
-					Class type = parameter.getClass();
+					Class<? extends Object> type = parameter.getClass();
 					if (type.equals(String.class)) {
 						preparedStatement.setString(paramCount,
 								(String) parameter);

@@ -115,6 +115,24 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		return viewInfo;
 	}
 	
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<TableViewInfo> listDatasetsForDatabase(int physicalDatabaseId)
+			throws Exception {
+		ArrayList<SimpleExpression> exprs = new ArrayList<SimpleExpression>();
+		exprs.add(Restrictions.eq("physicalDatabaseId", physicalDatabaseId));
+		List<TableView> views = (List<TableView>) this.getModelObjects(exprs, TableView.class, false);
+		ArrayList<TableViewInfo> viewInfoList = new ArrayList<TableViewInfo>();
+		for ( TableView v: views ) {
+			TableViewInfo vi = new TableViewInfo(v);
+			viewInfoList.add(vi);
+		}
+		return  viewInfoList;
+	}
+	
+	
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public List<TableViewInfo> searchDataSets(String query) throws Exception {

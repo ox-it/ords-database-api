@@ -13,7 +13,22 @@ public interface TableViewService {
 
 	// static data sets
 	
+	/**
+	 * 
+	 * @param term
+	 * @return
+	 * @throws Exception
+	 */
 	public List<TableViewInfo> searchDataSets(String term) throws Exception;
+	
+
+	/**
+	 * 
+	 * @param physicalDatabaseId
+	 * @return
+	 * @throws Exception
+	 */
+	public List<TableViewInfo> listDatasetsForDatabase ( int physicalDatabaseId ) throws Exception;
 	
 	/**
 	 * 
