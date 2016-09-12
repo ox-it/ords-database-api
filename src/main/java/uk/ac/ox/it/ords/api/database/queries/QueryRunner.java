@@ -591,6 +591,7 @@ public class QueryRunner {
 	            log.error("SQLState: " + ex.getSQLState());
 	            log.error("VendorError: " + ex.getErrorCode());
 	            tableData = null;
+	            throw ex;
 	        }
 	        finally {
 	            if (rs != null) {

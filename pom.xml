@@ -3,7 +3,7 @@
   <groupId>uk.ac.ox.it.ords</groupId>
   <artifactId>ords-database-api</artifactId>
   <packaging>war</packaging>
-  <version>0.0.8-SNAPSHOT</version>
+  <version>0.0.9-SNAPSHOT</version>
 
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Database microservice for ORDS</description>

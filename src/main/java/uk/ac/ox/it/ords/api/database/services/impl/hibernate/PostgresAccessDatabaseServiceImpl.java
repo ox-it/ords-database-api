@@ -156,7 +156,6 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 			// Finally, we have to update the sequences
 			//
 			for (Pair<String, String> sequence : sequences){
-				System.out.println(sequence.getLeft() + ":" + sequence.getRight());
 				QueryRunner qr = new QueryRunner(databaseServer, databaseName);
 				String key = getNormalisedColumnName(sequence.getLeft());
 				String table = getNormalisedTableName(sequence.getRight());
