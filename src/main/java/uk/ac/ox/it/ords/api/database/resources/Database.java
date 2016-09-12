@@ -338,7 +338,12 @@ public class Database {
 
 		    return Response.created(builder.build()).build();
 		    
-		} 	catch (Exception e) {
+		} 	
+		catch (BadParameterException bpe) {
+			log.error(bpe);
+			return Response.status(Response.Status.NOT_ACCEPTABLE).build();
+		}
+		catch (Exception e) {
 			
 			log.error(e);
 

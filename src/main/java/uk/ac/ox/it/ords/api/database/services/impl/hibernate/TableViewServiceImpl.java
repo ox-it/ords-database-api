@@ -101,16 +101,11 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 
 	@Override
 	public TableViewInfo getStaticDataSet(int datasetId) throws Exception {
-		TableViewInfo viewInfo = new TableViewInfo();
 		TableView tableView = this.getTableView(datasetId);
 		if ( tableView == null ) {
 			throw new NotFoundException("Unable to find dataset id: "+datasetId);
 		}
-		viewInfo.setViewAuthorization(tableView.getTvAuthorization());
-		viewInfo.setViewDescription(tableView.getViewDescription());
-		viewInfo.setViewName(tableView.getViewName());
-		viewInfo.setViewQuery(tableView.getQuery());
-		viewInfo.setViewTable(tableView.getAssociatedTable());
+		TableViewInfo viewInfo = new TableViewInfo(tableView);
 		
 		return viewInfo;
 	}
