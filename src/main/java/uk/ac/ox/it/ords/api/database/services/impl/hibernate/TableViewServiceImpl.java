@@ -67,8 +67,6 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		QueryRunner qr = new QueryRunner(server,databaseName);
         ParameterList params = new ParameterList();
 		TableData tableData = qr.runDBQuery(query, params, startIndex, rowsPerPage, true);
-		
-		
 		return tableData;
 	}
 
