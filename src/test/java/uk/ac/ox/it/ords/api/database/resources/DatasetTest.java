@@ -178,7 +178,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		assertEquals(200, response.getStatus());
 		TableData data = response.readEntity(TableData.class);
 		assertNotNull(data);
-		//assertEquals(50,data.getNumberOfRowsInEntireTable());
+		assertEquals(3113,data.getNumberOfRowsInEntireTable());
 		
 		//
 		// Get the data not logged in - will not work as its not public
@@ -249,7 +249,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		assertEquals(200, response.getStatus());
 		TableData data = response.readEntity(TableData.class);
 		assertNotNull(data);
-		//assertEquals(50,data.getNumberOfRowsInEntireTable());
+		assertEquals(3113,data.getNumberOfRowsInEntireTable());
 		
 		//
 		// Get the data not logged in - will still work as its public
@@ -259,7 +259,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		assertEquals(200, response.getStatus());
 		data = response.readEntity(TableData.class);
 		assertNotNull(data);
-//		assertEquals(50,data.getNumberOfRowsInEntireTable());
+		assertEquals(3113,data.getNumberOfRowsInEntireTable());
 		
 
 		// Cleanup
