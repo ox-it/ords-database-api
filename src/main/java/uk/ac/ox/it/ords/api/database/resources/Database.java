@@ -98,8 +98,8 @@ public class Database {
 	@Path("{id}/datasetdata/{datasetid}")
 	public Response getDatabaseDatasetData(@PathParam("id") final int id,
 			@PathParam("datasetid") int datasetID,
-			@DefaultValue("0") @QueryParam("startindex") int startIndex,
-			@DefaultValue("50") @QueryParam("rowsperpage") int rowsPerPage,
+			@DefaultValue("0") @QueryParam("start") int startIndex,
+			@DefaultValue("50") @QueryParam("length") int rowsPerPage,
 			@QueryParam("sort") String sort,
 			@QueryParam("direction") String direction ) {
 		
