@@ -97,7 +97,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		TableViewInfo dataset = new TableViewInfo();
 		dataset.setViewName("test");
 		dataset.setViewTable("City");
-		dataset.setViewQuery("SELECT 'CityName', 'Population' from City");
+		dataset.setViewQuery("SELECT 'CityName', 'Country' from City");
 		dataset.setViewDescription("test");
 		dataset.setViewAuthorization("private");
 		response = getClient(true).path("/"+id+"/dataset/").post(dataset);	
@@ -225,7 +225,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		TableViewInfo dataset = new TableViewInfo();
 		dataset.setViewName("test");
 		dataset.setViewTable("City");
-		dataset.setViewQuery("SELECT 'CityName', 'Population' from City");
+		dataset.setViewQuery("SELECT 'CityName', 'Longitude' from City");
 		dataset.setViewDescription("test");
 		dataset.setViewAuthorization("public");
 		response = getClient(true).path("/"+id+"/dataset/").post(dataset);	
@@ -301,7 +301,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		TableViewInfo dataset = new TableViewInfo();
 		dataset.setViewName("test one");
 		dataset.setViewTable("City");
-		dataset.setViewQuery("SELECT 'CityName', 'Population' from City");
+		dataset.setViewQuery("SELECT 'CityName', 'Latitude' from City");
 		dataset.setViewDescription("test");
 		dataset.setViewAuthorization("private");
 		response = getClient(true).path("/"+id+"/dataset/").post(dataset);	
@@ -315,7 +315,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		dataset = new TableViewInfo();
 		dataset.setViewName("test two");
 		dataset.setViewTable("City");
-		dataset.setViewQuery("SELECT 'CityName', 'Population' from City");
+		dataset.setViewQuery("SELECT 'Country', 'Population' from City");
 		dataset.setViewDescription("test");
 		dataset.setViewAuthorization("public");
 		response = getClient(true).path("/"+id+"/dataset/").post(dataset);	
@@ -383,7 +383,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		TableViewInfo dataset = new TableViewInfo();
 		dataset.setViewName("test");
 		dataset.setViewTable("City");
-		dataset.setViewQuery("SELECT 'CityName', 'Population' from City");
+		dataset.setViewQuery("SELECT 'Country', 'Longitude' from City");
 		dataset.setViewDescription("test");
 		dataset.setViewAuthorization("public");
 		response = getClient(true).path("/"+id+"/dataset/").post(dataset);	
@@ -552,7 +552,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		TableViewInfo dataset = new TableViewInfo();
 		dataset.setViewName("test");
 		dataset.setViewTable("City");
-		dataset.setViewQuery("SELECT 'CityName', 'Population' from City");
+		dataset.setViewQuery("SELECT 'Country', 'Latitude' from City");
 		dataset.setViewDescription("test");
 		dataset.setViewAuthorization("public");
 		response = getClient(true).path("/"+id+"/dataset/").post(dataset);	
@@ -637,6 +637,10 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		logout();
 		assertEquals(403, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
 		
+		
+		// cleanup
+		loginUsingSSO("pingu@nowhere.co", "");
+		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
 		AbstractResourceTest.databases.add(r);
 		logout();
 

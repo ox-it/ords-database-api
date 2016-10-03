@@ -38,7 +38,7 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 			.getLogger(PostgresAccessDatabaseServiceImpl.class);
 
 	public PostgresAccessDatabaseServiceImpl() {
-		sequences = new ArrayList<Pair<String, String>>();
+		//sequences = new ArrayList<Pair<String, String>>();
 	}
 	
 	public ArrayList<Pair<String, String>> sequences;
@@ -50,6 +50,7 @@ public class PostgresAccessDatabaseServiceImpl implements AccessImportService {
 			return false;
 		}
 		try {
+			sequences = new ArrayList<Pair<String, String>>();
 			Map<String, TableImportResult> results = parseSchema(database,
 					false, null, null);
 			for (TableImportResult result : results.values()) {
