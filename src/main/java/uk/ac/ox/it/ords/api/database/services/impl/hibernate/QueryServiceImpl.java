@@ -89,7 +89,7 @@ public class QueryServiceImpl extends DatabaseServiceImpl
 	   protected String getSingularPrimaryKeyColumn(String tableName, QueryRunner qr) throws ClassNotFoundException, SQLException {
 	       log.debug("getSingularPrimaryKeyColumn");
 	       String command = String
-	               .format("SELECT pg_attribute.attname,  format_type(pg_attribute.atttypid, pg_attribute.atttypmod)  FROM pg_index, pg_class, pg_attribute WHERE pg_class.oid = '%s'::regclass AND indrelid = pg_class.oid AND pg_attribute.attrelid = pg_class.oid AND pg_attribute.attnum = any(pg_index.indkey) AND indisprimary",
+	               .format("SELECT pg_attribute.attname,  format_type(pg_attribute.atttypid, pg_attribute.atttypmod)  FROM pg_index, pg_class, pg_attribute WHERE pg_class.oid = '\"%s\"'::regclass AND indrelid = pg_class.oid AND pg_attribute.attrelid = pg_class.oid AND pg_attribute.attnum = any(pg_index.indkey) AND indisprimary",
 	               tableName);
 
 	       if (!qr.runDBQuery(command)) {
