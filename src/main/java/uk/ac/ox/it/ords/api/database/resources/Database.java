@@ -842,7 +842,7 @@ public class Database {
 			
 			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
 				
-				DatabaseAuditService.Factory.getInstance().createNotAuthRecord("GET " + id + "/data/", id);
+				DatabaseAuditService.Factory.getInstance().createNotAuthRecord("GET " + id + "/export/", id);
 				
 				return Response.status(Response.Status.FORBIDDEN).build();
 			}
@@ -873,6 +873,78 @@ public class Database {
 		response.header("Content-Disposition", "attachment; filename="+output.getName());
 		return response.build();
 	}
+	
+
+	@ApiOperation(
+			value="Exports the specified database table as csv",
+			notes="",
+			response=String.class
+		)
+		@ApiResponses(value = { 
+			@ApiResponse(code = 200, message = "Export successful."),
+			@ApiResponse(code = 404, message = "Database or table does not exist."),
+			@ApiResponse(code = 403, message = "Not authorized to modify the database.")
+		})
+
+	@GET
+	@Path("{id}/export/table/{tablename}")
+	public Response exportDatabaseTable(@PathParam("id") final int id,
+			@PathParam("tablename") String tableName ) {
+		File output = null;
+		try {
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
+			
+			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
+				
+				DatabaseAuditService.Factory.getInstance().createNotAuthRecord("GET " + id + "/export/table/"+tableName, id);
+				
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
+			output = CSVService.Factory.getInstance().exportTable(physicalDatabase.getDatabaseServer(), physicalDatabase.getDbConsumedName(), tableName);
+		}
+		catch (BadParameterException ex) {
+			return Response.status(Response.Status.NOT_FOUND).build();
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+		}
+		ResponseBuilder response = Response.ok(output, "text/csv");
+		response.header("Content-Disposition", "attachment; filename="+output.getName());
+		return response.build();
+	}
+	
+	
+	@GET
+	@Path("{id}/export")
+	public Response exportDatabaseWithQuery(@PathParam("id") final int id,
+			@QueryParam("q") String theQuery) {
+		File output = null;
+		try {
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService().getRecordFromId(id);
+			
+			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
+				
+				DatabaseAuditService.Factory.getInstance().createNotAuthRecord("GET " + id + "/export?"+theQuery, id);
+				
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
+			output = CSVService.Factory.getInstance().exportQuery(physicalDatabase.getDatabaseServer(), physicalDatabase.getDbConsumedName(), theQuery);
+		}
+		catch (BadParameterException ex) {
+			return Response.status(Response.Status.NOT_FOUND).build();
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+		}
+		ResponseBuilder response = Response.ok(output, "text/csv");
+		response.header("Content-Disposition", "attachment; filename="+output.getName());
+		return response.build();
+	}
+	
+	
+	
 	
 
 	@ApiOperation(

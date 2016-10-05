@@ -185,16 +185,26 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			response = client.path("/"+id+"/export/zip").get();
 			assertEquals(200, response.getStatus());
 			
+			//quick test for csv table
 			
+			client = getClient(true);
+			client.accept("text/csv");
+			response = client.path("/"+id+"/export/table/city").get();
+			assertEquals(200, response.getStatus());
 			
-			
-			
+			//quick test for sql export csv
+			client = getClient(true);
+			client.accept("text/csv");
+			response = client.path("/"+id+"/export").query("q", "select \"Code\", \"CountryName\" from country").get();
+			assertEquals(200, response.getStatus());
+			stream = (InputStream) response.getEntity();
+			//this.getResponseFromInputStream(stream, "/tmp/country.csv");
 			
 			client = getClient(false);
 			response = client.path("/"+id+"/tabledata/country").get();
 			assertEquals(200, response.getStatus());
 			stream = (InputStream) response.getEntity();
-			this.getResponseFromInputStream(stream, "mondial.json");
+			//this.getResponseFromInputStream(stream, "mondial.json");
 			//tableData = response.readEntity(TableData.class);
 			/*
 			File sqlFile = new File ("/tmp/mondial.sql");
