@@ -593,6 +593,7 @@ public class QueryRunner {
 	            	}
 	            }
 	        	tableData.setNumberOfRowsInEntireTable(numberOfResults);
+	        	tableData.setNumberOfRowsReturnedByQuery(numberOfResults);
 	        }
 	        catch (SQLException ex) {
 	            log.error("Exception", ex);

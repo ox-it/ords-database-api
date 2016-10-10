@@ -302,6 +302,10 @@ public class ORDSPostgresDB extends QueryRunner {
             return null;
         }
         
+        //
+        // This really is the total rows in the table (from the table metadata). 
+        // The actual row count from the query (which may be filtered) is returned below from runDBQuery.
+        //
         tableData.setNumberOfRowsInEntireTable(totalRowsInt);
         
         //

@@ -45,6 +45,7 @@ public class TableData implements Serializable {
     public List<String> sequences = new ArrayList<String>();
     public String comment;
     private int numberOfRowsInEntireTable = 0;
+    private int numberOfRowsReturnedByQuery = 0;
     private int currentRow = 0;
     private boolean showTableDumps = false;
     private DataTypesSupported originalDbType;
@@ -364,4 +365,12 @@ public class TableData implements Serializable {
             this.originalDbType = DataTypesSupported.DB_DUMP;
         }
     }
+
+	public int getNumberOfRowsReturnedByQuery() {
+		return numberOfRowsReturnedByQuery;
+	}
+
+	public void setNumberOfRowsReturnedByQuery(int numberOfRowsReturnedByQuery) {
+		this.numberOfRowsReturnedByQuery = numberOfRowsReturnedByQuery;
+	}
 }
