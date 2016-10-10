@@ -381,20 +381,6 @@ public class ORDSPostgresDB extends QueryRunner {
             log.error("Null table name info");
             return null;
         }
-
-        int databaseRowStart;
-        if (rowStart == 0) {
-            log.error("Coding error - rowStart of zero input. The rowStart is from a users perspective and this should start at value 1");
-            databaseRowStart = 0;
-        }
-        else {
-            databaseRowStart = rowStart -1;
-        }
-
-        if (!this.checkTableExists(tableName)) {
-            log.info(String.format("Table %s does not exist", tableName));
-            return null;
-        }
  
         String keyName = null;
         try {
@@ -402,43 +388,27 @@ public class ORDSPostgresDB extends QueryRunner {
         }
         catch (ClassNotFoundException ex) {
             log.error("Class error - unable to find index", ex);
+            return null;
         }
         catch (SQLException ex) {
             log.error("Unable to find index", ex);
+            return null;
         }
 
         String query = "";
         
-        log.debug("About to run the select statement");
         if ( (sort == null) || (sort.equals("null")) ) {
-            if (numberOfRowsRequired == 0) {
-                if (keyName == null) {
-                    log.debug("No key specified - simple select");
-                    query = String.format("select * from \"%s\"", tableName);
-                }
-                else {
-                    log.debug("Key specified");
-                    query = String.format("select * from \"%s\" order by \"%s\"", tableName, keyName);
-                }
-            }
-            else {
-                if (keyName == null) {
-                    log.debug("No key specified - simple select with limit");
-                    query = String.format("select * from \"%s\" limit %d offset %d", tableName, numberOfRowsRequired, databaseRowStart);
-                }
-                else {
-                    log.debug("Key specified - select with limit");
-                    query = String.format("select * from \"%s\" order by \"%s\" limit %d offset %d", tableName, keyName, numberOfRowsRequired, databaseRowStart);
-                }
-            }
+        	if (keyName == null) {
+        		log.debug("No key specified - simple select ");
+        		query = String.format("select * from \"%s\"", tableName);
+        	}
+        	else {
+        		log.debug("Key specified - select ordered by key");
+        		query = String.format("select * from \"%s\" order by \"%s\"", tableName, keyName);
+        	}
         }
         else {
-            if (numberOfRowsRequired == 0) {
-                query = String.format("select * from \"%s\" order by \"%s\" %s", tableName, sort, direction ? "asc" : "desc");
-            }
-            else {
-                query = String.format("select * from \"%s\" order by \"%s\" %s limit %d offset %d", tableName, sort, direction ? "asc" : "desc", numberOfRowsRequired, databaseRowStart);
-            }
+             query = String.format("select * from \"%s\" order by \"%s\" %s", tableName, sort, direction ? "asc" : "desc");
         }
         
         return this.getTableDataForTable(query, null, tableName, rowStart, numberOfRowsRequired, sort, direction);
