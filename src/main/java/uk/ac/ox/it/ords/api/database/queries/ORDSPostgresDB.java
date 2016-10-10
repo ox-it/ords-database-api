@@ -203,7 +203,7 @@ public class ORDSPostgresDB extends QueryRunner {
         TableData constraints = getForeignConstraintsForTable(tableName);
         
         tableData.columns.clear();
-        int i = 0;
+        int i = 1;
         for (DataRow row : tableData.rows) {
             OrdsTableColumn otc = new OrdsTableColumn();
             otc.orderIndex = i++;
@@ -303,7 +303,21 @@ public class ORDSPostgresDB extends QueryRunner {
         }
         
         tableData.setNumberOfRowsInEntireTable(totalRowsInt);
-        tableData.setCurrentRow(databaseRowStart);
+        
+        //
+    	// Note that we want to tell the UI the actual start index.
+    	// We've used the OFFSET, which is one less than where you want to
+    	// start the zero-based index. So to return a 1-based index of rows,
+    	// we have to add 1.
+    	//
+        tableData.setCurrentRow(databaseRowStart + 1);
+        
+        //
+        // If there were no results, we won't have column metadata, so we need to add it in now
+        // anyway from the metadata we collected earlier.
+        //
+        tableData.columns = metadata.columns;
+        
         tableData.tableName = tableName;
         tableData.comment = metadata.comment;
         tableData.sequences = metadata.sequences;
@@ -367,10 +381,10 @@ public class ORDSPostgresDB extends QueryRunner {
         int databaseRowStart;
         if (rowStart == 0) {
             log.error("Coding error - rowStart of zero input. The rowStart is from a users perspective and this should start at value 1");
-            databaseRowStart = rowStart;
+            databaseRowStart = 0;
         }
         else {
-            databaseRowStart = rowStart - 1;
+            databaseRowStart = rowStart -1;
         }
 
         if (!this.checkTableExists(tableName)) {
@@ -423,7 +437,7 @@ public class ORDSPostgresDB extends QueryRunner {
             }
         }
         
-        return this.getTableDataForTable(query, null, tableName, databaseRowStart, numberOfRowsRequired, sort, direction);
+        return this.getTableDataForTable(query, null, tableName, rowStart, numberOfRowsRequired, sort, direction);
     }
     
     /**
@@ -755,15 +769,10 @@ public class ORDSPostgresDB extends QueryRunner {
             //
             // We use this when the table is being filtered, as we then need to return
             // the keys from a subquery based on the filter.
-			//
+            //
             if (filter != null){
             	try {
-            		
-            		//
-            		// Replace any aliases in the filter with table names
-            		//
-					filter = FilteredQuery.normaliseFilterQuery(filter);
-            		
+            		            		
             		//
             		// Just include WHERE clause from filter
             		//

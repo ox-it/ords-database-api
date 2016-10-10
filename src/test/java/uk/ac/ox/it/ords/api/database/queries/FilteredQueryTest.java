@@ -21,8 +21,8 @@ public class FilteredQueryTest {
 	 * @throws Exception 
 	 */
 	private static String createFilterFromParameters(String filter, String params, boolean isCaseSensitive) throws Exception{
-		ParameterList parameters = FilteredQuery.getParameterList(params);
-		String query = FilteredQuery.createFilterFromParameters(filter, parameters, isCaseSensitive);
+		ParameterList parameters = new FilteredQuery(filter, params, isCaseSensitive).getParameterList(params);
+		String query = new FilteredQuery().createFilterFromParameters(filter, parameters, isCaseSensitive);
 	    //
         // Substitute params for placeholders in SQL
         //
@@ -36,19 +36,19 @@ public class FilteredQueryTest {
 	public void normaliseFilter(){
 		String filter = "SELECT * FROM \"documents\" INNER JOIN \"sites\" \"x0\" ON \"docsite\" = \"x0\".\"id\" WHERE (\"x0\".\"sitename\" = ?)";
 		String expected = "SELECT * FROM \"documents\" INNER JOIN \"sites\" \"sites\" ON \"docsite\" = \"sites\".\"id\" WHERE (\"sites\".\"sitename\" = ?)"; 
-		assertEquals(expected, FilteredQuery.normaliseFilterQuery(filter));
+		assertEquals(expected, new FilteredQuery().normaliseFilterQuery(filter));
 		
 		filter="SELECT * FROM \"documents\" INNER JOIN \"sites\" \"x2\" ON \"docsite\" = \"x2\".\"id\" WHERE (\"x2\".\"sitename\" CONTAINS ?)";
 		expected = "SELECT * FROM \"documents\" INNER JOIN \"sites\" \"sites\" ON \"docsite\" = \"sites\".\"id\" WHERE (\"sites\".\"sitename\" CONTAINS ?)";
-		assertEquals(expected, FilteredQuery.normaliseFilterQuery(filter));
+		assertEquals(expected, new FilteredQuery().normaliseFilterQuery(filter));
 		
 		filter="SELECT * FROM \"x0x1x2\" INNER JOIN \"sites\" \"x2\" ON \"docsite\" = \"x2\".\"id\" WHERE (\"x2\".\"sitename\" CONTAINS ?)";
 		expected = "SELECT * FROM \"x0x1x2\" INNER JOIN \"sites\" \"sites\" ON \"docsite\" = \"sites\".\"id\" WHERE (\"sites\".\"sitename\" CONTAINS ?)";
-		assertEquals(expected, FilteredQuery.normaliseFilterQuery(filter));
+		assertEquals(expected, new FilteredQuery().normaliseFilterQuery(filter));
 		
 		filter="SELECT \"x0\".* FROM \"city\" \"x0\" WHERE (\"x0\".\"population\" > ?)";
 		expected = "SELECT \"city\".* FROM \"city\" \"city\" WHERE (\"city\".\"population\" > ?)";
-		assertEquals(expected, FilteredQuery.normaliseFilterQuery(filter));
+		assertEquals(expected, new FilteredQuery().normaliseFilterQuery(filter));
 	}
 
 	@Test
@@ -58,7 +58,7 @@ public class FilteredQueryTest {
 		String output = createFilterFromParameters(filter, params);
 		String expected = "SELECT * FROM \"documents\" WHERE \"docid\" = '4'";
 		assertEquals(expected, output);
-		ParameterList parameterList = FilteredQuery.getParameterList(params);
+		ParameterList parameterList = new FilteredQuery().getParameterList(params);
 		assertEquals(DataType.INTEGER, parameterList.getParameter(0).dt);
 		assertEquals(4, parameterList.getParameter(0).intValue);
 	}
@@ -70,7 +70,7 @@ public class FilteredQueryTest {
 		String output = createFilterFromParameters(filter, params);
 		String expected = "SELECT * FROM \"documents\" WHERE \"docid\" = '4'";
 		assertEquals(expected, output);
-		ParameterList parameterList = FilteredQuery.getParameterList(params);
+		ParameterList parameterList = new FilteredQuery().getParameterList(params);
 		assertEquals(DataType.INTEGER, parameterList.getParameter(0).dt);
 		assertEquals(4, parameterList.getParameter(0).intValue);
 	}
@@ -82,7 +82,7 @@ public class FilteredQueryTest {
 		String output = createFilterFromParameters(filter, params);
 		String expected = "SELECT * FROM \"documents\" WHERE \"isgood\" = 't'";
 		assertEquals(expected, output);
-		ParameterList parameterList = FilteredQuery.getParameterList(params);
+		ParameterList parameterList = new FilteredQuery().getParameterList(params);
 		assertEquals(DataType.BOOLEAN, parameterList.getParameter(0).dt);
 		assertEquals(1, parameterList.getParameter(0).intValue);
  	}
@@ -91,7 +91,7 @@ public class FilteredQueryTest {
 	public void invalidIntegerCasting() throws Exception{
 		String filter = "SELECT * FROM \"documents\" WHERE \"docid\" = ?";
 		String params = "[{'type':'number', 'value':'banana'}]";
-		ParameterList parameterList = FilteredQuery.getParameterList(params);
+		ParameterList parameterList = new FilteredQuery().getParameterList(params);
 		assertEquals(DataType.NULL, parameterList.getParameter(0).dt);
 		assertEquals(-1, parameterList.getParameter(0).intValue);
 		assertEquals("NULL", parameterList.getParameter(0).stringValue);
@@ -103,33 +103,33 @@ public class FilteredQueryTest {
 	@Test
 	public void getParameterList() throws Exception{
 		String params =  null;
-		ParameterList parameters = FilteredQuery.getParameterList(params);
+		ParameterList parameters = new FilteredQuery().getParameterList(params);
 		assertNotNull(parameters);
 		assertTrue(parameters.size() == 0);
 		
 		params = "[{\"type\":\"date\",\"value\":\"2015-05-31T23:00:00.000Z\"}]";
-		parameters = FilteredQuery.getParameterList(params);
+		parameters = new FilteredQuery().getParameterList(params);
 		assertNotNull(parameters);
 		assertEquals(1, parameters.size());
 		assertEquals("2015-05-31 23:00:00.000", parameters.getParameter(0).stringValue);
 		assertEquals(DataType.TIMESTAMP, parameters.getParameter(0).dt);		
 		
 		params = "[{&quot;type&quot;:&quot;string&quot;,&quot;value&quot;:&quot;apple&quot;}]";
-		parameters = FilteredQuery.getParameterList(params);
+		parameters = new FilteredQuery().getParameterList(params);
 		assertNotNull(parameters);
 		assertEquals(1, parameters.size());
 		assertEquals("apple", parameters.getParameter(0).stringValue);
 		assertEquals(DataType.VARCHAR, parameters.getParameter(0).dt);
 		
 		params = "[{'type':'string', 'value':'apple'}, {'type':'string', 'value':'banana'}]";
-		parameters = FilteredQuery.getParameterList(params);
+		parameters = new FilteredQuery().getParameterList(params);
 		assertNotNull(parameters);
 		assertTrue(parameters.size() == 2);
 		assertEquals("apple", parameters.getParameter(0).stringValue);
 		assertEquals(DataType.VARCHAR, parameters.getParameter(0).dt);
 		
 		params = "[{\"type\":\"string\", \"value\":\"apple\"}, {\"type\":\"string\", \"value\":\"banana\"}]";
-		parameters = FilteredQuery.getParameterList(params);
+		parameters = new FilteredQuery().getParameterList(params);
 		assertNotNull(parameters);
 		assertTrue(parameters.size() == 2);
 		assertEquals("apple", parameters.getParameter(0).stringValue);

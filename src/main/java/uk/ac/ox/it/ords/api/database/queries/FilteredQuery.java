@@ -28,10 +28,37 @@ import uk.ac.ox.it.ords.api.database.data.DataTypeMap;
 
 public class FilteredQuery {
 	
+	String filter;
+	ParameterList parameters;
+	
+	public FilteredQuery(String filter, String params, boolean isCaseSensitive){
+		try {
+			this.parameters = getParameterList(params);
+		} catch (Exception e) {
+			this.parameters = new ParameterList();
+		}
+		this.filter = createFilterFromParameters(normaliseFilterQuery(filter), parameters, isCaseSensitive);
+		if (this.parameters == null){
+			this.parameters = new ParameterList();
+		}
+	}
+	
+	public FilteredQuery(String filter, ParameterList params, boolean isCaseSensitive){
+		this.parameters = params;
+		this.filter = createFilterFromParameters(normaliseFilterQuery(filter), parameters, isCaseSensitive);
+		if (this.parameters == null){
+			this.parameters = new ParameterList();
+		}
+	}
+	
+	public FilteredQuery(){
+		
+	}
+	
 	/**
 	 * Returns a query based on a filter string and parameter string
 	 */
-	public static String getFilter( 
+	public String getFilter( 
 			String filter, 
 			String params, 
 			boolean isCaseSensitive
@@ -53,7 +80,10 @@ public class FilteredQuery {
 	 * @param filter
 	 * @return the normalised filter
 	 */
-	public static String normaliseFilterQuery(String filter){
+	protected String normaliseFilterQuery(String filter){
+		
+		if (filter == null) return null;
+		
 		//
 		// We need to replace any temporary identifiers from RedQueryBuilder with the actual referenced table names
 		//
@@ -122,7 +152,7 @@ public class FilteredQuery {
 	 * @return
 	 * @throws Exception 
 	 */
-	public static ParameterList getParameterList(String params) throws Exception{
+	protected ParameterList getParameterList(String params) throws Exception{
 
 		ParameterList parameterList = new ParameterList();
 
@@ -183,7 +213,7 @@ public class FilteredQuery {
 	 * @param params the array of parameters
 	 * @return a combined SQL query, or null if either of the components are invalid
 	 */
-	public static String createFilterFromParameters(String filter, ParameterList parameters, boolean isCaseSensitive){
+	protected String createFilterFromParameters(String filter, ParameterList parameters, boolean isCaseSensitive){
 		//
 		// We don't want malformed queries...
 		//
@@ -231,5 +261,17 @@ public class FilteredQuery {
 		filter = filter.replaceAll("&quot;", "\"");
 
 		return filter;
+	}
+
+
+
+	public String getFilter() {
+		return filter;
+	}
+
+
+
+	public ParameterList getParameters() {
+		return parameters;
 	}
 }

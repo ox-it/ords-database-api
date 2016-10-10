@@ -199,9 +199,13 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	
 
 	@Override
-	public TableData getDatabaseRows(int dbId,
-			String tableName, int startIndex, int rowsPerPage,
-			String sort, String sortDirection,
+	public TableData getDatabaseRows(
+			int dbId,
+			String tableName, 
+			int startIndex, 
+			int rowsPerPage,
+			String sort, 
+			String sortDirection,
 			String filter, 
 			String params
 			) throws Exception {
@@ -219,8 +223,9 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		String filterQuery = null;
 		ParameterList filterParameters = null;
 		if (filter !=null && params != null && !filter.isEmpty() && !params.isEmpty()){
-			filterQuery = FilteredQuery.getFilter(filter, params, true);
-			filterParameters = FilteredQuery.getParameterList(params);
+			FilteredQuery filteredQuery = new FilteredQuery(filter, params, true);
+			filterQuery = filteredQuery.getFilter();
+			filterParameters = filteredQuery.getParameters();
 		}
 		
 		TableData tableData = null;
@@ -837,10 +842,12 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		}
 		
 		String filterQuery = null;
-		ParameterList filterParameters = new ParameterList();
+		ParameterList filterParameters = null;
+		
 		if (filter !=null && parameters != null && !filter.isEmpty() && !parameters.isEmpty()){
-			filterQuery = FilteredQuery.getFilter(filter, parameters, true);
-			filterParameters = FilteredQuery.getParameterList(parameters);
+			FilteredQuery filteredQuery = new FilteredQuery(filter, parameters, true);
+			filterQuery = filteredQuery.getFilter();
+			filterParameters = filteredQuery.getParameters();
 		}
 		
 		return sqlQueries.getReferenceValues(tableName, foreignKey, referencedTable, referencedColumn, startIndex, rowsPerPage, sort, direction, filterQuery, filterParameters);
