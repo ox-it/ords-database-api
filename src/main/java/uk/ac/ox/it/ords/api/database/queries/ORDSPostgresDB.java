@@ -87,36 +87,34 @@ public class ORDSPostgresDB extends QueryRunner {
     * else null
     */
    public String getSingularPrimaryKeyColumn(String tableName) throws ClassNotFoundException, SQLException {
-       log.debug("getSingularPrimaryKeyColumn");
+	   
+	   List<String> primaryKeys = this.getPrimaryKeys(tableName);
+	   if (primaryKeys.isEmpty()){
+		   return null;
+	   } else {
+		   return primaryKeys.get(0);
+	   }
+   }
+   
+   public List<String> getPrimaryKeys(String tableName) throws ClassNotFoundException, SQLException {
+	   List<String> primaryKeys = new ArrayList<String>();
+	   
        String command = String
                .format("SELECT pg_attribute.attname,  format_type(pg_attribute.atttypid, pg_attribute.atttypmod)  FROM pg_index, pg_class, pg_attribute WHERE pg_class.oid = '\"%s\"'::regclass AND indrelid = pg_class.oid AND pg_attribute.attrelid = pg_class.oid AND pg_attribute.attnum = any(pg_index.indkey) AND indisprimary",
                tableName);
-
+       
        if (!runDBQuery(command)) {
     	   return null;
        }
-
-       /*
-        * Note We shall currently restrict this function to only return the
-        * primary key if there is a single primary key. Maybe we can extend that
-        * later
-        */
        if (this.getTableData().rows.size() >= 1) {
            for (DataRow dr : this.getTableData().rows) {
                String primaryKey = dr.cell.get("attname").getValue();
-               return primaryKey;
+               primaryKeys.add(primaryKey);
            }
-       }
+       } 
 
-       return null;
+       return primaryKeys;
    }
-   
-   
-   
-
-
-   
-
    
    public OrdsTableColumn addReferencesToColumn(OrdsTableColumn otc, TableData constraints) throws SQLException {
        try {
@@ -197,23 +195,69 @@ public class ORDSPostgresDB extends QueryRunner {
     public TableData getTableDataForTable(String tableName, String sort, boolean direction) throws ClassNotFoundException, SQLException {
         return getTableDataForTable(tableName, 1, 0, sort, direction);
     }
+    
+    public TableData getTableMetadataForTable(String tableName) throws ClassNotFoundException, SQLException {
 
-    /**
-     * Get rows of data from the table. This function will get a subset of the table data.
-     *
-     * @param tableName the table whose data is to be returned
-     * @param rowStart the number of the first row to return. In terms of the user, the row number starts at row 1, so
-     * for example they may display rows 1 to 30, meaning the first 30 rows of data. In terms of the database, however,
-     * the row number starts at 0, so rows 1 to 30 (from a user perspective) correspond to rows 0 to 29 from a database
-     * perspective.
-     * @param numberOfRowsRequired the number of rows to return. If zero, then all rows are returned.
-     * @return table data or null if there has been an error or the table doesn't exist
-     * @throws SQLException 
-     */
-    public TableData getTableDataForTable(String tableName, int rowStart, int numberOfRowsRequired, String sort, boolean direction) throws ClassNotFoundException, SQLException {
-        if (log.isDebugEnabled()) {
-            log.debug(String.format("getTableDataForTable(%s, %d, %d)", tableName, rowStart, numberOfRowsRequired));
+        ArrayList<String> sequences = getSequencesForTable(tableName);
+        TableData tableData = getColumnDataTypesForTable(tableName);
+        TableData constraints = getForeignConstraintsForTable(tableName);
+        
+        tableData.columns.clear();
+        int i = 0;
+        for (DataRow row : tableData.rows) {
+            OrdsTableColumn otc = new OrdsTableColumn();
+            otc.orderIndex = i++;
+            DataCell dc = row.cell.get("column_name");
+            otc.columnName = dc.getValue();
+            dc = row.cell.get("data_type");
+            /*  The following is a bit of a hack. Sometimes we've got
+                data types as varchars, sometimes we've got columns of
+                the actual data types.  The data type will always be a valid value so
+                we'll use that as the fallback.
+            */
+            try {
+                String type = dc.getValue();
+                type = type.replace(" precision", "")
+                        .replace("character varying", "varchar")
+                        .replace("character", "char")
+                        .replace(" without time zone", "")
+                        .replace("bytea", "binary")
+                        .toUpperCase();
+                otc.columnType = DataCell.DataType.valueOf(type);
+            } catch (java.lang.IllegalArgumentException e) {
+                otc.columnType = DataCell.DataType.valueOf(dc.getType().toString());
+            }
+
+            otc = addReferencesToColumn(otc, constraints);
+            
+            otc.comment = getColumnComment(tableName, otc.columnName);
+
+            tableData.columns.add(otc);
         }
+        
+        tableData.rows = new ArrayList<DataRow>();
+        tableData.sequences = sequences;
+        tableData.setNumberOfRowsInEntireTable(0);
+        tableData.comment = getTableComment(tableName);
+        tableData.primaryKeys = getPrimaryKeys(tableName);
+        return tableData;
+    }
+    
+    public String getTableComment(String tableName) throws ClassNotFoundException, SQLException{
+        String tableComment = "";
+        boolean ret = runDBQuery("SELECT obj_description(quote_ident('"+tableName+"')::regclass::oid, 'pg_class') as comment");
+        TableData commentData = this.getTableData();
+        if (ret && commentData.rows.size() > 0) {
+            tableComment = commentData.rows.get(0).cell.get("comment").getValue();
+            if (tableComment == null) {
+                tableComment = "";
+            }
+        }
+        return tableComment;
+    }
+    
+    
+    public TableData getTableDataForTable(String query, ParameterList parameters, String tableName, int rowStart, int numberOfRowsRequired, String sort, boolean direction) throws ClassNotFoundException, SQLException {
         if (tableName == null) {
             log.error("Null table name info");
             return null;
@@ -228,13 +272,64 @@ public class ORDSPostgresDB extends QueryRunner {
             databaseRowStart = rowStart - 1;
         }
 
+        if (!this.checkTableExists(tableName)) {
+            log.info(String.format("Table %s does not exist", tableName));
+            return null;
+        }
+
+        if (!runDBQuery("select count(*) from \"" + tableName+"\"")) {
+            return null;
+        }
+        String totalRows = this.getTableData().rows.get(0).cell.get("count").getValue();
+        int totalRowsInt = 0;
+        if (totalRows == null) {
+            log.error("Null value for total rows. Should not happen!");
+            return null;
+        }
+       
+        TableData metadata = this.getTableMetadataForTable(tableName);
+        totalRowsInt = Integer.parseInt(totalRows);
+        if (totalRowsInt == 0) {
+        	// There are no rows in the table. Just set up column information and return
+        	return metadata;
+        }
+
+        
+        TableData tableData = runDBQuery(query, parameters, databaseRowStart, numberOfRowsRequired, true);
+
+        if (tableData == null) {
+            log.error("Null table data returned - can't do anything with this");
+            return null;
+        }
+        
+        tableData.setNumberOfRowsInEntireTable(totalRowsInt);
+        tableData.setCurrentRow(databaseRowStart);
+        tableData.tableName = tableName;
+        tableData.comment = metadata.comment;
+        tableData.sequences = metadata.sequences;
+        tableData.primaryKeys = metadata.primaryKeys;
+        TableData td2 = getForeignConstraintsForTable(tableName);
+
+        // Look at each column in our current data
+        log.debug("About to loop through columns");
+        for (OrdsTableColumn column : tableData.columns) {
+            if (td2 != null && !td2.rows.isEmpty()) {
+                column = addReferencesToColumn(column, td2);
+            }
+            column.comment = getColumnComment(tableData.tableName, column.columnName);
+        }
+
+        return tableData;
+    }
+
+    public boolean checkTableExists(String tableName) throws ClassNotFoundException, SQLException{
         /*
          * Get all table names in the database and ensure the table exists
          */
         boolean exists = false;
         QueryRunner lqr = new QueryRunner(this.getCurrentDbServer(), this.getCurrentDbName());
         if (!lqr.runDBQuery(String.format("SELECT table_name FROM information_schema.tables WHERE table_schema='%s'", CommonVars.SCHEMA_NAME))) {
-            return null;
+            return false;
         }
         for (DataRow dr : lqr.getTableData().rows) {
             for (DataCell dc : dr.cell.values()) {
@@ -248,84 +343,41 @@ public class ORDSPostgresDB extends QueryRunner {
                 break;
             }
         }
-        if (!exists) {
+        return exists;
+    }
+
+    /**
+     * Get rows of data from the table. This function will get a subset of the table data.
+     *
+     * @param tableName the table whose data is to be returned
+     * @param rowStart the number of the first row to return. In terms of the user, the row number starts at row 1, so
+     * for example they may display rows 1 to 30, meaning the first 30 rows of data. In terms of the database, however,
+     * the row number starts at 0, so rows 1 to 30 (from a user perspective) correspond to rows 0 to 29 from a database
+     * perspective.
+     * @param numberOfRowsRequired the number of rows to return. If zero, then all rows are returned.
+     * @return table data or null if there has been an error or the table doesn't exist
+     * @throws SQLException 
+     */
+    public TableData getTableDataForTable(String tableName, int rowStart, int numberOfRowsRequired, String sort, boolean direction) throws ClassNotFoundException, SQLException {
+        if (tableName == null) {
+            log.error("Null table name info");
+            return null;
+        }
+
+        int databaseRowStart;
+        if (rowStart == 0) {
+            log.error("Coding error - rowStart of zero input. The rowStart is from a users perspective and this should start at value 1");
+            databaseRowStart = rowStart;
+        }
+        else {
+            databaseRowStart = rowStart - 1;
+        }
+
+        if (!this.checkTableExists(tableName)) {
             log.info(String.format("Table %s does not exist", tableName));
             return null;
         }
-
-        String tableComment = "";
-        
-        ArrayList<String> sequences = getSequencesForTable(tableName);
-
-
-        if (!runDBQuery("select count(*) from \"" + tableName+"\"")) {
-            return null;
-        }
-        String totalRows = this.getTableData().rows.get(0).cell.get("count").getValue();
-        int totalRowsInt = 0;
-        if (totalRows == null) {
-            log.error("Null value for total rows. Should not happen!");
-        }
-        else {
-            totalRowsInt = Integer.parseInt(totalRows);
-            boolean ret = runDBQuery("SELECT obj_description(quote_ident('"+tableName+"')::regclass::oid, 'pg_class') as comment");
-            TableData commentData = this.getTableData();
-            if (ret && commentData.rows.size() > 0) {
-                tableComment = commentData.rows.get(0).cell.get("comment").getValue();
-                if (tableComment == null) {
-                    tableComment = "";
-                }
-            }
-            if (totalRowsInt == 0) {
-                // There are no rows in the table. Just set up column information and return
-                log.info("No rows in this table");
-
-                TableData tableData = getColumnDataTypesForTable(tableName);
-                TableData constraints = getForeignConstraintsForTable(tableName);
-                
-                tableData.columns.clear();
-                int i = 0;
-                for (DataRow row : tableData.rows) {
-                    OrdsTableColumn otc = new OrdsTableColumn();
-                    otc.orderIndex = i++;
-                    DataCell dc = row.cell.get("column_name");
-                    otc.columnName = dc.getValue();
-                    dc = row.cell.get("data_type");
-                    /*  The following is a bit of a hack. Sometimes we've got
-                        data types as varchars, sometimes we've got columns of
-                        the actual data types.  The data type will always be a valid value so
-                        we'll use that as the fallback.
-                    */
-                    try {
-                        String type = dc.getValue();
-                        type = type.replace(" precision", "")
-                                .replace("character varying", "varchar")
-                                .replace("character", "char")
-                                .replace(" without time zone", "")
-                                .replace("bytea", "binary")
-                                .toUpperCase();
-                        otc.columnType = DataCell.DataType.valueOf(type);
-                    } catch (java.lang.IllegalArgumentException e) {
-                        otc.columnType = DataCell.DataType.valueOf(dc.getType().toString());
-                    }
-
-                    otc = addReferencesToColumn(otc, constraints);
-                    
-                    otc.comment = getColumnComment(tableName, otc.columnName);
-
-                    tableData.columns.add(otc);
-                }
-
-                tableData.rows = new ArrayList<DataRow>();
-                tableData.sequences = sequences;
-                tableData.setNumberOfRowsInEntireTable(totalRowsInt);
-                tableData.comment = tableComment;
-
-                return tableData;
-            }
-        }
-
-
+ 
         String keyName = null;
         try {
             keyName = getSingularPrimaryKeyColumn(tableName);
@@ -337,77 +389,41 @@ public class ORDSPostgresDB extends QueryRunner {
             log.error("Unable to find index", ex);
         }
 
+        String query = "";
+        
         log.debug("About to run the select statement");
-        TableData tableData = null;
         if ( (sort == null) || (sort.equals("null")) ) {
             if (numberOfRowsRequired == 0) {
                 if (keyName == null) {
                     log.debug("No key specified - simple select");
-                    runDBQuery(String.format("select * from \"%s\"", tableName), databaseRowStart, numberOfRowsRequired, true);
+                    query = String.format("select * from \"%s\"", tableName);
                 }
                 else {
                     log.debug("Key specified");
-                    runDBQuery(String.format("select * from \"%s\" order by \"%s\"", tableName, keyName), databaseRowStart, numberOfRowsRequired, true);
+                    query = String.format("select * from \"%s\" order by \"%s\"", tableName, keyName);
                 }
             }
             else {
                 if (keyName == null) {
                     log.debug("No key specified - simple select with limit");
-                    runDBQuery(String.format("select * from \"%s\" limit %d offset %d", tableName, numberOfRowsRequired, databaseRowStart));
+                    query = String.format("select * from \"%s\" limit %d offset %d", tableName, numberOfRowsRequired, databaseRowStart);
                 }
                 else {
                     log.debug("Key specified - select with limit");
-                    runDBQuery(String.format("select * from \"%s\" order by \"%s\" limit %d offset %d", tableName, keyName, numberOfRowsRequired, databaseRowStart));
+                    query = String.format("select * from \"%s\" order by \"%s\" limit %d offset %d", tableName, keyName, numberOfRowsRequired, databaseRowStart);
                 }
             }
         }
         else {
             if (numberOfRowsRequired == 0) {
-                runDBQuery(String.format("select * from \"%s\" order by \"%s\" %s", tableName, sort, direction ? "asc" : "desc"), databaseRowStart, numberOfRowsRequired, true);
+                query = String.format("select * from \"%s\" order by \"%s\" %s", tableName, sort, direction ? "asc" : "desc");
             }
             else {
-                runDBQuery(String.format("select * from \"%s\" order by \"%s\" %s limit %d offset %d", tableName, sort, direction ? "asc" : "desc", numberOfRowsRequired, databaseRowStart));
+                query = String.format("select * from \"%s\" order by \"%s\" %s limit %d offset %d", tableName, sort, direction ? "asc" : "desc", numberOfRowsRequired, databaseRowStart);
             }
         }
-        tableData = this.getTableData();
-        if (tableData == null) {
-            log.error("Null table data returned - can't do anything with this");
-            return null;
-        }
-        tableData.setNumberOfRowsInEntireTable(totalRowsInt);
-        tableData.setCurrentRow(databaseRowStart);
-        tableData.tableName = tableName;
-        tableData.comment = tableComment;
-
-
-        /*
-         * Now we have basic data. Let's get more details on the structure of the table.
-         */
-        TableData td = new TableData(tableData);
-
-        List<String> primKeys = new ArrayList<String>();
-        primKeys.add(keyName);
-        if (log.isDebugEnabled()) {
-            log.debug("Adding primary key of " + keyName);
-        }
-        td.sequences = sequences;
-        td.primaryKeys = primKeys;
-
-
-        TableData td2 = getForeignConstraintsForTable(tableName);
-
-        // Look at each column in our current data
-        log.debug("About to loop through columns");
-        for (OrdsTableColumn column : td.columns) {
-            if (td2 != null && !td2.rows.isEmpty()) {
-                column = addReferencesToColumn(column, td2);
-            }
-            column.comment = getColumnComment(td.tableName, column.columnName);
-        }
-
-
-        log.debug("getTableDataForTable:Returning...");
-        return td;
+        
+        return this.getTableDataForTable(query, null, tableName, databaseRowStart, numberOfRowsRequired, sort, direction);
     }
     
     /**
@@ -603,35 +619,35 @@ public class ORDSPostgresDB extends QueryRunner {
 
     
 
-    /*
-     * Constraints ...
-     */
-    /**
-     * This function will return the table name referenced by the foreign key in the table provided.
-     *
-     * @param tableName the table to run the query against
-     * @return a String containing the name of the table that is referenced. If more than one table exists, it will
-     * return the first table it comes across. If there are no foreign tables it will return null.
-     * @throws SQLException 
-     */
-    public String getSingularForeignConstraintTableName(String tableName) throws ClassNotFoundException, SQLException {
-        log.debug("getSingularForeignConstraintTableName");
-
-        String command = String
-                .format("SELECT ccu.table_name AS foreign_table_name FROM information_schema.table_constraints AS tc JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name WHERE constraint_type = 'FOREIGN KEY' AND tc.table_name='%s'",
-                tableName);
-        if (!runDBQuery(command)) {
-        	return null;
-        }
-
-        if (this.getTableData().rows.size() >= 1) {
-            for (DataRow dr : this.getTableData().rows) {
-                return dr.cell.get("foreign_table_name").getValue();
-            }
-        }
-
-        return null;
-    }
+//    /*
+//     * Constraints ...
+//     */
+//    /**
+//     * This function will return the table name referenced by the foreign key in the table provided.
+//     *
+//     * @param tableName the table to run the query against
+//     * @return a String containing the name of the table that is referenced. If more than one table exists, it will
+//     * return the first table it comes across. If there are no foreign tables it will return null.
+//     * @throws SQLException 
+//     */
+//    public String getSingularForeignConstraintTableName(String tableName) throws ClassNotFoundException, SQLException {
+//        log.debug("getSingularForeignConstraintTableName");
+//
+//        String command = String
+//                .format("SELECT ccu.table_name AS foreign_table_name FROM information_schema.table_constraints AS tc JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name WHERE constraint_type = 'FOREIGN KEY' AND tc.table_name='%s'",
+//                tableName);
+//        if (!runDBQuery(command)) {
+//        	return null;
+//        }
+//
+//        if (this.getTableData().rows.size() >= 1) {
+//            for (DataRow dr : this.getTableData().rows) {
+//                return dr.cell.get("foreign_table_name").getValue();
+//            }
+//        }
+//
+//        return null;
+//    }
 
     /**
      * Provide the foreign constraints for a table. Using this function, the caller will be provided with all
@@ -681,7 +697,7 @@ public class ORDSPostgresDB extends QueryRunner {
         TableData referenceValues = new TableData();
         try {
             String primaryKey = getSingularPrimaryKeyColumn(referencedTable);
-            String query = String.format("SELECT DISTINCT \"%s\" AS value, \"%s\" AS label FROM \"%s\" ORDER BY label ASC", primaryKey, referencedColumn, referencedTable);
+            String query = String.format("SELECT DISTINCT \"%s\" AS value, \"%s\" AS label FROM \"%s\" ORDER BY label ASC LIMIT 100", primaryKey, referencedColumn, referencedTable);
             runDBQuery(query);
             referenceValues = this.getTableData();
         } catch (ClassNotFoundException e) {
@@ -694,7 +710,7 @@ public class ORDSPostgresDB extends QueryRunner {
     
     /**
      * Gets a list of foreign keys, primary keys and labels from specified table as "id", "value" and "label".
-     * Used for updating selection controls that don't use drop-downs
+     * Used for updating selections
      * @param table
      * @param foreignKey
      * @param referencedTable
@@ -703,7 +719,7 @@ public class ORDSPostgresDB extends QueryRunner {
      * @param limit
      * @return
      */
-    public TableData getReferenceValues(String table, String foreignKey, String referencedTable, String referencedColumn, int offset, int limit, String sort, boolean direction, String filter, ParameterList parameters){
+    public TableData getReferenceValues(String table, String foreignKey, String referencedTable, String referencedColumn, int start, int length, String sort, boolean direction, String filter, ParameterList parameters){
         TableData referenceValues = new TableData();
         try {
         	//
@@ -728,11 +744,10 @@ public class ORDSPostgresDB extends QueryRunner {
             //
             // The SQL query captures a value and label
             //
-            String sql = String.format("SELECT %1$s.%2$s AS id, "
-            		+ "%3$s.%5$s AS value, %3$s.%4$s AS label "
-            		+ "FROM %1$s LEFT OUTER JOIN %3$s ON %3$s.%5$s = %1$s.%6$s "
-            		+ "ORDER BY %1$s.%7$s %8$s", table, originPrimaryKey, referencedTable, referencedColumn, primaryKey, foreignKey, sort, direction? "ASC" : "DESC");
-            
+            String sql = String.format("SELECT \"%1$s\".\"%2$s\" AS id, "
+            		+ "\"%3$s\".\"%5$s\" AS value, \"%3$s\".\"%4$s\" AS label "
+            		+ "FROM \"%1$s\" LEFT OUTER JOIN \"%3$s\" ON \"%3$s\".\"%5$s\" = \"%1$s\".\"%6$s\" "
+            		+ "ORDER BY \"%1$s\".\"%7$s\" %8$s", table, originPrimaryKey, referencedTable, referencedColumn, primaryKey, foreignKey, sort, direction? "ASC" : "DESC", start, length);     
 			//
 			// The optional WHERE clause looks like this:
             //
@@ -747,18 +762,18 @@ public class ORDSPostgresDB extends QueryRunner {
             		//
             		// Replace any aliases in the filter with table names
             		//
-					filter = this.normaliseFilterQuery(filter);
+					filter = FilteredQuery.normaliseFilterQuery(filter);
             		
             		//
             		// Just include WHERE clause from filter
             		//
 					filter = filter.split("WHERE")[1];
 
-		          	sql = String.format("SELECT %1$s.%2$s AS id, "
-	                		+ "%3$s.%5$s AS value, %3$s.%4$s AS label "
-	                		+ "FROM %1$s LEFT OUTER JOIN %3$s ON %3$s.%5$s = %1$s.%6$s "
-	                		+ "WHERE %1$s.%2$s IN (SELECT %2$s FROM %1$s WHERE %9$s) "
-	                		+ "ORDER BY %1$s.%7$s %8$s", table, originPrimaryKey, referencedTable, referencedColumn, primaryKey, foreignKey, sort, direction? "ASC" : "DESC", filter);
+		          	sql = String.format("SELECT \"%1$s\".\"%2$s\" AS id, "
+	                		+ "\"%3$s\".\"%5$s\" AS value, \"%3$s\".\"%4$s\" AS label "
+	                		+ "FROM \"%1$s\" LEFT OUTER JOIN \"%3$s\" ON \"%3$s\".\"%5$s\" = \"%1$s\".\"%6$s\" "
+	                		+ "WHERE \"%1$s\".\"%2$s\" IN (SELECT \"%2$s\" FROM \"%1$s\" WHERE %9$s) "
+	                		+ "ORDER BY \"%1$s\".\"%7$s\" %8$s", table, originPrimaryKey, referencedTable, referencedColumn, primaryKey, foreignKey, sort, direction? "ASC" : "DESC", filter);
 	  
 				} catch (Exception e) {
 					log.debug("getReferenceValues: filter did not contain a WHERE clause");
@@ -768,7 +783,7 @@ public class ORDSPostgresDB extends QueryRunner {
             //SELECT documents.docid AS id, sites.id AS value, sites.sitename AS label FROM documents LEFT OUTER JOIN sites ON sites.id = documents.docsite ORDER BY docsite ASC LIMIT 100 OFFSET 0 
             
             log.debug("Getting references values using SQL:" + sql);
-            referenceValues = runDBQuery(sql, parameters, offset, limit, true);
+            referenceValues = runDBQuery(sql, parameters, start, length, true);
         } catch (ClassNotFoundException e) {
             log.error(e.getMessage());
         } catch (SQLException e) {
@@ -780,7 +795,7 @@ public class ORDSPostgresDB extends QueryRunner {
     /**
      * Gets a list of primary keys and the specified column from the specified table.
      * The query aliases the primary key as "value" and the specified column as "label" in the results.
-     * This data is used for creating select lists by {@link GeneralUtils.buildReferenceDataSelect}
+     * This data is used for creating auto-completion select lists
      * 
      * @param referencedTable The name of the table
      * @param referencedColumn The column to use as "label"
@@ -873,76 +888,5 @@ public class ORDSPostgresDB extends QueryRunner {
         }
         return columnComment;
     }
-    
-    
-	public String normaliseFilterQuery(String filter){
-		//
-		// We need to replace any temporary identifiers from RedQueryBuilder with the actual referenced table names
-		//
-		// RQB gives us filters that look like this:
-		//
-		// SELECT * FROM "documents" INNER JOIN "sites" "x0" ON "docsite" = "x0"."id" WHERE ("x0"."sitename" = ?)"
-		//
-		// We need to make this instead:
-		//
-		// SELECT * FROM "documents" INNER JOIN "sites" ON "docsite" = "sites"."id" WHERE ("sites"."sitename" = ?)"
-		//
-		// Ideally we should be able to specify within RQB not to use these aliases at all ...
-		//
-		// Note also here the 20 is an arbitrary number - if tables have more than 20 foreign key relations
-		// with filter conditions attached then this is going to fail.
-		//
-		for (int i = 0; i < 20; i++){
-			String identifier = String.format("\"x%d\"", i);
-			//
-			// Potentially we could get problems with legitimate uses of "x0" in queries
-			// so we check for '"x0" ON' which should be uniquely used by these cases
-			//
-			if (filter.contains(identifier+" ON ")){
-				//
-				// Find the table identifier used before the identifier
-				// first take the part form before the first use of the identifier
-				// e.g. SELECT * FROM "documents" INNER JOIN "sites" 
-				//
-				String part = filter.split(identifier + " ON ")[0].trim();
-				//
-				// Now get the last word
-				//
-				String name = part.substring(part.lastIndexOf(" ")+1);
-				//
-				// ... and replace all occurences where the identifier is used
-				//
-				filter = filter.replaceAll(identifier, name);
-			} else {
-				//
-				// Another case is a simpler filter such as:
-				//
-				// SELECT "x0".* FROM "city" "x0" WHERE ("x0"."population" > ?)
-				//
-				// For this we get the table identifier from just before the WHERE clause
-				//
-				if (filter.contains(identifier + " WHERE")){
-					String part = filter.split(identifier + " WHERE")[0].trim();
-					//
-					// Now get the last word
-					//
-					String name = part.substring(part.lastIndexOf(" ")+1);
-					//
-					// ... and replace all occurences where the identifier is used
-					//
-					filter = filter.replaceAll(identifier, name);
-				}
-			}
-			
-		}
-		return filter;
-	}
-
-    
-    
-    
-    /*
-     * Static routines
-     */
-    
+   
 }
