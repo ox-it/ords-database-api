@@ -32,6 +32,7 @@ public class ParameterList {
 		DataTypeMap parameter = new DataTypeMap();
 		parameter.dt = DataType.VARCHAR;
 		parameter.stringValue = param;
+		parameter.index = parameters.size() + 1;
 		parameters.add(parameter);
 	}
 	
@@ -53,6 +54,7 @@ public class ParameterList {
 		parameter.dt = DataType.BOOLEAN;
 		parameter.intValue = value ? 1 : 0;
 		parameter.stringValue = value ? "t" : "f";
+		parameter.index = parameters.size() + 1;
 		parameters.add(parameter);	
 	}
 		
@@ -61,6 +63,7 @@ public class ParameterList {
 		parameter.dt = DataType.NULL;
 		parameter.stringValue = "NULL";
 		parameter.intValue = -1;
+		parameter.index = parameters.size() + 1;
 		parameters.add(parameter);
 	}
 	
@@ -69,6 +72,7 @@ public class ParameterList {
 		parameter.dt = DataType.INTEGER;
 		parameter.intValue = value;
 		parameter.stringValue = String.valueOf(value);
+		parameter.index = parameters.size() + 1;
 		parameters.add(parameter);
 	}
 	
