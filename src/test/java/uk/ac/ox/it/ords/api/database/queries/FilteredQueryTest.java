@@ -264,6 +264,22 @@ public class FilteredQueryTest {
     	output = createFilterFromParameters(sql, params);
         expected = "SELECT * FROM \"documents\" WHERE (name LIKE '%banana%') AND (type LIKE '%fruit%')";
     	assertEquals(expected, output);
+    	
+    }
+    
+    @Test
+    public void multiple() throws Exception{
+    	
+
+    	
+    	String sql = "SELECT \"x0\".* FROM \"city\" \"x0\" INNER JOIN \"country\" \"x2\" ON \"x0\".\"Country\" = \"x2\".\"Code\" WHERE ((\"x2\".\"CountryName\" CONTAINS ?) AND (\"x0\".\"ID\" < ?))";
+    	String params = "[{'type':'string', 'value':'banana'}, {'type':'string', 'value':'fruit'}]";
+
+    	FilteredQuery f = new FilteredQuery(sql, params, true);
+    	
+    	String output = f.getFilter();
+        String expected = "SELECT \"city\".* FROM \"city\" \"city\" INNER JOIN \"country\" \"country\" ON \"city\".\"Country\" = \"country\".\"Code\" WHERE ((\"country\".\"CountryName\" LIKE ?) AND (\"city\".\"ID\" < ?))";
+    	assertEquals(expected, output);	
     }
     
     @Test

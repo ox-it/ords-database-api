@@ -107,9 +107,10 @@ public class FilteredQuery {
 			// so we check for '"x0" ON' which should be uniquely used by these cases
 			//
 			if (filter.contains(identifier+" ON ")){
+
 				//
 				// Find the table identifier used before the identifier
-				// first take the part form before the first use of the identifier
+				// first take the part from before the first use of the identifier
 				// e.g. SELECT * FROM "documents" INNER JOIN "sites" 
 				//
 				String part = filter.split(identifier + " ON ")[0].trim();
@@ -130,7 +131,26 @@ public class FilteredQuery {
 				// For this we get the table identifier from just before the WHERE clause
 				//
 				if (filter.contains(identifier + " WHERE")){
+										
 					String part = filter.split(identifier + " WHERE")[0].trim();
+					//
+					// Now get the last word
+					//
+					String name = part.substring(part.lastIndexOf(" ")+1);
+					//
+					// ... and replace all occurences where the identifier is used
+					//
+					filter = filter.replaceAll(identifier, name);
+				} else {
+					//
+					// Finally, we have cases where the identifier is used as part of a join
+					//
+					//
+					// Find the table identifier used before the identifier
+					// first take the part from before the first use of the identifier
+					// e.g. SELECT * FROM "documents" "x0" INNER JOIN "sites" 
+					//
+					String part = filter.split(identifier + " INNER JOIN ")[0].trim();
 					//
 					// Now get the last word
 					//
