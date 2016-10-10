@@ -231,6 +231,283 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		assertEquals(500, getClient(true).path("/"+dbID+"/tabledata/nosuchtable").post(row).getStatus());
 
 	}
+
+	//
+	// Search related values for table
+	//
+	@Test
+	public void getRelatedColumnValuesUsingSearch() throws Exception{
+
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		File file = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(file);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		response = getClient(true).path("/"+id+"/tabledata/city").get();
+		assertEquals(200, response.getStatus());
+		
+		// ("{id}/table/{tablename}/column/{foreignkeycolumn}/related/")
+		response = getClient(true)
+				.path("/"+id+"/table/country/column/CountryName/related")
+				.query("term", "Alb")
+				.query("length", "10")
+				.get();
+		TableData data = response.readEntity(TableData.class);
+
+		assertEquals(2, data.rows.size());
+		String labels = "";
+		String values = "";
+		for (int i = 0; i < data.rows.size(); i++){
+			values += " " + data.rows.get(i).cell.get("value").getValue();
+			labels += " " + data.rows.get(i).cell.get("label").getValue();
+		}
+		assertEquals(" AL SVAX", values);
+		assertEquals(" Albania Svalbard", labels);
+		logout();
+	}
+	
+	//
+	// Search related values for table using "a" - check result limited to 100 rows
+	//
+	@Test
+	public void getRelatedColumnValuesUsingWideSearch() throws Exception{
+
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		File file = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(file);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		response = getClient(true).path("/"+id+"/tabledata/city").get();
+		assertEquals(200, response.getStatus());
+		
+		// ("{id}/table/{tablename}/column/{foreignkeycolumn}/related/")
+		response = getClient(true)
+				.path("/"+id+"/table/country/column/CountryName/related")
+				.query("term", "a")
+				.get();
+		TableData data = response.readEntity(TableData.class);
+
+		assertEquals(100, data.rows.size());
+
+		logout();
+	}
+	
+	//
+	// Get related column for table
+	//
+	@Test
+	public void getRelatedColumnValues() throws Exception{
+
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		File file = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(file);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		response = getClient(true).path("/"+id+"/tabledata/city").get();
+		assertEquals(200, response.getStatus());
+		
+		// {id}/table/{tablename}/column/{foreignkeycolumn}/related-values/
+		response = getClient(true)
+				.path("/"+id+"/table/city/column/Country/related-values")
+				.query("direction", "asc")
+				.query("sort", "ID")
+				.query("start", "1")
+				.query("length", "10")
+				.query("referencedtable", "country")
+				.query("referencedcolumn", "CountryName")
+				.get();
+		TableData data = response.readEntity(TableData.class);
+
+		assertEquals(10, data.rows.size());
+		String labels = "";
+		String values = "";
+		for (int i = 0; i < data.rows.size(); i++){
+			values += " " + data.rows.get(i).cell.get("value").getValue();
+			labels += " " + data.rows.get(i).cell.get("label").getValue();
+		}
+		assertEquals(" AL AL AL AL AL AL GR GR GR GR", values);
+		assertEquals(" Albania Albania Albania Albania Albania Albania Greece Greece Greece Greece", labels);
+		logout();
+	}
+	
+	//
+	// Get related column for table
+	//
+	@Test
+	public void getRelatedColumnValuesWithNoTerms() throws Exception{
+
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		File file = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(file);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		response = getClient(true).path("/"+id+"/tabledata/city").get();
+		assertEquals(200, response.getStatus());
+		
+		// {id}/table/{tablename}/column/{foreignkeycolumn}/related-values/
+		response = getClient(true)
+				.path("/"+id+"/table/country/column/CountryName/related")
+				.get();
+		TableData data = response.readEntity(TableData.class);
+
+		assertEquals(100, data.rows.size());
+		logout();
+	}
+	
+	//
+	// Get related column for table
+	//
+	@Test
+	public void getRelatedColumnValuesWhenUsingFilter() throws Exception{
+
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		File file = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(file);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		response = getClient(true).path("/"+id+"/tabledata/city").get();
+		assertEquals(200, response.getStatus());
+		
+		// {id}/table/{tablename}/column/{foreignkeycolumn}/related-values/
+		response = getClient(true)
+				.path("/"+id+"/table/city/column/Country/related-values")
+				.query("direction", "asc")
+				.query("sort", "ID")
+				.query("start", "1")
+				.query("length", "10")
+				.query("referencedtable", "country")
+				.query("referencedcolumn", "CountryName")
+				.query("filter", "SELECT%20%22x0%22.*%20FROM%20%22city%22%20%22x0%22%20WHERE%20(%22x0%22.%22CityName%22%20CONTAINS%20%3F)")
+				.query("params", "[{\"type\":\"string\", \"value\": \"%Tir%\"}]")
+				.get();
+		TableData data = response.readEntity(TableData.class);
+
+		assertEquals(5, data.rows.size());
+		String labels = "";
+		String values = "";
+		for (int i = 0; i < data.rows.size(); i++){
+			values += " " + data.rows.get(i).cell.get("value").getValue();
+			labels += " " + data.rows.get(i).cell.get("label").getValue();
+		}
+		assertEquals(" AL RO RO RO IND", values);
+		assertEquals(" Albania Romania Romania Romania India", labels);
+		logout();
+	}
+	
+	//
+	// Get table with filter
+	//
+	@Test
+	public void getTableWithFilter() throws Exception{
+		
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(csvFile);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		response = getClient(true).path("/"+id+"/tabledata/city").get();
+		assertEquals(200, response.getStatus());
+		TableData data = response.readEntity(TableData.class);
+		
+		for (int i = 0; i <data.columns.size(); i ++){
+			System.out.println(data.columns.get(i).columnName);
+		}
+		assertEquals("country", (data.columns.get(2).referencedTable));
+		assertEquals("Code", (data.columns.get(2).referencedColumn));
+		assertEquals(1, data.primaryKeys.size());
+		
+		// SELECT "x0".* FROM "city" "x0" WHERE ("x0"."CityName" CONTAINS "%Tir%")
+		response = getClient(true).path("/"+id+"/tabledata/city")				
+				.query("filter", "SELECT%20%22x0%22.*%20FROM%20%22city%22%20%22x0%22%20WHERE%20(%22x0%22.%22CityName%22%20CONTAINS%20%3F)")
+				.query("params", "[{\"type\":\"string\", \"value\": \"%Tir%\"}]")
+				.get();
+		assertEquals(200, response.getStatus());
+		data = response.readEntity(TableData.class);
+		
+		assertEquals("country", (data.columns.get(2).referencedTable));
+		assertEquals("Code", (data.columns.get(2).referencedColumn));
+		assertEquals(1, data.primaryKeys.size());
+		
+		String cities = "";
+		for (int i = 0; i < data.rows.size(); i++){
+			cities = cities + " " + (data.rows.get(i).cell.get("CityName").getValue());
+		}
+		assertEquals(" Tirane Tirgoviste Tirgu Jiu Tirgu Mures Tiruchchirappalli", cities);
+		
+		logout();
+	}
 	
 	//
 	// Check we actually get relationship metadata
@@ -260,10 +537,10 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		assertEquals(200, response.getStatus());
 		TableData data = response.readEntity(TableData.class);
 		
-		assertEquals(1, data.primaryKeys.size());
 		assertEquals("tblinv", (data.columns.get(0).referencedTable));
 		assertEquals("InvNum", (data.columns.get(0).referencedColumn));
-
+		assertEquals(0, data.primaryKeys.size());
+		
 		logout();
 	}
 	
