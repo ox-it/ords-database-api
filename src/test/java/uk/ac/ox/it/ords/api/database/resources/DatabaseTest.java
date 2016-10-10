@@ -163,10 +163,10 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			response = client.path("/"+id+"/dataset/"+viewId).delete();
 			assertEquals(200, response.getStatus());
 			
-			// test export and import
+			// test export
 			
 			client = getClient(true);
-			client.accept("application/octet-stream");
+			client.accept("application/sql");
 			String exportPath = "/"+id+"/export/sql";
 			response = client.path(exportPath).get();
 			assertEquals(200, response.getStatus());
@@ -185,18 +185,28 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			response = client.path("/"+id+"/export/zip").get();
 			assertEquals(200, response.getStatus());
 			
+			//quick test for csv table
 			
+			client = getClient(true);
+			client.accept("text/csv");
+			response = client.path("/"+id+"/export/table/city").get();
+			assertEquals(200, response.getStatus());
 			
-			
-			
+			//quick test for sql export csv
+			client = getClient(true);
+			client.accept("text/csv");
+			response = client.path("/"+id+"/export").query("q", "select \"Code\", \"CountryName\" from country").get();
+			assertEquals(200, response.getStatus());
+			stream = (InputStream) response.getEntity();
+			//this.getResponseFromInputStream(stream, "/tmp/country.csv");
 			
 			client = getClient(false);
 			response = client.path("/"+id+"/tabledata/country").get();
 			assertEquals(200, response.getStatus());
 			stream = (InputStream) response.getEntity();
-			this.getResponseFromInputStream(stream, "mondial.json");
+			//this.getResponseFromInputStream(stream, "mondial.json");
 			//tableData = response.readEntity(TableData.class);
-			
+			/*
 			File sqlFile = new File ("/tmp/mondial.sql");
 			inputStream = new FileInputStream(sqlFile);
 			cd = new ContentDisposition("attachement;filename=mondial.sql");
@@ -221,7 +231,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 				assertEquals(200,response.getStatus());				
 			}
 			assertEquals(prg.getStatus(), "FINISHED");
-
+*/
 			
 			//System.out.println("Number of Rows: "+tableData.getNumberOfRowsInEntireTable());
 			

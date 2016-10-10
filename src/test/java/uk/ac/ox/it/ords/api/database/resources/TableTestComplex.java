@@ -76,7 +76,7 @@ public class TableTestComplex extends AbstractDatabaseTestRunner{
 		assertEquals(409, getClient(true).path("/"+dbID+"/tabledata/country").query("primaryKey", "Code").query("primaryKeyValue", "AFG").delete().getStatus());
 
 
-		logout();
+		//logout();
 
 	}
 	
@@ -96,7 +96,7 @@ public class TableTestComplex extends AbstractDatabaseTestRunner{
 		Response response = getClient(true).path("/"+dbID+"/tabledata/city").post(row);
 		assertEquals(201, response.getStatus());
 
-		logout();
+		//logout();
 
 	}
 
