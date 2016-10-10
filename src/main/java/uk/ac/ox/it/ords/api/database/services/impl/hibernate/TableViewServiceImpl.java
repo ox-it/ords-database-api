@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.ws.rs.NotFoundException;
-import javax.ws.rs.core.Response;
 
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.subject.Subject;
@@ -45,6 +44,7 @@ import uk.ac.ox.it.ords.api.database.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.TableView;
 import uk.ac.ox.it.ords.api.database.model.User;
+import uk.ac.ox.it.ords.api.database.queries.FilteredQuery;
 import uk.ac.ox.it.ords.api.database.queries.ORDSPostgresDB;
 import uk.ac.ox.it.ords.api.database.queries.ParameterList;
 import uk.ac.ox.it.ords.api.database.queries.QueryRunner;
@@ -201,7 +201,10 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	@Override
 	public TableData getDatabaseRows(int dbId,
 			String tableName, int startIndex, int rowsPerPage,
-			String sort, String sortDirection) throws Exception {
+			String sort, String sortDirection,
+			String filter, 
+			String params
+			) throws Exception {
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
 		if ( database == null ) {
 			throw new NotFoundException();
@@ -212,8 +215,20 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		if (sortDirection != null && sortDirection.equalsIgnoreCase("ASC") ){
 			direction = true;
 		}
-		TableData tableData = sqlQueries.getTableDataForTable(tableName, startIndex, rowsPerPage, sort, direction);
 		
+		String filterQuery = null;
+		ParameterList filterParameters = null;
+		if (filter !=null && params != null && !filter.isEmpty() && !params.isEmpty()){
+			filterQuery = FilteredQuery.getFilter(filter, params, true);
+			filterParameters = FilteredQuery.getParameterList(params);
+		}
+		
+		TableData tableData = null;
+		if (filterQuery != null){
+			tableData = sqlQueries.getTableDataForTable(filterQuery, filterParameters, tableName, startIndex, rowsPerPage, sort, direction);			
+		} else {
+			tableData = sqlQueries.getTableDataForTable(tableName, startIndex, rowsPerPage, sort, direction);
+		}
 		// get the actual number of rows in table
 		
 		return tableData;
@@ -795,6 +810,40 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 			return false;
 		}
 		return true;
+	}
+
+	@Override
+	public TableData getReferenceValues(
+			int dbId,
+			String tableName, 
+			String foreignKey,
+			String referencedTable, 
+			String referencedColumn, 
+			int startIndex,
+			int rowsPerPage, 
+			String sort,
+			String sortDirection, 
+			String filter,
+			String parameters) throws ClassNotFoundException, SQLException, Exception {
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
+		if ( database == null ) {
+			throw new NotFoundException();
+		}
+		
+		ORDSPostgresDB sqlQueries = new ORDSPostgresDB(database.getDatabaseServer(), database.getDbConsumedName() );
+		boolean direction = false;
+		if (sortDirection != null && sortDirection.equalsIgnoreCase("ASC") ){
+			direction = true;
+		}
+		
+		String filterQuery = null;
+		ParameterList filterParameters = new ParameterList();
+		if (filter !=null && parameters != null && !filter.isEmpty() && !parameters.isEmpty()){
+			filterQuery = FilteredQuery.getFilter(filter, parameters, true);
+			filterParameters = FilteredQuery.getParameterList(parameters);
+		}
+		
+		return sqlQueries.getReferenceValues(tableName, foreignKey, referencedTable, referencedColumn, startIndex, rowsPerPage, sort, direction, filterQuery, filterParameters);
 	}
 
 

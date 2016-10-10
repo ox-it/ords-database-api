@@ -42,6 +42,23 @@ public interface TableViewService {
 	
 	
 	/**
+	 * @param dbId
+	 * @param table
+	 * @param foreignKey
+	 * @param referencedTable
+	 * @param referencedColumn
+	 * @param offset
+	 * @param limit
+	 * @param sort
+	 * @param sortDirection
+	 * @param filter
+	 * @param parameters
+	 * @return
+	 */
+	public TableData getReferenceValues(int dbId, String table, String foreignKey, String referencedTable, String referencedColumn, int offset, int limit, String sort, String sortDirection, String filter, String parameters) throws Exception;
+
+		
+	/**
 	 * 
 	 * @param datasetId
 	 * @return
@@ -90,18 +107,26 @@ public interface TableViewService {
 	/**
 	 * 
 	 * @param dbId
-	 * @param instance
 	 * @param tableName
 	 * @param startIndex
 	 * @param rowsPerPage
 	 * @param filter
+	 * @param params
 	 * @param sort
 	 * @param sortDirection
 	 * @return
 	 * @throws Exception
 	 */
-	public TableData getDatabaseRows ( int dbId,   String tableName, 
-			int startIndex, int rowsPerPage, String sort, String sortDirection ) throws Exception;
+	public TableData getDatabaseRows ( 
+			int dbId,   
+			String tableName, 
+			int startIndex, 
+			int rowsPerPage, 
+			String sort, 
+			String sortDirection,
+			String filter,
+			String params
+	) throws Exception;
 	
 	/**
 	 * 
