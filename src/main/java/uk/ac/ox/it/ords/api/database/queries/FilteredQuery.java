@@ -26,6 +26,20 @@ import org.json.JSONObject;
 import uk.ac.ox.it.ords.api.database.data.DataCell.DataType;
 import uk.ac.ox.it.ords.api.database.data.DataTypeMap;
 
+/**
+ * 
+ * This is a helper class for working with filter parameters supplied when using RedQueryBuilder on
+ * the front end.
+ * 
+ * RQB supplies a Filter SQL string, and an array of parameters.
+ * 
+ * These need to be reformatted to be fed into queries, which is where this class comes in. 
+ * 
+ * Use the "raw" input from RQB in the constructor; then the Get methods to access the parsed
+ * filter string and the normalized ParameterList. If the filter supplied is invalid, null will
+ * be returned.
+ *
+ */
 public class FilteredQuery {
 	
 	String filter;
@@ -43,22 +57,23 @@ public class FilteredQuery {
 		}
 	}
 	
-	public FilteredQuery(String filter, ParameterList params, boolean isCaseSensitive){
-		this.parameters = params;
-		this.filter = createFilterFromParameters(normaliseFilterQuery(filter), parameters, isCaseSensitive);
-		if (this.parameters == null){
-			this.parameters = new ParameterList();
-		}
-	}
-	
+	/*
+	 * The default constructor is only used for unit testing
+	 */
 	public FilteredQuery(){
-		
 	}
 	
 	/**
 	 * Returns a query based on a filter string and parameter string
+	 * @param filter
+	 * @param params
+	 * @param isCaseSensitive
+	 * @return the filtered query, or null if invalid
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * @throws Exception
 	 */
-	public String getFilter( 
+	protected String getFilter( 
 			String filter, 
 			String params, 
 			boolean isCaseSensitive
