@@ -44,6 +44,7 @@ import uk.ac.ox.it.ords.api.database.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.TableView;
 import uk.ac.ox.it.ords.api.database.model.User;
+import uk.ac.ox.it.ords.api.database.queries.DataTypeUtils;
 import uk.ac.ox.it.ords.api.database.queries.FilteredQuery;
 import uk.ac.ox.it.ords.api.database.queries.ORDSPostgresDB;
 import uk.ac.ox.it.ords.api.database.queries.ParameterList;
@@ -207,7 +208,8 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 			String sort, 
 			String sortDirection,
 			String filter, 
-			String params
+			String params,
+			boolean isCaseSensitive
 			) throws Exception {
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
 		if ( database == null ) {
@@ -223,11 +225,11 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		String filterQuery = null;
 		ParameterList filterParameters = null;
 		if (filter !=null && params != null && !filter.isEmpty() && !params.isEmpty()){
-			FilteredQuery filteredQuery = new FilteredQuery(filter, params, true);
+			FilteredQuery filteredQuery = new FilteredQuery(filter, params, isCaseSensitive);
 			filterQuery = filteredQuery.getFilter();
 			filterParameters = filteredQuery.getParameters();
 		}
-		
+				
 		TableData tableData = null;
 		if (filterQuery != null){
 			tableData = sqlQueries.getTableDataForTable(filterQuery, filterParameters, tableName, startIndex, rowsPerPage, sort, direction);			
@@ -644,7 +646,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		for (DataRow rows : qr.getTableData().rows) {
 			DataTypeMap dtm = new DataTypeMap();
 			dtm.colName = rows.cell.get("column_name").getValue();
-			dtm.dt = QueryRunner.getDataType(rows.cell.get("data_type")
+			dtm.dt = DataTypeUtils.getDataType(rows.cell.get("data_type")
 					.getValue());
 			dataTypeMappingList.put(dtm.colName, dtm);
 		}		
@@ -829,7 +831,9 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 			String sort,
 			String sortDirection, 
 			String filter,
-			String parameters) throws ClassNotFoundException, SQLException, Exception {
+			String parameters,
+			boolean isCaseSensitive
+			) throws ClassNotFoundException, SQLException, Exception {
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(dbId);
 		if ( database == null ) {
 			throw new NotFoundException();
@@ -845,7 +849,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		ParameterList filterParameters = null;
 		
 		if (filter !=null && parameters != null && !filter.isEmpty() && !parameters.isEmpty()){
-			FilteredQuery filteredQuery = new FilteredQuery(filter, parameters, true);
+			FilteredQuery filteredQuery = new FilteredQuery(filter, parameters, isCaseSensitive);
 			filterQuery = filteredQuery.getFilter();
 			filterParameters = filteredQuery.getParameters();
 		}

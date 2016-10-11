@@ -429,7 +429,8 @@ public class Database {
 			@QueryParam("sort") String sort,
 			@QueryParam("direction") String direction,
 			@QueryParam("filter") String filter,
-			@QueryParam("params") String params
+			@QueryParam("params") String params,
+			@DefaultValue("true") @QueryParam("casesensitive") boolean isCaseSensitive
 			) {
 		
 		int dbId;
@@ -481,7 +482,7 @@ public class Database {
 			//
 			// Get data
 			//
-			TableData tableData = tableViewService().getDatabaseRows(dbId, tableName, startIndex, rowsPerPage, sort, direction, filter, params);
+			TableData tableData = tableViewService().getDatabaseRows(dbId, tableName, startIndex, rowsPerPage, sort, direction, filter, params, isCaseSensitive);
 
 			//
 			// Validate: TODO we should be able to check this before executing the request?
@@ -745,6 +746,7 @@ public class Database {
 			@QueryParam("direction") String direction,
 			@QueryParam("filter") String filter,
 			@QueryParam("params") String params,
+			@DefaultValue("true") @QueryParam("casesensitive") boolean isCaseSensitive,
 			
 			@PathParam("foreignkeycolumn") String foreignKeyColumn,
 			@QueryParam("referencedtable") String referencedTable,
@@ -780,7 +782,9 @@ public class Database {
 					sort, 
 					direction, 
 					filter, 
-					params);
+					params,
+					isCaseSensitive
+			);
 			
 			return Response.status(Response.Status.OK).entity(data).build();
 
