@@ -55,7 +55,7 @@ public interface TableViewService {
 	 * @param parameters
 	 * @return
 	 */
-	public TableData getReferenceValues(int dbId, String table, String foreignKey, String referencedTable, String referencedColumn, int offset, int limit, String sort, String sortDirection, String filter, String parameters) throws Exception;
+	public TableData getReferenceValues(int dbId, String table, String foreignKey, String referencedTable, String referencedColumn, int offset, int limit, String sort, String sortDirection, String filter, String parameters, boolean isCaseSensitive) throws Exception;
 
 		
 	/**
@@ -125,7 +125,8 @@ public interface TableViewService {
 			String sort, 
 			String sortDirection,
 			String filter,
-			String params
+			String params,
+			boolean isCaseSensitive
 	) throws Exception;
 	
 	/**
