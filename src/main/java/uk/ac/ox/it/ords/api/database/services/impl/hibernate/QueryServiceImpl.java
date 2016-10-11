@@ -16,9 +16,6 @@
 
 package uk.ac.ox.it.ords.api.database.services.impl.hibernate;
 
-import java.sql.SQLException;
-
-import uk.ac.ox.it.ords.api.database.data.DataRow;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
