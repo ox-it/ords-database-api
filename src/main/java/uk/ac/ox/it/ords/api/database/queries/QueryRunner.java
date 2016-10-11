@@ -1,6 +1,17 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.dbName
+ * Copyright 2015 University of Oxford
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package uk.ac.ox.it.ords.api.database.queries;
 
@@ -12,7 +23,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -45,9 +55,6 @@ public class QueryRunner {
     
     
     public QueryRunner(String dbServer, String dbName) {
-        if (log.isDebugEnabled()) {
-            log.debug(String.format("QR Constructor:%s,%s", dbServer, dbName ));
-        }
     	setCredentials(dbServer, dbName);
     }
     
@@ -125,174 +132,19 @@ public class QueryRunner {
         return conn;
     }
     
-
     public Connection getConnection() throws ClassNotFoundException, SQLException{
     	return initialiseConnection();
     }
-    
-    
     
     public boolean runDBQuery(String query) throws ClassNotFoundException, SQLException {
         return runDBQuery(query, 1, 0, false);
     }
     
-    
-    
-    
     public boolean runDBQuery(String query, int startRecord, int numberOfRecordsRequired, boolean readOnly) throws ClassNotFoundException, SQLException {
-        if (query == null || query.trim().isEmpty()) {
-            log.error("Null query - returning");
-            return false;
-        }
-        boolean ret = false;
-        tableData = null;
-        boolean pagination = true;
-        
-        if (numberOfRecordsRequired == 0) {
-            pagination = false;
-        }
-        else {
-        	tableData = new TableData();
-        	//
-        	// Note that we want to tell the UI the actual start index.
-        	// We've used the OFFSET, which is one less than where you want to
-        	// start the zero-based index. So to return a 1-based index of rows,
-        	// we have to add 1.
-        	//
-            tableData.setCurrentRow(startRecord + 1);
-        }
-        
-        Statement stmt = null;
-        ResultSet rs = null;
-        
-        Connection conn = null;
-        try {
-        	conn = initialiseConnection();
-        	conn.setReadOnly(readOnly);
-        }
-        catch (SQLException e) {
-            log.error("No connection set", e);
-            throw new SQLException (e);
-        }
-        
-        try {
-	        try {
-	            stmt = conn.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_READ_ONLY);
-	            
-	            int offset = 0;
-	            if (startRecord > 0) {
-	                offset = startRecord-1;
-	            }
-	            if (numberOfRecordsRequired == 0) {
-	                conn.setAutoCommit(true);
-	            }
-	            else {
-	                if (!query.toLowerCase().contains("limit")) {
-	                    query = createLimitAndOffsetCommand(query, numberOfRecordsRequired, offset);
-	                    conn.setAutoCommit(false);
-	                }   
-	            }
-	            
-	            if (stmt.execute(query)) {
-	            	/*
-	            	 * There are results to collect
-	            	 */
-	                rs = stmt.getResultSet();
-	                ResultSetMetaData md;
-	                int colCount;
-	
-	                DataRow dr;
-	                int counter = 0;
-	                boolean firstTimeThrough = true;
-	                
-	                if (tableData == null) {
-	                	tableData = new TableData();
-	                }
-	                
-	                while (rs.next()) {
-	                    md = rs.getMetaData();
-	                    colCount = md.getColumnCount();
-	                    dr = new DataRow();
-	
-	                    if (firstTimeThrough) {
-	                        /*
-	                         * During the first iteration we need to set up column data
-	                         */
-	                        firstTimeThrough = false;
-	                        for (int colNum = 1; colNum <= colCount; colNum++) {
-	                            OrdsTableColumn otc = new OrdsTableColumn();
-	                            otc.columnName = md.getColumnName(colNum);
-	                            otc.columnType = getDataType(md.getColumnType(colNum));
-	                            tableData.columns.add(otc);
-	                            otc.orderIndex = colNum;
-	                        }
-	                    }
-	                    for (int colNum = 1; colNum <= colCount; colNum++) {
-	                        DataCell dc = new DataCell();
-	                        dc.setType(getDataType(md.getColumnType(colNum)));
-	                        if (rs.getString(colNum) != null) {
-	                            dc.setValue(rs.getString(colNum));
-	                        } 
-	                        dr.cell.put(md.getColumnName(colNum), dc);
-	                    }
-	
-	                    tableData.rows.add(dr);
-	                    counter++;
-	                    
-	                    if (pagination && (counter >= numberOfRecordsRequired)) {
-	                        break;
-	                    }
-	                }
-	                rs.last();
-	                tableData.setNumberOfRowsInEntireTable(rs.getRow());
-	                rs.close();
-	            }
-	            else {
-	            	// This was either an update count or a query that provided no results.
-	            }
-	            ret = true;
-	        }
-	        catch (SQLException ex) {
-	            log.error("Exception", ex);
-	            log.error("Database: " + databaseName);
-	            log.error("User: " + dbc.getUsername());
-	            log.error("Command: " + query);
-	            dbErrorMessage = "" + ex;
-	            log.error("SQLState: " + ex.getSQLState());
-	            log.error("VendorError: " + ex.getErrorCode());
-	            throw ex;
-	        }
-	        finally {
-	            if (rs != null) {
-	                try {
-	                    rs.close();
-	                }
-	                catch (SQLException sqlEx) {
-	                    log.error("Cannot close the resultset: " + sqlEx.getMessage());
-	                }
-	            }
-	            if (stmt != null) {
-	                try {
-	                    stmt.close();
-	                }
-	                catch (SQLException sqlEx) {
-	                    log.error("Cannot close the statement: " + sqlEx.getMessage());
-	                }
-	            }
-	        }
-        }
-        finally {
-        	closeConnection(conn);
-        }
-        
-        if (log.isDebugEnabled()) {
-            log.debug("Returning from the Query Runner with ret:" + (ret ? "true" : "false"));
-        }
-        
-        return ret;
+    	this.tableData = this.runDBQuery(query, new ParameterList(), startRecord, numberOfRecordsRequired, readOnly);
+    	return tableData != null;
     }
-     
-    
+      
     private void closeConnection(Connection conn) {
         log.trace("closeConnection");
         if (conn != null) {
@@ -305,158 +157,6 @@ public class QueryRunner {
 	            log.error("Cannot close the connection: ", e);
 	        }
         }
-    }
-    
-    
-    
-    
-    public static DataType getDataType(int ct) {
-        DataType dt;
-        // See java.sql.Types
-        switch (ct) {
-            case 2003: dt = DataType.ARRAY;
-				break;
-            case -5: dt = DataType.BIGINT;
-				break;
-            case -2: dt = DataType.BINARY;
-				break;
-            case -7: dt = DataType.BOOLEAN;
-                // -7 is really BIT, but JDBC sees BOOLEANs as BITs and
-                // we can't save BITs with PreparedStatement, so it's easiest
-                // to pretend its a BOOLEAN.
-				break;
-            case 2004: dt = DataType.BLOB;
-				break;
-            case 16: dt = DataType.BOOLEAN;
-				break;
-            case 1: dt = DataType.CHAR;
-				break;
-            case 2005: dt = DataType.CLOB;
-				break;
-            case 70: dt = DataType.DATALINK;
-				break;
-            case 91: dt = DataType.DATE;
-				break;
-            case 3: dt = DataType.DECIMAL;
-				break;
-            case 2001: dt = DataType.DISTINCT;
-				break;
-            case 8: dt = DataType.DOUBLE;
-				break;
-            case 6: dt = DataType.FLOAT;
-				break;
-            case 4: dt = DataType.INTEGER;
-				break;
-            case 2000: dt = DataType.JAVA_OBJECT;
-				break;
-            case -16: dt = DataType.LONGNVARCHAR;
-				break;
-            case -4: dt = DataType.LONGVARBINARY;
-				break;
-            case -1: dt = DataType.LONGVARCHAR;
-				break;
-            case -15: dt = DataType.NCHAR;
-				break;
-            case 2011: dt = DataType.NCLOB;
-				break;
-            case 0: dt = DataType.NULL;
-				break;
-            case 2: dt = DataType.NUMERIC;
-				break;
-            case -9: dt = DataType.NVARCHAR;
-				break;
-            case 1111: dt = DataType.OTHER;
-				break;
-            case 7: dt = DataType.REAL;
-				break;
-            case 2006: dt = DataType.REF;
-				break;
-            case -8: dt = DataType.ROWID;
-				break;
-            case 5: dt = DataType.SMALLINT;
-				break;
-            case 2009: dt = DataType.SQLXML;
-				break;
-            case 2002: dt = DataType.STRUCT;
-				break;
-            case 92: dt = DataType.TIME;
-				break;
-            case 93: dt = DataType.TIMESTAMP;
-				break;
-            case -6: dt = DataType.TINYINT;
-				break;
-            case -3: dt = DataType.VARBINARY;
-				break;
-            case 12: dt = DataType.VARCHAR;
-				break;
-            default: dt = DataType.OTHER;
-                break;
-        }
-
-        return dt;
-    }
-    
-    
-    /**
-     * The following is taken from http://www.postgresql.org/docs/9.1/static/datatype.html
-     * There seems to be a disconnect between what Postgres knows as a datatype and what
-     * ORDS might expect (e.g. macaddr is a Postgres datatype we don't know about ... similarly
-     * we have space for DataType.BLOB that doesn't appear as a Postgres datatype).
-     * TODO more work needed here
-     * @param type
-     * @return the datatype or DataType.OTHER if unknown
-     */
-    public static DataType getDataType(String type) {
-        if (type == null) {
-        	return null;
-        }
-        if (type.equals("character varying")) {
-        	return DataType.VARCHAR;
-        }
-        if (type.equals("integer")) {
-        	return DataType.INTEGER;
-        }
-        if (type.startsWith("timestamp")) {
-        	return DataType.TIMESTAMP;
-        }
-        if (type.equals("boolean")) {
-        	return DataType.BOOLEAN;
-        }
-        if (type.equals("bigint")) {
-        	return DataType.BIGINT;
-        }
-        if (type.equals("numeric")) {
-        	return DataType.DECIMAL;
-        }
-        if (type.equals("date")) {
-        	return DataType.DATE;
-        }
-        if (type.startsWith("double ")) {
-        	return DataType.DOUBLE;
-        }
-        if (type.equals("xml")) {
-        	return DataType.SQLXML;
-        }
-        if (type.equals("character")) {
-        	return DataType.CHAR;
-        }
-        if (type.equals("time without time zone")) {
-        	return DataType.TIME;
-        }
-        if (type.equals("time")) {
-        	return DataType.TIME;
-        }
-        if (type.equals("timestamp")) {
-        	return DataType.TIMESTAMP;
-        }
-        if (type.equals("smallint")) {
-        	return DataType.SMALLINT;
-        }
-        if (type.equals("real")) {
-        	return DataType.REAL;
-        }
-        
-        return DataType.OTHER;
     }
     
     /**
@@ -555,14 +255,14 @@ public class QueryRunner {
 	                        for (int colNum = 1; colNum <= colCount; colNum++) {
 	                            OrdsTableColumn otc = new OrdsTableColumn();
 	                            otc.columnName = md.getColumnName(colNum);
-	                            otc.columnType = getDataType(md.getColumnType(colNum));
+	                            otc.columnType = DataTypeUtils.getDataType(md.getColumnType(colNum));
 	                            tableData.columns.add(otc);
 	                            otc.orderIndex = colNum;
 	                        }
 	                    }
 	                    for (int colNum = 1; colNum <= colCount; colNum++) {
 	                        DataCell dc = new DataCell();
-	                        dc.setType(getDataType(md.getColumnType(colNum)));
+	                        dc.setType(DataTypeUtils.getDataType(md.getColumnType(colNum)));
 	                        if (rs.getString(colNum) != null) {
 	                            dc.setValue(rs.getString(colNum));
 	                        } 
@@ -685,14 +385,13 @@ public class QueryRunner {
         return ret;
     }
 
-    
     /**
      * Apply a ParameterList to a PreparedStatement
      * @param pstmt
      * @param parameters
      * @throws SQLException
      */
-    public void addParametersToPreparedStatement(PreparedStatement pstmt, ParameterList parameters) throws SQLException{
+    private void addParametersToPreparedStatement(PreparedStatement pstmt, ParameterList parameters) throws SQLException{
     	if (parameters != null ){
     		for (int i=0; i<parameters.size(); i++){
     			DataTypeMap parameter = parameters.getParameter(i);
@@ -708,7 +407,7 @@ public class QueryRunner {
      * @param dtm
      * @throws SQLException
      */
-	public void addParameterToPreparedStatement(PreparedStatement pst, int index, DataTypeMap dtm) throws SQLException{
+	private void addParameterToPreparedStatement(PreparedStatement pst, int index, DataTypeMap dtm) throws SQLException{
         if (dtm.dt.equals(DataType.INTEGER) 
                 || dtm.dt.equals(DataType.BIGINT)
                 || dtm.dt.equals(DataType.DECIMAL)
@@ -779,7 +478,7 @@ public class QueryRunner {
         }
 	}
 	
-    public static String createLimitAndOffsetCommand(String command, int limit, int offset) {
+    private static String createLimitAndOffsetCommand(String command, int limit, int offset) {
         String fullCommand = command;
         
         if (fullCommand == null) {

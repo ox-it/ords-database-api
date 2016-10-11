@@ -1,3 +1,19 @@
+/*
+ * Copyright 2015 University of Oxford
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package uk.ac.ox.it.ords.api.database.queries;
 
 import java.sql.SQLException;
@@ -13,8 +29,6 @@ import uk.ac.ox.it.ords.api.database.data.DataRow;
 import uk.ac.ox.it.ords.api.database.data.OrdsTableColumn;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 
-
-
 /**
  * A class to run some key database commands against the database.
  * Commands that might, for example, get a list of the columns in a table in 
@@ -23,29 +37,29 @@ import uk.ac.ox.it.ords.api.database.data.TableData;
  * @author dave
  */
 public class ORDSPostgresDB extends QueryRunner {
+	
     private static Logger log = LoggerFactory.getLogger(ORDSPostgresDB.class);
-    public static final String MAIN_DB_DOES_NOT_EXIST_DEPRICATED = "Main database does not exist.";
     
-    /*
-     * Constructors ...
+    /**
+     * Construct an instance; you need to supply both a database name AND a database server to
+     * use this class
+     * 
+     * @param dbServer
+     * @param dbName
      */
 	public ORDSPostgresDB(String dbServer, String dbName) {
 		super(dbServer, dbName);
     }
     
-    /*
-     * ... Constructors
-     */
-    
-    
-    /*
-     * Work on column information ...
-     */
+	/**
+	 * Gets the names of all the columns in a table
+	 * @param tableName
+	 * @return
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 */
     public TableData getColumnNamesForTable(String tableName) throws ClassNotFoundException, SQLException {
-        if (log.isDebugEnabled()) {
-            log.debug(String.format("getColumnNamesForTable(%s)", tableName));
-        }
-
+    	
         String command = String.format("select column_name from information_schema.columns where table_name = '%s';",
                 tableName);
         TableData td = null;
@@ -57,16 +71,14 @@ public class ORDSPostgresDB extends QueryRunner {
         return td;
     }
     
-    
-//    public TableData getColumnDataTypesForTableTest(String tableName) throws ClassNotFoundException, SQLException {
-//    	return getColumnDataTypesForTable(tableName);
-//    }
-    
-    
+    /**
+     * Gets column metadata for a table. Used in populating table metadata.
+     * @param tableName
+     * @return
+     * @throws ClassNotFoundException
+     * @throws SQLException
+     */
     private TableData getColumnDataTypesForTable(String tableName) throws ClassNotFoundException, SQLException {
-        if (log.isDebugEnabled()) {
-            log.debug(String.format("getColumnDataTypesForTable(%s)", tableName));
-        }
 
         String command = String.format("select column_name, data_type from information_schema.columns where table_name = '%s';",
                 tableName);
@@ -80,8 +92,8 @@ public class ORDSPostgresDB extends QueryRunner {
         return td;
     }
     
-    /**
-    *
+   /**
+    * Returns the first primary key found. Used for setting default sort columns etc.
     * @param tableName
     * @return the primary key of the table, but only if there is one (it will return the first entry if more than one),
     * else null
@@ -96,7 +108,14 @@ public class ORDSPostgresDB extends QueryRunner {
 	   }
    }
    
-   public List<String> getPrimaryKeys(String tableName) throws ClassNotFoundException, SQLException {
+   /**
+    * Get all the primary keys for a table. Used for populating metadata.
+    * @param tableName
+    * @return
+    * @throws ClassNotFoundException
+    * @throws SQLException
+    */
+   private List<String> getPrimaryKeys(String tableName) throws ClassNotFoundException, SQLException {
 	   List<String> primaryKeys = new ArrayList<String>();
 	   
        String command = String
@@ -116,12 +135,17 @@ public class ORDSPostgresDB extends QueryRunner {
        return primaryKeys;
    }
    
-   public OrdsTableColumn addReferencesToColumn(OrdsTableColumn otc, TableData constraints) throws SQLException {
+   /**
+    * Adds relation metadata for a column. Used in populating metadata.
+    * @param otc
+    * @param constraints
+    * @return
+    * @throws SQLException
+    */
+   private OrdsTableColumn addReferencesToColumn(OrdsTableColumn otc, TableData constraints) throws SQLException {
        try {
            for (DataRow constraint : constraints.rows) {
-               if (log.isDebugEnabled()) {
-                   log.debug(String.format("Check column name %s against %s", otc.columnName, constraint.cell.get("column_name").getValue()));
-               }
+
                if (otc.columnName.equals(constraint.cell.get("column_name").getValue())) {
                    otc.referencedColumn = constraint.cell.get("foreign_column_name").getValue();
                    otc.referencedTable = constraint.cell.get("foreign_table_name").getValue();
@@ -133,9 +157,6 @@ public class ORDSPostgresDB extends QueryRunner {
                        for (String s2 : rd.cell.keySet()) {
                            otc.alternateColumns.add(rd.cell.get(s2).getValue());
                        }
-                   }
-                   if (log.isDebugEnabled()) {
-                       log.debug(String.format("Setting up ref col %s and ref table %s with %d alternatives", otc.referencedColumn, otc.referencedTable, otc.alternateColumns.size()));
                    }
                }
            }
@@ -157,13 +178,10 @@ public class ORDSPostgresDB extends QueryRunner {
     * @throws java.lang.ClassNotFoundException
     */
    public boolean checkDatabaseHasTables() throws SQLException, ClassNotFoundException {
-       if (log.isDebugEnabled()) {
-           log.debug(String.format("getTablesForDatabase()"));
-       }
+
        String command = String.format("select c.relname FROM pg_catalog.pg_class c LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE c.relkind IN ('r','') AND n.nspname NOT IN ('pg_catalog', 'pg_toast') AND pg_catalog.pg_table_is_visible(c.oid) ORDER BY UPPER(c.relname);");
        return runDBQuery(command);
    }
-
    
    /**
     * Get a list of table names for the database in a TableData object.  The table names are the
@@ -181,11 +199,12 @@ public class ORDSPostgresDB extends QueryRunner {
        log.debug("getTablesForDatabase:return");
        return tableData;
    }
-
     		    
     /**
      * Get rows of data from the table. This function will get ALL table rows, which may be large.
-     *
+     * 
+     * NOTE this only seems to be used in testing. Consider removing it.
+     * 
      * @param tableName the table whose data is to be returned
      * @param sort
      * @param direction
@@ -196,7 +215,15 @@ public class ORDSPostgresDB extends QueryRunner {
         return getTableDataForTable(tableName, 1, 0, sort, direction);
     }
     
-    public TableData getTableMetadataForTable(String tableName) throws ClassNotFoundException, SQLException {
+    /**
+     * Get the metadata associated with a table - columns, data types, relationships
+     * 
+     * @param tableName
+     * @return
+     * @throws ClassNotFoundException
+     * @throws SQLException
+     */
+    private TableData getTableMetadataForTable(String tableName) throws ClassNotFoundException, SQLException {
 
         ArrayList<String> sequences = getSequencesForTable(tableName);
         TableData tableData = getColumnDataTypesForTable(tableName);
@@ -243,7 +270,15 @@ public class ORDSPostgresDB extends QueryRunner {
         return tableData;
     }
     
-    public String getTableComment(String tableName) throws ClassNotFoundException, SQLException{
+    /**
+     * Get table comments. Used when collecting table metadata
+     * 
+     * @param tableName
+     * @return
+     * @throws ClassNotFoundException
+     * @throws SQLException
+     */
+    private String getTableComment(String tableName) throws ClassNotFoundException, SQLException{
         String tableComment = "";
         boolean ret = runDBQuery("SELECT obj_description(quote_ident('"+tableName+"')::regclass::oid, 'pg_class') as comment");
         TableData commentData = this.getTableData();
@@ -256,7 +291,22 @@ public class ORDSPostgresDB extends QueryRunner {
         return tableComment;
     }
     
-    
+    /**
+     * Get table data using a specified query and parameters as input. Returns table metadata as well
+     * as the rows.
+     * 
+     * @param query
+     * @param parameters
+     * @param iscasesensitive
+     * @param tableName
+     * @param rowStart
+     * @param numberOfRowsRequired
+     * @param sort
+     * @param direction
+     * @return
+     * @throws ClassNotFoundException
+     * @throws SQLException
+     */
     public TableData getTableDataForTable(String query, ParameterList parameters, String tableName, int rowStart, int numberOfRowsRequired, String sort, boolean direction) throws ClassNotFoundException, SQLException {
         if (tableName == null) {
             log.error("Null table name info");
@@ -326,21 +376,29 @@ public class ORDSPostgresDB extends QueryRunner {
         tableData.comment = metadata.comment;
         tableData.sequences = metadata.sequences;
         tableData.primaryKeys = metadata.primaryKeys;
-        TableData td2 = getForeignConstraintsForTable(tableName);
-
+//        TableData td2 = getForeignConstraintsForTable(tableName);
+//
         // Look at each column in our current data
-        log.debug("About to loop through columns");
-        for (OrdsTableColumn column : tableData.columns) {
-            if (td2 != null && !td2.rows.isEmpty()) {
-                column = addReferencesToColumn(column, td2);
-            }
-            column.comment = getColumnComment(tableData.tableName, column.columnName);
-        }
+//        log.debug("About to loop through columns");
+//        for (OrdsTableColumn column : tableData.columns) {
+//            if (td2 != null && !td2.rows.isEmpty()) {
+//                column = addReferencesToColumn(column, td2);
+//            }
+//            column.comment = getColumnComment(tableData.tableName, column.columnName);
+//        }
 
         return tableData;
     }
 
-    public boolean checkTableExists(String tableName) throws ClassNotFoundException, SQLException{
+
+    /**
+     * Checks whether the specified table exists
+     * @param tableName
+     * @return
+     * @throws ClassNotFoundException
+     * @throws SQLException
+     */
+    private boolean checkTableExists(String tableName) throws ClassNotFoundException, SQLException{
         /*
          * Get all table names in the database and ensure the table exists
          */
@@ -415,13 +473,13 @@ public class ORDSPostgresDB extends QueryRunner {
     }
     
     /**
-     * Get any auto-increment sequences for the specified table
+     * Get any auto-increment sequences for the specified table. Used for metadata collection.
      * @param tableName
      * @return
      * @throws ClassNotFoundException
      * @throws SQLException
      */
-    public ArrayList<String> getSequencesForTable(String tableName) throws ClassNotFoundException, SQLException {
+    private ArrayList<String> getSequencesForTable(String tableName) throws ClassNotFoundException, SQLException {
         ArrayList<String> sequences = new ArrayList<String>();
         if (runDBQuery(String.format("SELECT column_name, column_default from information_schema.columns where table_name='%s' AND column_default IS NOT NULL", tableName))) {
 	        for (DataRow row : this.getTableData().rows) {
@@ -434,218 +492,15 @@ public class ORDSPostgresDB extends QueryRunner {
         return sequences;
     }
 
-//    /**
-//     * Returns the data from a table. This does a lot more than just querying the data. It also understands the
-//     * structure of the table and is able to cross reference other tables for their data if necessary.
-//     *
-//     * @param tableName the table whose data is to be returned
-//     * @param rowStart initial row of data that needs to be viewed
-//     * @param tableColumnReferences A HashMap of foreign keys from the table, and the foreign values to display in their place
-//     * @param rowsPerPage the number of rows of data to be displayed per page
-//     * @param sort the name of the column to sort by, or null if no sorting needed
-//     * @param direction if sort is specified then this boolean will show if sorting is in normal or reverse order
-//     * @return a TableData object containing all the data for a specific table or null if there has been a problem
-//     * @throws SQLException 
-//     */
-//    public TableData getTableDataForTable(String tableName, int rowStart, HashMap<String, String> tableColumnReferences, int rowsPerPage, String sort, boolean direction) throws ClassNotFoundException, SQLException {
-//        if (log.isDebugEnabled()) {
-//            String tcr;
-//            try {
-//                tcr = tableColumnReferences.toString();
-//            } catch (NullPointerException e) {
-//                tcr = "null";
-//            }
-//            log.debug(String.format("getTableDataForTable(%s, %s, %d)",
-//                    tableName, tcr, rowStart));
-//        }
-//        if (tableName == null) {
-//            log.error("Null table name - cannot proceed");
-//            return null;
-//        }
-//
-//        /*
-//         * First up, let's get the data that would be viewed
-//         */
-//        TableData baseTableData = getTableDataForTable(tableName, rowStart, rowsPerPage, sort, direction);
-//        if (baseTableData == null) {
-//            log.error("Null tabledata - this is bad");
-//            return null;
-//        }
-//        if (!baseTableData.tableName.equals(tableName)) {
-//            log.error("Coding error - table name set incorrectly. Correcting ...");
-//            baseTableData.tableName = tableName;
-//        }
-//        
-//        /*
-//         * We need to understand if there are any foreign keys associated with this table and, if so, add
-//         * them to the data.
-//         */
-//        if (tableColumnReferences != null) {
-//        	addTableColumnReferences(tableName, baseTableData,tableColumnReferences);
-//        }
-//
-//        baseTableData.logData();
-//        baseTableData.setCurrentRow(rowStart);
-//        return baseTableData;
-//    }
-
-    
-//    /**
-//     * Adds foreign key references to a table result
-//     * @param tableName the table
-//     * @param baseTableData the base table data (results)
-//     * @param tableColumnReferences A HashMap of foreign keys from the table, and the foreign values to display in their place
-//     * @throws ClassNotFoundException
-//     * @throws SQLException
-//     */
-//    public void addTableColumnReferences(String tableName, TableData baseTableData, HashMap<String, String> tableColumnReferences) throws ClassNotFoundException, SQLException{
-//    	{
-//            TableData constraintData = getForeignConstraintsForTable(tableName);
-//
-//            /*
-//             * The constraintData object now contains constraint data. Due to the nature of
-//             * result sets, this constraint data is contained within the row information of
-//             * the object.
-//             */
-//            if (constraintData.rows != null) {
-//                /*
-//                 * Look at each row to get the constraint information
-//                 */
-//                if (log.isDebugEnabled()) {
-//                    log.debug(String.format("There are %d constraint rows", constraintData.rows.size()));
-//                }
-//                for (int index = 0; index < constraintData.rows.size(); index++) {
-//                    // Get the name of the referree table
-//                    String requiredReferencedTable = constraintData.rows.get(index).cell.get("foreign_table_name").getValue();
-//                    String requiredReferencingTableIndex = constraintData.rows.get(index).cell.get("foreign_column_name").getValue();
-//                    String referencingColumn = constraintData.rows.get(index).cell.get("column_name").getValue();
-//
-//                    if (log.isDebugEnabled()) {
-//                        log.debug(String.format("Req ref table is %s", requiredReferencedTable));
-//                        log.debug(String.format("Req ref table index is %s", requiredReferencingTableIndex));
-//                    }
-//                    // find the reference column
-//                    OrdsTableColumn col = null;
-//                    for (OrdsTableColumn column: baseTableData.columns) {
-//                    	if ( column.columnName.equals(referencingColumn)) {
-//                    		col = column;
-//                    		break;
-//                    	}
-//                    }
-//                    if (col == null) {
-//                        log.error("Null column information for " + referencingColumn);
-//                        continue;
-//                    }
-//                    //sort it here
-//                    boolean b1 = false, b2 = false;
-//                    if ( (requiredReferencedTable != null) && (requiredReferencedTable.equals(col.referencedTable))) {
-//                        b1 = true;
-//                    }
-//                    if ( (requiredReferencingTableIndex != null) && (col.referencedColumn != null)){
-//                    	if (requiredReferencingTableIndex.endsWith(col.referencedColumn)) {
-//                        b2 = true;
-//                    	}
-//                    }
-//
-//
-//                    /*
-//                     * Now we need to replace all the data in referencingColumn with the data in requiredReferencedColumn.
-//                     * First, we need to get the relevant data from the target table.
-//                     */
-//                    String command;
-//                    if (b1 && b2) {
-//                        if (log.isDebugEnabled()) {
-//                            log.debug(String.format("RefTable is %s", requiredReferencedTable));
-//                            log.debug(String.format("RefIndex is %s", requiredReferencingTableIndex));
-//                        }
-//
-//                        /*
-//                         * Now we should set up column information
-//                         */
-//                        String requiredReferencedColumn = tableColumnReferences.get(referencingColumn);
-//                        if (requiredReferencedColumn != null) {
-//                            command = String.format("select \"%s\" from \"%s\"", requiredReferencedColumn, requiredReferencedTable);
-//                            TableData td;
-//                            runDBQuery(command);
-//                            List<String> alternativeOptions = new ArrayList<>();
-//                            if (getTableData() == null) {
-//                                log.error("No table data present. Something has gone wrong. Unable to continue here!");
-//                                break;
-//                            }
-//                            for (DataRow row : getTableData().rows) {
-//                                alternativeOptions.add(row.cell.get(requiredReferencedColumn).getValue());
-//                            }
-//
-//                            td = getColumnNamesForTable(requiredReferencedTable);
-//                            List<String> alternateColumns = new ArrayList<String>();
-//                            for (DataRow row : td.rows) {
-//                                alternateColumns.add(row.cell.get("column_name").getValue());
-//                            }
-//
-//                            log.debug("Looping through columns");
-//                            for (OrdsTableColumn otc : baseTableData.columns) {
-//                                if (otc.columnName.equals(referencingColumn)) {
-//                                    otc.alternativeOptions = alternativeOptions;
-//                                    otc.alternateColumns = alternateColumns;
-//                                    otc.referencedColumn = requiredReferencedColumn;
-//                                    otc.referencedTable = requiredReferencedTable;
-//                                    break;
-//                                }
-//                            }
-//                        }
-//                    }
-//                    else {
-//                        if (log.isDebugEnabled()) {
-//                            log.debug(String.format("%s == %s?", requiredReferencedTable, col.referencedTable));
-//                            log.debug(String.format("%s == %s?", requiredReferencingTableIndex, col.referencedColumn));
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
-
-    
-
-//    /*
-//     * Constraints ...
-//     */
-//    /**
-//     * This function will return the table name referenced by the foreign key in the table provided.
-//     *
-//     * @param tableName the table to run the query against
-//     * @return a String containing the name of the table that is referenced. If more than one table exists, it will
-//     * return the first table it comes across. If there are no foreign tables it will return null.
-//     * @throws SQLException 
-//     */
-//    public String getSingularForeignConstraintTableName(String tableName) throws ClassNotFoundException, SQLException {
-//        log.debug("getSingularForeignConstraintTableName");
-//
-//        String command = String
-//                .format("SELECT ccu.table_name AS foreign_table_name FROM information_schema.table_constraints AS tc JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name WHERE constraint_type = 'FOREIGN KEY' AND tc.table_name='%s'",
-//                tableName);
-//        if (!runDBQuery(command)) {
-//        	return null;
-//        }
-//
-//        if (this.getTableData().rows.size() >= 1) {
-//            for (DataRow dr : this.getTableData().rows) {
-//                return dr.cell.get("foreign_table_name").getValue();
-//            }
-//        }
-//
-//        return null;
-//    }
-
     /**
      * Provide the foreign constraints for a table. Using this function, the caller will be provided with all
-     * relationship information about the table.
+     * relationship information about the table. Used in collecting meteadata.
      *
      * @param tableName the table whose information is required.
      * @return a TableData object with all the information
      * @throws SQLException 
      */
-    public TableData getForeignConstraintsForTable(String tableName) throws ClassNotFoundException, SQLException {
+    private TableData getForeignConstraintsForTable(String tableName) throws ClassNotFoundException, SQLException {
         log.debug("getForeignConstraintsForTable");
 
         String command = String
@@ -659,19 +514,7 @@ public class ORDSPostgresDB extends QueryRunner {
         tableData.tableName = tableName;
         return tableData;
     }
-    /*
-     * ... Constraints
-     */
-    
-//    public boolean runGenericQuery(String query, int rowStart, int rowsPerPage) throws ClassNotFoundException, SQLException {
-//    	return runDBQuery(query, rowStart, rowsPerPage);
-//    }
-    
-    
-//    public boolean runGenericQuery(String query) throws ClassNotFoundException, SQLException {
-//    	return runDBQuery(query);
-//    }
-
+ 
     /**
      * Gets a list of primary keys and the specified column from the specified table.
      * The query aliases the primary key as "value" and the specified column as "label" in the results.
@@ -698,13 +541,20 @@ public class ORDSPostgresDB extends QueryRunner {
     
     /**
      * Gets a list of foreign keys, primary keys and labels from specified table as "id", "value" and "label".
-     * Used for updating selections
+     * 
+     * Used for obtaining a foreign table column for transposing over the foreign key in a table; for example, for the
+     * given table with filters and pagination applied, with a column of this.fk, what are the values of rel.label rather 
+     * than rel.pk for this.fk?
+     * 
      * @param table
      * @param foreignKey
      * @param referencedTable
      * @param referencedColumn
      * @param offset
      * @param limit
+     * @param filter
+     * @param parameters
+     * @param isCaseSensitive
      * @return
      */
     public TableData getReferenceValues(String table, String foreignKey, String referencedTable, String referencedColumn, int start, int length, String sort, boolean direction, String filter, ParameterList parameters){
@@ -778,7 +628,7 @@ public class ORDSPostgresDB extends QueryRunner {
     /**
      * Gets a list of primary keys and the specified column from the specified table.
      * The query aliases the primary key as "value" and the specified column as "label" in the results.
-     * This data is used for creating auto-completion select lists
+     * This data is used for creating auto-completion select lists using the supplied query term
      * 
      * @param referencedTable The name of the table
      * @param referencedColumn The column to use as "label"
@@ -826,7 +676,7 @@ public class ORDSPostgresDB extends QueryRunner {
         
     
     /**
-     * Get a list of all tables associated with a particular database
+     * Get a list of all tables associated with a particular database. Used in export/import
      *
      * @return true if the command has been successful
      * @throws java.sql.SQLException
@@ -841,7 +691,8 @@ public class ORDSPostgresDB extends QueryRunner {
     }
     
     /**
-     * Get a list of all tables associated with a particular database
+     * Get a list of all tables associated with a particular database. Used in import
+     * refactor: merge with the above method.
      *
      * @return true if the command has been successful
      * @throws java.sql.SQLException
@@ -858,7 +709,15 @@ public class ORDSPostgresDB extends QueryRunner {
         return tableData;
     }
 
-    public String getColumnComment(String tableName, String columnName) throws ClassNotFoundException, SQLException {
+    /**
+     * Gets comments for a column. Used in metadata collection
+     * @param tableName
+     * @param columnName
+     * @return
+     * @throws ClassNotFoundException
+     * @throws SQLException
+     */
+    private String getColumnComment(String tableName, String columnName) throws ClassNotFoundException, SQLException {
         String columnComment = "";
         String commentQuery = "SELECT col_description(quote_ident('%s')::regclass::oid, (SELECT attnum FROM pg_attribute WHERE attrelid = quote_ident('%s')::regclass::oid AND attname = '%s')) as comment";
         boolean ret = runDBQuery(String.format(commentQuery, tableName, tableName, columnName));
