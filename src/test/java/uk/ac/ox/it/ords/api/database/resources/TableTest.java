@@ -544,6 +544,39 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		logout();
 	}
 	
+	//
+	// Check we actually get relationship metadata
+	//
+	@Test
+	public void getTableWithPagination() throws Exception{
+		
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(csvFile);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		response = getClient(true).path("/"+id+"/tabledata/city").query("start", "51").get();
+		assertEquals(200, response.getStatus());
+		TableData data = response.readEntity(TableData.class);
+		
+		assertEquals("51", data.rows.get(0).cell.get("ID").getValue() );
+		assertEquals(51, data.getCurrentRow());
+		
+		logout();
+	}
+	
 	@Test
 	public void addRowToTable() throws Exception{		
 		loginUsingSSO("pingu@nowhere.co", "");

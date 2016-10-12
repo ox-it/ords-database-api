@@ -313,15 +313,6 @@ public class ORDSPostgresDB extends QueryRunner {
             return null;
         }
 
-        int databaseRowStart;
-        if (rowStart == 0) {
-            log.error("Coding error - rowStart of zero input. The rowStart is from a users perspective and this should start at value 1");
-            databaseRowStart = rowStart;
-        }
-        else {
-            databaseRowStart = rowStart - 1;
-        }
-
         if (!this.checkTableExists(tableName)) {
             log.info(String.format("Table %s does not exist", tableName));
             return null;
@@ -345,7 +336,7 @@ public class ORDSPostgresDB extends QueryRunner {
         }
 
         
-        TableData tableData = runDBQuery(query, parameters, databaseRowStart, numberOfRowsRequired, true);
+        TableData tableData = runDBQuery(query, parameters, rowStart, numberOfRowsRequired, true);
 
         if (tableData == null) {
             log.error("Null table data returned - can't do anything with this");
@@ -359,14 +350,6 @@ public class ORDSPostgresDB extends QueryRunner {
         tableData.setNumberOfRowsInEntireTable(totalRowsInt);
         
         //
-    	// Note that we want to tell the UI the actual start index.
-    	// We've used the OFFSET, which is one less than where you want to
-    	// start the zero-based index. So to return a 1-based index of rows,
-    	// we have to add 1.
-    	//
-        tableData.setCurrentRow(databaseRowStart + 1);
-        
-        //
         // If there were no results, we won't have column metadata, so we need to add it in now
         // anyway from the metadata we collected earlier.
         //
@@ -376,16 +359,6 @@ public class ORDSPostgresDB extends QueryRunner {
         tableData.comment = metadata.comment;
         tableData.sequences = metadata.sequences;
         tableData.primaryKeys = metadata.primaryKeys;
-//        TableData td2 = getForeignConstraintsForTable(tableName);
-//
-        // Look at each column in our current data
-//        log.debug("About to loop through columns");
-//        for (OrdsTableColumn column : tableData.columns) {
-//            if (td2 != null && !td2.rows.isEmpty()) {
-//                column = addReferencesToColumn(column, td2);
-//            }
-//            column.comment = getColumnComment(tableData.tableName, column.columnName);
-//        }
 
         return tableData;
     }

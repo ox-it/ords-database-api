@@ -182,13 +182,7 @@ public class QueryRunner {
             pagination = false;
         }
         else {
-        	//
-        	// Note that we want to tell the UI the actual start index.
-        	// We've used the OFFSET, which is one less than where you want to
-        	// start the zero-based index. So to return a 1-based index of rows,
-        	// we have to add 1.
-        	//
-            tableData.setCurrentRow(startRecord + 1);
+            tableData.setCurrentRow(startRecord);
         }
         
         PreparedStatement getResults = null;
