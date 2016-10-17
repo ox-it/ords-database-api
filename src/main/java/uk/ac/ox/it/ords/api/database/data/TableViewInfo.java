@@ -25,6 +25,7 @@ public class TableViewInfo {
 	private String viewDescription;
 	private String viewQuery;
 	private String viewAuthorization;
+	private int databaseId;
 
 	public TableViewInfo(){
 		
@@ -37,6 +38,7 @@ public class TableViewInfo {
 		this.setViewName(dataset.getViewName());
 		this.setViewQuery(dataset.getQuery());
 		this.setViewTable(dataset.getAssociatedTable());
+		this.setDatabaseId(dataset.getPhysicalDatabaseId());
 	}
 	
 	public String getViewName() {
@@ -76,6 +78,14 @@ public class TableViewInfo {
 
 	public void setId(int id) {
 		this.id = id;
+	}
+
+	public int getDatabaseId() {
+		return databaseId;
+	}
+
+	public void setDatabaseId(int databaseId) {
+		this.databaseId = databaseId;
 	}
 
 
