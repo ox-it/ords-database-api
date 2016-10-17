@@ -996,7 +996,9 @@ public class Database {
 			return Response.status(Response.Status.NOT_FOUND).build();
 		} 
 		catch (Exception e) {
-			e.printStackTrace();
+			
+			log.error(e);
+			
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
 		}
 		ResponseBuilder response = Response.ok(output, "application/octet-stream");
@@ -1036,7 +1038,9 @@ public class Database {
 			return Response.status(Response.Status.NOT_FOUND).build();
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			
+			log.error(e);
+			
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
 		}
 		ResponseBuilder response = Response.ok(output, "text/csv");
@@ -1065,7 +1069,9 @@ public class Database {
 			return Response.status(Response.Status.NOT_FOUND).build();
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			
+			log.error(e);
+			
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
 		}
 		ResponseBuilder response = Response.ok(output, "text/csv");
@@ -1126,6 +1132,9 @@ public class Database {
 			}
 		}
 		catch (Exception e ) {
+			
+			log.error(e);
+			
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
 		}
 	    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
@@ -1196,6 +1205,9 @@ public class Database {
 		} catch (BadParameterException ex) {
 			return Response.status(Response.Status.NOT_FOUND).build();
 		} catch (Exception e) {
+			
+			log.error(e);
+			
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
 					.build();
 		}
@@ -1228,6 +1240,9 @@ public class Database {
 			return Response.ok(progress).build();
 		}
 		catch (Exception e ) {
+			
+			log.error(e);
+			
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
 		}
 	}
@@ -1254,6 +1269,9 @@ public class Database {
 			return Response.ok().build();
 		}
 		catch (Exception e ) {
+			
+			log.error(e);
+			
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
 		}
 
