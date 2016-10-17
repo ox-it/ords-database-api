@@ -272,6 +272,55 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 
 	}
 	
+	
+	@Test
+	public void getDatasetAsCSV() throws Exception {
+		loginUsingSSO("pingu@nowhere.co", "");
+		
+		//
+		// Import a database
+		//
+		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		//
+		// Create a dataset
+		//
+		TableViewInfo dataset = new TableViewInfo();
+		dataset.setViewName("test one");
+		dataset.setViewTable("City");
+		dataset.setViewQuery("SELECT 'CityName', 'Latitude', 'Population' from City");
+		dataset.setViewDescription("test");
+		dataset.setViewAuthorization("pubic");
+		response = getClient(true).path("/"+id+"/dataset/").post(dataset);	
+		assertEquals(201, response.getStatus());
+		path = response.getLocation().getPath();
+		String viewId = path.substring(path.lastIndexOf('/')+1);
+
+		
+		client = getClient(true);
+		client.accept("text/csv");
+		response = client.path("/"+id+"/dataset/"+viewId+"/csv").get();
+		assertEquals(200, response.getStatus());
+		// Cleanup
+		loginUsingSSO("pingu@nowhere.co", "");
+		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
+		
+		logout();
+
+	}
+	
 	@SuppressWarnings("unchecked")
 	@Test
 	public void searchDatasets() throws Exception{

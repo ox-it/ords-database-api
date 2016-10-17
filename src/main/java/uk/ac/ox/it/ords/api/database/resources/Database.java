@@ -235,6 +235,56 @@ public class Database {
 	}
 	
 	
+
+	@ApiOperation(
+			value="Gets the data for a specified dataset as a CSVFile",
+			response=File.class
+	)
+	@ApiResponses(value = { 
+			@ApiResponse(code = 200, message = "Dataset csv successfully retrieved."),
+		    @ApiResponse(code = 404, message = "The dataset does not exist."),
+		    @ApiResponse(code = 403, message = "Not authorized to access the dataset.")
+	})
+	@GET
+	@Path("{id}/dataset/{datasetid}/csv")
+	public Response getDatasetAsCSVFile(@PathParam("id") final int id,
+			@PathParam("datasetid") int datasetId) {
+		TableView tableView = tableViewService().getTableViewRecord(datasetId);
+		if (tableView == null)
+			return Response.status(404).build();
+		OrdsPhysicalDatabase physicalDatabase = databaseRecordService()
+				.getRecordFromId(id);
+		//
+		// Check permissions
+		//
+		if (!"public".equals(tableView.getTvAuthorization())) {
+			if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions
+					.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
+
+				DatabaseAuditService.Factory.getInstance().createNotAuthRecord(
+						"GET " + id + "/datasetdata/" + datasetId + "/csv", id);
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
+		}
+		try {
+			String server = physicalDatabase.getDatabaseServer();
+			String database = physicalDatabase.getDbConsumedName();
+			String query = tableView.getQuery();
+			File CSVFile = CSVService.Factory.getInstance().exportQuery(server,
+					database, query);
+			ResponseBuilder response = Response.ok(CSVFile, "text/csv");
+			response.header("Content-Disposition", "attachment; filename="+CSVFile.getName());
+			return response.build();
+		} catch (NotFoundException e) {
+			return Response.status(404).build();
+		} catch (Exception e) {
+			log.error(e);
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+					.build();
+		}
+	}	
+	
+	
 	
 	@ApiOperation(
 		value="Updates the data and metadata for a specified dataset"
