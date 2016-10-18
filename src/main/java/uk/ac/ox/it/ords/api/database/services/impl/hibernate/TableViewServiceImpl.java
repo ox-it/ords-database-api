@@ -785,12 +785,12 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	private void dropDatasetDatabase ( int datasetId) throws Exception {
 		TableView tableView = this.getTableView(datasetId);
 		String databaseName = tableView.getAssociatedDatabase();
-
-
+		String server = this.getPhysicalDatabaseFromID(tableView.getPhysicalDatabaseId()).getDatabaseServer();
+		
 		String statement = this.getTerminateStatement(databaseName);
-		this.runJDBCQuery(statement, null, this.getORDSDatabaseHost(), databaseName);
+		this.runJDBCQuery(statement, null, server, databaseName);
 		statement = "drop database " + databaseName + ";";
-		this.runJDBCQuery(statement, null, this.getORDSDatabaseHost(), this.getORDSDatabaseName());
+		this.runJDBCQuery(statement, null, server, databaseName);
 
 	}
 
