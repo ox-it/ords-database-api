@@ -790,7 +790,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		String statement = this.getTerminateStatement(databaseName);
 		this.runJDBCQuery(statement, null, server, databaseName);
 		statement = "drop database " + databaseName + ";";
-		this.runJDBCQuery(statement, null, server, databaseName);
+		this.runJDBCQuery(statement, null, server, getORDSDatabaseName());
 
 	}
 
