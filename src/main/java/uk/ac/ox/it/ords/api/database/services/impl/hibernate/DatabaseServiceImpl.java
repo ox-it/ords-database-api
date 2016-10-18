@@ -307,10 +307,10 @@ public class DatabaseServiceImpl {
 //		}
 //	}
 
-	public boolean checkDatabaseExists(String databaseName) throws Exception {
+	public boolean checkDatabaseExists(String serverName, String databaseName) throws Exception {
 		String sql = "SELECT COUNT(*) as count from pg_database WHERE datname = ?";
 		List<Object> parameters = this.createParameterList(databaseName);
-		return this.runCountSql(sql, parameters, null, null, null, null) == 1;
+		return this.runCountSql(sql, parameters, null, serverName, null, null) == 1;
 	}
 
 	protected List<Object> createParameterList(Object... args) {
@@ -336,7 +336,6 @@ public class DatabaseServiceImpl {
 				result.close();
 		}
 		return 0;
-
 	}
 
 	protected String getTerminateStatement(String databaseName)

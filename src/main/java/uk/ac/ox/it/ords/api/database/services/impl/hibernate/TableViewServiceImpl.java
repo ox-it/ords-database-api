@@ -669,7 +669,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 			// remove old static copy
 			this.dropDatasetDatabase(datasetId);
 		}
-		String staticDBName = this.generateStaticDBName(physicalDatabase.getDbConsumedName());
+		String staticDBName = this.generateStaticDBName(physicalDatabase.getDatabaseServer(), physicalDatabase.getDbConsumedName());
 
 		TableView viewRecord = this.getTableView(datasetId);
 		
@@ -744,7 +744,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
     
     
     
-    private  String generateStaticDBName(String dbName) throws Exception{
+    private  String generateStaticDBName(String server, String dbName) throws Exception{
         log.debug(String.format("generateStaticDBName(%s)", dbName));
 
         String possibleDbName;
@@ -752,7 +752,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 
         while (true) {
             possibleDbName = dbName + "_" + counter + "_static";
-            if (!this.checkDatabaseExists(possibleDbName)) {
+            if (!this.checkDatabaseExists(server, possibleDbName)) {
                 break;
             }
             counter++;
@@ -767,7 +767,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 //		String password = this.getODBCPassword();
 //		this.createOBDCUserRole(userName, password);
 		
-		if (this.checkDatabaseExists(to)) {
+		if (this.checkDatabaseExists(server, to)) {
 			String statement = this.getTerminateStatement(to);
 			this.runJDBCQuery(statement, null, server, null);
 			statement = "rollback transaction; drop database " + to + ";";
