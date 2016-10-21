@@ -86,17 +86,9 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 	public void deleteStaticDataSet(int datasetId)
 			throws Exception {
 		TableView tableView = this.getTableView(datasetId);
-		String databaseName = tableView.getAssociatedDatabase();
-
 		this.removeModelObject(tableView);
-
-		String statement = this.getTerminateStatement(databaseName);
-		this.runJDBCQuery(statement, null, this.getORDSDatabaseHost(), databaseName);
-		statement = "drop database " + databaseName + ";";
-		this.runJDBCQuery(statement, null, this.getORDSDatabaseHost(), this.getORDSDatabaseName());
+		this.dropDatasetDatabase(tableView);
 	}
-
-
 
 	@Override
 	public TableViewInfo getStaticDataSet(int datasetId) throws Exception {
@@ -376,7 +368,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		
 		QueryRunner dq = new QueryRunner(database.getDatabaseServer(), database.getDbConsumedName());
 		
-		ret = dq.createAndExecuteStatement(command, parameterList, tableName);
+		ret = dq.createAndExecuteStatement(command, parameterList);
 
 		if (!ret) {
 			log.warn("Unable to update table successfully due to error.");
@@ -384,7 +376,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 			if (!resetSequence(database.getDatabaseServer(), database.getDbConsumedName(), tableName, primaryKey)) {
 				log.error("Unable to reset the sequence - will try the insert again, just in case");
 			}
-			ret = dq.createAndExecuteStatement(command, parameterList, tableName);
+			ret = dq.createAndExecuteStatement(command, parameterList);
 		}
 
 		return ret;
@@ -464,7 +456,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 			
 			QueryRunner dq = new QueryRunner(database.getDatabaseServer(), database.getDbConsumedName());
 			try {
-				dq.createAndExecuteStatement(command, parameterList, tableName);
+				dq.createAndExecuteStatement(command, parameterList);
 			} catch (Exception e) {
 				
 				log.error(e.getMessage());
@@ -562,7 +554,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		// Execute the delete statement
 		//
 		try {
-			new QueryRunner(database.getDatabaseServer(), database.getDbConsumedName()).createAndExecuteStatement(command, parameterList, tableName);
+			new QueryRunner(database.getDatabaseServer(), database.getDbConsumedName()).createAndExecuteStatement(command, parameterList);
 		} catch (Exception e) {
 			
 			//
@@ -767,36 +759,37 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 //		String password = this.getODBCPassword();
 //		this.createOBDCUserRole(userName, password);
 		
+		QueryRunner qr = new QueryRunner(server, from);
+
 		if (this.checkDatabaseExists(server, to)) {
 			String statement = this.getTerminateStatement(to);
-			this.runJDBCQuery(statement, null, server, null);
+			qr.createAndExecuteStatement(statement, null);
 			statement = "rollback transaction; drop database " + to + ";";
-			this.runJDBCQuery(statement, null, server, null);
+			qr.createAndExecuteStatement(statement, null);
 		}
 		String clonedb = String.format(
 				"ROLLBACK TRANSACTION; CREATE DATABASE %s WITH TEMPLATE %s",
 				quote_ident(to),
 				quote_ident(from));
-		this.runJDBCQuery(clonedb, null, server, null);
+		qr.createAndExecuteStatement(clonedb, null);
 	
 	}
 	
 	
 	private void dropDatasetDatabase ( int datasetId) throws Exception {
 		TableView tableView = this.getTableView(datasetId);
-		String databaseName = tableView.getAssociatedDatabase();
-		String server = this.getPhysicalDatabaseFromID(tableView.getPhysicalDatabaseId()).getDatabaseServer();
-		
-		String statement = this.getTerminateStatement(databaseName);
-		this.runJDBCQuery(statement, null, server, databaseName);
-		statement = "drop database " + databaseName + ";";
-		this.runJDBCQuery(statement, null, server, getORDSDatabaseName());
-
+		dropDatasetDatabase(tableView);
 	}
 
-
-
-	
+	private void dropDatasetDatabase(TableView  tableView) throws Exception{
+		String databaseName = tableView.getAssociatedDatabase();
+		String server = this.getPhysicalDatabaseFromID(tableView.getPhysicalDatabaseId()).getDatabaseServer();
+		String statement = this.getTerminateStatement(databaseName);
+		QueryRunner qr = new QueryRunner(server, this.getORDSDatabaseName());
+		qr.runDBQuery(statement);
+		statement = "drop database " + databaseName + ";";
+		qr.createAndExecuteStatement(statement, null);
+	}
 	
 	private boolean isInt ( String input ) {
 		try {

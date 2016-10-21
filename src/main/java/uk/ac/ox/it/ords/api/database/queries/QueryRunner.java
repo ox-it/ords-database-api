@@ -337,23 +337,20 @@ public class QueryRunner {
 	/**
 	 * Creates and executes a prepared statement with a supplied map of typed values; used when no return is expected
 	 * 
-	 * @param updateString the command to execute
-	 * @param dataTypeMap a map of datatypes and values
-	 * @param tableName the table
-	 * @param primKey the primary key of the table TODO why?
-	 * @param originalKeyValue the original value of the primary key TODO why?
+	 * @param statement the command to execute
+	 * @param ParameterList parameters to include in the statement
 	 * @return true if the statement executes successfully
 	 * @throws ClassNotFoundException if there is a problem with the database driver
 	 * @throws SQLException if there is a problem executing the SQL, typically a type validation problem, or a syntax error in the command
 	 */
-	public boolean createAndExecuteStatement(String updateString, ParameterList parameters, String tableName) throws ClassNotFoundException, SQLException {
+	public boolean createAndExecuteStatement(String statement, ParameterList parameters) throws ClassNotFoundException, SQLException {
         boolean ret = false;
 
         PreparedStatement pst = null;
         Connection conn = initialiseConnection();
                 
         try {
-        	pst = conn.prepareStatement(updateString);
+        	pst = conn.prepareStatement(statement);
             addParametersToPreparedStatement(pst, parameters);                
             pst.executeUpdate();
 
