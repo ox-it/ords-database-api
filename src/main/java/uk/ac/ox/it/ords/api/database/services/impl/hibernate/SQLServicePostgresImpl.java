@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.User;
+import uk.ac.ox.it.ords.api.database.services.DatabaseUploadService;
 import uk.ac.ox.it.ords.api.database.services.RestoreEmailService;
 import uk.ac.ox.it.ords.api.database.services.SQLService;
 import uk.ac.ox.it.ords.api.database.threads.RestoreThread;
@@ -81,27 +82,71 @@ public class SQLServicePostgresImpl extends DatabaseServiceImpl implements SQLSe
 	}
 
 	@Override
-	public long importSQLFileToDatabase(String hostName,
+	public void importSQLFileToDatabase(String hostName,
 			String databaseName, File sqlFile, int databaseId) throws Exception {
 		DatabaseServer server = ServerConfigurationService.Factory.getInstance().getDatabaseServer(hostName);
-		Subject s = SecurityUtils.getSubject();
-		String principalName = s.getPrincipal().toString();
-		User u = this.getUserByPrincipal(principalName);
-		RestoreEmailService emailService = RestoreEmailService.Factory.getInstance();
-		emailService.setEmail(u.getEmail());
-		emailService.setDatabaseName(databaseName);
-		
-		RestoreThread rst = new RestoreThread(server.getHost(), databaseName, databaseId, server.getUsername(), server.getPassword(), sqlFile, emailService);
-		
-		// send an email to kick it off
-		emailService.sendStartRestoreMessage();
-		
-		//Thread thread = new Thread(rst);
-		rst.start();
-		
-		// return the thread id
-		
-		return rst.getId();
+		//Subject s = SecurityUtils.getSubject();
+		//String principalName = s.getPrincipal().toString();
+		//User u = this.getUserByPrincipal(principalName);
+		//RestoreEmailService emailService = RestoreEmailService.Factory.getInstance();
+		//emailService.setEmail(u.getEmail());
+		//emailService.setDatabaseName(databaseName);
+
+		Properties properties = ConfigurationConverter.getProperties(MetaConfiguration.getConfiguration());
+		String postgres_bin = "";
+		if ( properties.containsKey("ords.postgresql.bin.path")) {
+			postgres_bin = properties.getProperty("ords.postgresql.bin.path");
+		}
+		ProcessBuilder processBuilder = new ProcessBuilder(postgres_bin+"psql", 
+				"-d", 
+				databaseName,
+				"-h",
+				hostName,
+				"-U",
+				server.getUsername(),
+				"-f",
+				sqlFile.toString());
+		processBuilder.environment().put("PGPASSWORD",  server.getPassword());
+		DatabaseUploadService uploadService = DatabaseUploadService.Factory.getInstance();
+		try {
+			Process process = processBuilder.start();
+			uploadService.setImportProgress(databaseId, OrdsPhysicalDatabase.ImportType.IN_PROGRESS);
+			InputStream is = process.getInputStream();
+			InputStreamReader reader = new InputStreamReader(is);
+			BufferedReader buffer = new BufferedReader(reader);
+			String line;
+			while ((line = buffer.readLine()) != null ) {
+				System.out.println(line);
+				if (log.isDebugEnabled()) {
+					log.debug(line);
+				}
+			}
+			//emailService.sendRestoreSuccessfulMessage();
+			uploadService.setImportProgress(databaseId, OrdsPhysicalDatabase.ImportType.FINISHED);
+		}
+		catch ( Exception e ) {
+			log.error("ERROR", e );
+			try {
+				//emailService.sendRestoreUnsuccessfulMessage(e.toString());
+				uploadService.setImportProgress(databaseId, OrdsPhysicalDatabase.ImportType.FAILED);
+			} catch (Exception e1) {
+				log.error("ERROR", e1);
+				e1.printStackTrace();
+			}
+		}	
 	}
+
+//		RestoreThread rst = new RestoreThread(server.getHost(), databaseName, databaseId, server.getUsername(), server.getPassword(), sqlFile, emailService);
+//		
+//		// send an email to kick it off
+//		emailService.sendStartRestoreMessage();
+//		
+//		//Thread thread = new Thread(rst);
+//		rst.start();
+//		
+//		// return the thread id
+//		
+//		return rst.getId();
+	
 
 }

@@ -1088,7 +1088,8 @@ public class Database {
 		notes="CSV, Access and sql dump files are currently supported"
 	)
 	@ApiResponses(value = { 
-		@ApiResponse(code = 201, message = "Database successfully imported."),
+		@ApiResponse(code = 201, message = "Database successfully imported - for databases under 2mb."),
+		@ApiResponse(code = 202, message = "Database import started - for databases of 2mb and over."),
 		@ApiResponse(code = 415, message = "Database type not supported."),
 		@ApiResponse(code = 403, message = "Not authorized to create databases.")
 	})
@@ -1105,7 +1106,6 @@ public class Database {
 		if (!SecurityUtils.getSubject().isPermitted(DatabasePermissions.DATABASE_CREATE)) {
 			
 			DatabaseAuditService.Factory.getInstance().createNotAuthRecord("POST " + dbId + "/data/" + server, dbId);
-
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		
@@ -1122,14 +1122,16 @@ public class Database {
 		}
 		try {
 			File dbFile = this.saveFileAttachment(fileAttachment, context, fileName);
-			if ( extension.equalsIgnoreCase("sql")) {
-				newDbId = DatabaseUploadService.Factory.getInstance().importToExistingDatabase(dbId, dbFile, server);
-				DatabaseAuditService.Factory.getInstance().createImportRecord(dbId);
-			}
-			else {
-				newDbId = DatabaseUploadService.Factory.getInstance().createNewDatabaseFromFile(dbId, dbFile, extension, server);
-				DatabaseAuditService.Factory.getInstance().createImportRecord(newDbId);
-			}
+//			if ( extension.equalsIgnoreCase("sql")) {
+//				newDbId = DatabaseUploadService.Factory.getInstance().importToExistingDatabase(dbId, dbFile, server);
+//				DatabaseAuditService.Factory.getInstance().createImportRecord(dbId);
+//			}
+//			else {
+//				newDbId = DatabaseUploadService.Factory.getInstance().createNewDatabaseFromFile(dbId, dbFile, extension, server);
+//				DatabaseAuditService.Factory.getInstance().createImportRecord(newDbId);
+//			}
+			newDbId = DatabaseUploadService.Factory.getInstance().createNewDatabaseFromFile(dbId, dbFile, extension, server);
+			DatabaseAuditService.Factory.getInstance().createImportRecord(newDbId);
 		}
 		catch (Exception e ) {
 			
@@ -1137,9 +1139,14 @@ public class Database {
 			
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
 		}
-	    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
-	    builder.path(Integer.toString(newDbId));
-	    return Response.created(builder.build()).build();
+		if ( newDbId > 0 ) {
+			UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+			builder.path(Integer.toString(newDbId));
+			return Response.created(builder.build()).build();
+		}
+		else {
+			return Response.accepted().build();
+		}
 	}
 	
 	
@@ -1192,9 +1199,7 @@ public class Database {
 				DatabaseAuditService.Factory.getInstance()
 						.createImportRecord(dbId);
 			} else {
-				newDbId = DatabaseUploadService.Factory.getInstance()
-						.createNewDatabaseFromFile(dbId, importFile, extension,
-								server);
+				newDbId = DatabaseUploadService.Factory.getInstance().appendCSVToDatabase(dbId, importFile, server);
 				DatabaseAuditService.Factory.getInstance()
 						.createImportRecord(newDbId);
 			}

@@ -21,7 +21,7 @@ public interface SQLService {
 	 * @param sql
 	 * @return
 	 */
-	public long importSQLFileToDatabase ( String databaseServer, String databaseName, File sqlFile, int databaseId ) throws Exception;
+	public void importSQLFileToDatabase ( String databaseServer, String databaseName, File sqlFile, int databaseId ) throws Exception;
 	
 
     public static class Factory {

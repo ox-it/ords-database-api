@@ -30,7 +30,9 @@ import uk.ac.ox.it.ords.api.database.services.AccessImportService;
 import uk.ac.ox.it.ords.api.database.services.CSVService;
 import uk.ac.ox.it.ords.api.database.services.DatabaseRoleService;
 import uk.ac.ox.it.ords.api.database.services.DatabaseUploadService;
+import uk.ac.ox.it.ords.api.database.services.ImportEmailService;
 import uk.ac.ox.it.ords.api.database.services.SQLService;
+import uk.ac.ox.it.ords.api.database.threads.ImportThread;
 import uk.ac.ox.it.ords.security.model.Permission;
 import uk.ac.ox.it.ords.security.services.PermissionsService;
 
@@ -51,21 +53,39 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 			throw new BadParameterException("No type for uploaded file");
 		}
 
-		if (type.equalsIgnoreCase("csv")) {
-			CSVService service = CSVService.Factory.getInstance();
-			service.newTableDataFromFile(server, databaseName, dbFile, true);
+		// get file size
+		
+		long dbFileSize = dbFile.length();
+		
+		if ( dbFileSize < 2000000 ) {
+			// less than a 2 mb just import the database directly
+			if (type.equalsIgnoreCase("csv")) {
+				CSVService service = CSVService.Factory.getInstance();
+				service.newTableDataFromFile(server, databaseName, dbFile, true);
+			}
+			else if ( type.equalsIgnoreCase("sql")) {
+				SQLService service = SQLService.Factory.getInstance();
+				service.importSQLFileToDatabase(server, databaseName, dbFile, db.getPhysicalDatabaseId());
+			} else {
+				AccessImportService service = AccessImportService.Factory
+						.getInstance();
+				service.preflightImport(dbFile);
+				service.createSchema(server, databaseName, dbFile);
+				service.importData(server, databaseName, dbFile);
+			}
+			return db.getPhysicalDatabaseId();
 		}
-		else if ( type.equalsIgnoreCase("sql")) {
-			SQLService service = SQLService.Factory.getInstance();
-			service.importSQLFileToDatabase(server, databaseName, dbFile, db.getPhysicalDatabaseId());
-		} else {
-			AccessImportService service = AccessImportService.Factory
-					.getInstance();
-			service.preflightImport(dbFile);
-			service.createSchema(server, databaseName, dbFile);
-			service.importData(server, databaseName, dbFile);
+		else {
+			// over 1 mb run through the exportThread
+			ImportEmailService emailService = ImportEmailService.Factory.getInstance();
+
+			ImportThread importThread = new ImportThread(server,databaseName, dbFile, emailService, db.getPhysicalDatabaseId(), type);
+		
+			emailService.sendStartImportMessage();
+			importThread.run();
+			return 0;
 		}
-		return db.getPhysicalDatabaseId();
+		
 	}
 
 	@Override
@@ -83,7 +103,7 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		String databaseName = physicalDatabase.getDbConsumedName();
 		CSVService service = CSVService.Factory.getInstance();
 		service.newTableDataFromFile(server, databaseName, csvFile, true);
-		return 0;
+		return  physicalDatabase.getPhysicalDatabaseId();
 	}
 	
 	@Override
@@ -93,7 +113,7 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		String databaseName = physicalDatabase.getDbConsumedName();
 		SQLService service = SQLService.Factory.getInstance();
 		service.importSQLFileToDatabase(server, databaseName, sqlFile, dbId);
-		return dbId;
+		return physicalDatabase.getPhysicalDatabaseId();
 	}
 	
 		@Override
