@@ -78,6 +78,44 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 	}
 	
 	@Test ()
+	public void testImport() throws FileNotFoundException {
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		
+		FileInputStream inputStream;
+		
+		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
+		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+
+		String id = getIdFromResponse(response);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+	
+		// try adding a csv
+		client = getClient(false);
+		client.type("multipart/form-data");
+		
+		File csvFile = new File(getClass().getResource("/small_test.csv").getFile());
+		inputStream= new FileInputStream(csvFile);
+		cd = new ContentDisposition("attachement;filename=small_test.csv");
+		att = new Attachment("csvFile", inputStream, cd );
+		response = client.path("/"+id+"/import/testTable/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String actualTableName = getIdFromResponse(response);
+		System.out.println("New table name \"testTable\" wrangled to: \""+actualTableName+"\"");
+	}
+	
+	
+	@Test ()
 	public void uploadCSVFile() {
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		

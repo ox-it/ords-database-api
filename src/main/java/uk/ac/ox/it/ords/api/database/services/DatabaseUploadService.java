@@ -27,19 +27,21 @@ public interface DatabaseUploadService {
 	public int createNewDatabaseFromFile(int logicalDatabaseId, File dbFile,
 			String type, String server) throws Exception;
 
-	public int appendCSVToDatabase(int physicalDatabaseId, File csvFile,
+	public String appendCSVToDatabase(int physicalDatabaseId, File csvFile,
 			String server) throws Exception;
-	
-	
-	public int importToExistingDatabase(int dbId, File sqlFile, String server) throws Exception;
+
+	public String appendCSVToDatabase(int physicalDatabaseId, File csvFile,
+			String newTableName, String server) throws Exception;
+
+	public int importToExistingDatabase(int dbId, File sqlFile, String server)
+			throws Exception;
 
 	public void init() throws Exception;
 
-	public void testDeleteDatabase(int dbId, boolean staging)
-			throws Exception;
-	
-	
-	public void setImportProgress ( int id, OrdsPhysicalDatabase.ImportType progress ) throws Exception;
+	public void testDeleteDatabase(int dbId, boolean staging) throws Exception;
+
+	public void setImportProgress(int id,
+			OrdsPhysicalDatabase.ImportType progress) throws Exception;
 
 	public static class Factory {
 		private static DatabaseUploadService provider;

@@ -21,6 +21,7 @@ import java.io.File;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 
+import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase.EntityType;
@@ -58,7 +59,7 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		long dbFileSize = dbFile.length();
 		
 		if ( dbFileSize < 2000000 ) {
-			// less than a 2 mb just import the database directly
+			// less than a 1 mb just import the database directly
 			if (type.equalsIgnoreCase("csv")) {
 				CSVService service = CSVService.Factory.getInstance();
 				service.newTableDataFromFile(server, databaseName, dbFile, true);
@@ -95,17 +96,30 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 	}
 
 	@Override
-	public int appendCSVToDatabase(int physicalDatabaseId, File csvFile,
+	public String appendCSVToDatabase(int physicalDatabaseId, File csvFile,
 			String server) throws Exception {
 
 		OrdsPhysicalDatabase physicalDatabase = this
 				.getPhysicalDatabaseFromID(physicalDatabaseId);
 		String databaseName = physicalDatabase.getDbConsumedName();
 		CSVService service = CSVService.Factory.getInstance();
-		service.newTableDataFromFile(server, databaseName, csvFile, true);
-		return  physicalDatabase.getPhysicalDatabaseId();
+		TableData data = service.newTableDataFromFile(server, databaseName, csvFile, true);
+		return  data.tableName;
 	}
 	
+	
+	
+	@Override
+	public String appendCSVToDatabase(int physicalDatabaseId, File csvFile,
+			String newTableName, String server) throws Exception {
+		OrdsPhysicalDatabase physicalDatabase = this
+				.getPhysicalDatabaseFromID(physicalDatabaseId);
+		String databaseName = physicalDatabase.getDbConsumedName();
+		CSVService service = CSVService.Factory.getInstance();
+		TableData tableData = service.newTableDataFromFile(server, databaseName, newTableName, csvFile, true);
+		return tableData.tableName;
+	}
+
 	@Override
 	public int importToExistingDatabase(int dbId, File sqlFile, String server)
 			throws Exception {

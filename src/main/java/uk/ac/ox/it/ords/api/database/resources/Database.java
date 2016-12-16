@@ -1155,7 +1155,7 @@ public class Database {
 	// ------------------------------------------------------------------------------
 	@ApiOperation(
 			value="Handles file import to an existing database",
-			notes="CSV and sql dump files are currently supported"
+			notes="CSV files are currently supported"
 		)
 		@ApiResponses(value = { 
 			@ApiResponse(code = 201, message = "Database successfully imported."),
@@ -1163,11 +1163,12 @@ public class Database {
 			@ApiResponse(code = 403, message = "Not authorized to create databases.")
 		})
 	@POST
-	@Path("{id}/import/{server}")
-	@Produces(MediaType.APPLICATION_JSON)
+	@Path("{id}/import/{newTableName}/{server}")
+	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	public Response importFile(@PathParam("id") int dbId,
+			@PathParam("newTableName") String newTableName,
 			@PathParam("server") String server,
-			@Multipart("databaseFile") Attachment fileAttachment,
+			@Multipart("csvFile") Attachment fileAttachment,
 			@Context ServletContext context, @Context UriInfo uriInfo) {
 		try {
 			OrdsPhysicalDatabase physicalDatabase = databaseRecordService()
@@ -1176,35 +1177,32 @@ public class Database {
 			if (!SecurityUtils.getSubject()
 					.isPermitted(DatabasePermissions.DATABASE_MODIFY(
 							physicalDatabase.getLogicalDatabaseId()))) {
-
 				DatabaseAuditService.Factory.getInstance()
 						.createNotAuthRecord("POST " + dbId + "/import/", dbId);
-
 				return Response.status(Response.Status.FORBIDDEN).build();
 			}
 			MultivaluedMap<String, String> map = fileAttachment.getHeaders();
 			String fileName = getFileName(map);
 			String extension = FileUtilities.getFileExtension(fileName);
-			if (!extension.equalsIgnoreCase("sql")
-					&& !extension.contentEquals("csv")) {
+			if (!extension.contentEquals("csv")) {
 				return Response.status(Response.Status.UNSUPPORTED_MEDIA_TYPE)
 						.build();
 			}
 			File importFile = this.saveFileAttachment(fileAttachment, context,
 					fileName);
 			int newDbId;
-			if (extension.equalsIgnoreCase("sql")) {
-				newDbId = DatabaseUploadService.Factory.getInstance()
-						.importToExistingDatabase(dbId, importFile, server);
+//			if (extension.equalsIgnoreCase("sql")) {
+//				newDbId = DatabaseUploadService.Factory.getInstance()
+//						.importToExistingDatabase(dbId, importFile, server);
+//				DatabaseAuditService.Factory.getInstance()
+//						.createImportRecord(dbId);
+//			} else {
+				String nameUsed = DatabaseUploadService.Factory.getInstance().appendCSVToDatabase(dbId, importFile, newTableName, server);
 				DatabaseAuditService.Factory.getInstance()
 						.createImportRecord(dbId);
-			} else {
-				newDbId = DatabaseUploadService.Factory.getInstance().appendCSVToDatabase(dbId, importFile, server);
-				DatabaseAuditService.Factory.getInstance()
-						.createImportRecord(newDbId);
-			}
+//			}
 			UriBuilder builder = uriInfo.getAbsolutePathBuilder();
-			builder.path(Integer.toString(newDbId));
+			builder.path(nameUsed);
 			return Response.created(builder.build()).build();
 
 		} catch (BadParameterException ex) {
