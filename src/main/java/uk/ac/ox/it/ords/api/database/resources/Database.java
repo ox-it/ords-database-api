@@ -1099,7 +1099,7 @@ public class Database {
 	public Response handleFileUpload(
 			@PathParam("id") int dbId,
 			@PathParam("server") String server,
-			@Multipart("databaseFile") Attachment fileAttachment,
+			@Multipart("dataFile") Attachment fileAttachment,
 			@Context ServletContext context,
 			@Context UriInfo uriInfo) {
 		
@@ -1168,7 +1168,7 @@ public class Database {
 	public Response importFile(@PathParam("id") int dbId,
 			@PathParam("newTableName") String newTableName,
 			@PathParam("server") String server,
-			@Multipart("csvFile") Attachment fileAttachment,
+			@Multipart("dataFile") Attachment fileAttachment,
 			@Context ServletContext context, @Context UriInfo uriInfo) {
 		try {
 			OrdsPhysicalDatabase physicalDatabase = databaseRecordService()
@@ -1190,7 +1190,7 @@ public class Database {
 			}
 			File importFile = this.saveFileAttachment(fileAttachment, context,
 					fileName);
-			int newDbId;
+//			int newDbId;
 //			if (extension.equalsIgnoreCase("sql")) {
 //				newDbId = DatabaseUploadService.Factory.getInstance()
 //						.importToExistingDatabase(dbId, importFile, server);
