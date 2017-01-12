@@ -47,7 +47,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(accessFile);
 		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
@@ -81,7 +81,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(accessFile);
 		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
@@ -130,7 +130,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(accessFile);
 		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
@@ -209,7 +209,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(accessFile);
 		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
@@ -283,7 +283,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(accessFile);
 		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
@@ -333,7 +333,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(accessFile);
 		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
@@ -416,7 +416,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(accessFile);
 		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
@@ -501,7 +501,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(accessFile);
 		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
@@ -540,7 +540,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(accessFile);
 		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
@@ -585,7 +585,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(accessFile);
 		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
@@ -647,7 +647,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(accessFile);
 		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
@@ -705,7 +705,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(accessFile);
 		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));

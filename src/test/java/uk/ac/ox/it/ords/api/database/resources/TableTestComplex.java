@@ -45,7 +45,7 @@ public class TableTestComplex extends AbstractDatabaseTestRunner{
 		File file = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(file);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");

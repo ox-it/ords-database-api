@@ -54,7 +54,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		File csvFile = new File(getClass().getResource("/small_test.csv").getFile());
 		FileInputStream inputStream = new FileInputStream(csvFile);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=small_test.csv");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
@@ -243,7 +243,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		File file = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(file);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
@@ -289,7 +289,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		File file = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(file);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
@@ -327,7 +327,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		File file = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(file);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
@@ -377,7 +377,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		File file = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(file);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
@@ -413,7 +413,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		File file = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(file);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
@@ -465,7 +465,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(csvFile);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
@@ -521,7 +521,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		File csvFile = new File(getClass().getResource("/databases/invoice.mdb").getFile());
 		FileInputStream inputStream = new FileInputStream(csvFile);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=invoice.mdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
@@ -555,7 +555,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(csvFile);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
@@ -797,7 +797,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(csvFile);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
@@ -864,7 +864,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(csvFile);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
@@ -930,7 +930,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(csvFile);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");

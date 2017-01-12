@@ -39,7 +39,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		File csvFile = new File(getClass().getResource("/config.xml").getFile());
 		inputStream = new FileInputStream(csvFile);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=config.xml");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
 		assertEquals(415, response.getStatus());
 	}
@@ -55,7 +55,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		File csvFile = new File(getClass().getResource("/small_test.csv").getFile());
 		inputStream = new FileInputStream(csvFile);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=small_test.csv");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
 		assertEquals(403, response.getStatus());
 	}
@@ -70,7 +70,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		inputStream = new FileInputStream(accessFile);
 		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
@@ -89,7 +89,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		inputStream = new FileInputStream(accessFile);
 		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
-		Attachment att = new Attachment("databaseFile", inputStream, cd);
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 		client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
@@ -106,7 +106,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		File csvFile = new File(getClass().getResource("/small_test.csv").getFile());
 		inputStream= new FileInputStream(csvFile);
 		cd = new ContentDisposition("attachement;filename=small_test.csv");
-		att = new Attachment("csvFile", inputStream, cd );
+		att = new Attachment("dataFile", inputStream, cd );
 		response = client.path("/"+id+"/import/testTable/localhost").post(new MultipartBody(att));
 		assertEquals(201, response.getStatus());
 		
@@ -130,7 +130,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			// create a csv file database
 			inputStream = new FileInputStream(csvFile);
 			ContentDisposition cd = new ContentDisposition("attachment;filename=small_test.csv");
-			Attachment att = new Attachment("databaseFile", inputStream, cd);
+			Attachment att = new Attachment("dataFile", inputStream, cd);
 
 			Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
 			assertEquals(201, response.getStatus());
@@ -154,7 +154,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			// create an access database import
 			inputStream = new FileInputStream(accessFile);
 			cd = new ContentDisposition("attachement;filename=mondial.accdb");
-			att = new Attachment("databaseFile", inputStream, cd);
+			att = new Attachment("dataFile", inputStream, cd);
 			client = getClient(false);
 			client.type("multipart/form-data");
 			response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
@@ -248,7 +248,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 			File sqlFile = new File ("/tmp/mondial.sql");
 			inputStream = new FileInputStream(sqlFile);
 			cd = new ContentDisposition("attachement;filename=mondial.sql");
-			att = new Attachment("databaseFile", inputStream, cd);
+			att = new Attachment("dataFile", inputStream, cd);
 			client = getClient(false);
 			client.type("multipart/form-data");
 			response = client.path("/"+id+"/import/localhost").post(new MultipartBody(att));
