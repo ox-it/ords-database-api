@@ -1211,7 +1211,7 @@ public class Database {
 			
 			log.error(e);
 			
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e)
 					.build();
 		}
 	}
