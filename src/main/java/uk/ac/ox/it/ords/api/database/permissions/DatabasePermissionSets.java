@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+
 public class DatabasePermissionSets {
 	public static List<String> getPermissionsForAnonymous(){
 		ArrayList<String> permissions = new ArrayList<String>();
@@ -28,9 +29,10 @@ public class DatabasePermissionSets {
 	}
 	public static List<String> getPermissionsForUser(){
 		List<String> permissions = getPermissionsForAnonymous();
+		permissions.add(DatabasePermissions.DATABASE_CREATE);
 		return permissions;
 	}
-	public static List<String> getPermissionsForLocalUser(){
+	public static List<String> getPermissionsForLocalUser() {
 		List<String> permissions = getPermissionsForAnonymous();
 		permissions.add(DatabasePermissions.DATABASE_CREATE);
 		return permissions;
@@ -40,6 +42,7 @@ public class DatabasePermissionSets {
 		permissions.add(DatabasePermissions.DATABASE_VIEW(id));
 		return permissions;
 	}
+		
 	public static List<String> getPermissionsForContributor(int id){
 		List<String> permissions = getPermissionsForViewer(id);
 		permissions.add(DatabasePermissions.DATABASE_MODIFY(id));
@@ -58,5 +61,6 @@ public class DatabasePermissionSets {
 		permissions.add(DatabasePermissions.DATABASE_VIEW_ALL);
 		return permissions;
 	}
+
 
 }

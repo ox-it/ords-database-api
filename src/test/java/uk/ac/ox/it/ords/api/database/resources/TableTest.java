@@ -37,6 +37,7 @@ import org.junit.Test;
 
 import uk.ac.ox.it.ords.api.database.data.DataCell;
 import uk.ac.ox.it.ords.api.database.data.DataRow;
+import uk.ac.ox.it.ords.api.database.data.ImportProgress;
 import uk.ac.ox.it.ords.api.database.data.Row;
 import uk.ac.ox.it.ords.api.database.data.TableData;
 
@@ -48,7 +49,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	@Before
 	public void setupTable() throws FileNotFoundException{
 		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 				
 		// create a csv file database
 		File csvFile = new File(getClass().getResource("/small_test.csv").getFile());
@@ -74,7 +75,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void addRowToTableNull() throws Exception{
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		WebClient client = getClient(true);
 		Response response = client.path("/"+dbID+"/tabledata/"+tableName).post(null);
 		assertEquals(400, response.getStatus());
@@ -122,7 +123,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void updateRowInTableNull() throws Exception{
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		WebClient client = getClient(true);
 		Response response = client.path("/"+dbID+"/tabledata/"+tableName).put(null);
 		assertEquals(400, response.getStatus());
@@ -165,7 +166,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void deleteRowNonexisting() throws Exception{
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		assertEquals(404, getClient(true).path("/XXXX/tabledata/"+tableName).query("primaryKey", "id").query("primaryKeyValue", "V3a-36334").delete().getStatus());
 		assertEquals(404, getClient(true).path("/9999/tabledata/"+tableName).query("primaryKey", "id").query("primaryKeyValue", "V3a-36334").delete().getStatus());
@@ -186,7 +187,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void updateRowNonexisting() throws Exception{
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		ArrayList<Row> rows = new ArrayList<Row>();
 		Row row = new Row();
@@ -208,14 +209,14 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void getTableNonexisting() throws Exception{
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		assertEquals(404, getClient(true).path("/"+dbID+"/tabledata/nosuchtable").get().getStatus());
 		assertEquals(404, getClient(true).path("/9999/tabledata/"+tableName).get().getStatus());
 	}
 	
 	@Test
 	public void addRowToTableNonexisting(){
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		Row row = new Row();
 		row.columnNames = new String[]{"id","n", "volume", "pubid","long"};
@@ -238,7 +239,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void getRelatedColumnValuesUsingSearch() throws Exception{
 
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		File file = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(file);
@@ -284,7 +285,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void getRelatedColumnValuesUsingWideSearch() throws Exception{
 
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		File file = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(file);
@@ -322,7 +323,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void getRelatedColumnValues() throws Exception{
 
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		File file = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(file);
@@ -372,7 +373,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void getRelatedColumnValuesWithNoTerms() throws Exception{
 
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		File file = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(file);
@@ -408,7 +409,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void getRelatedColumnValuesWhenUsingFilter() throws Exception{
 
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		File file = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(file);
@@ -460,7 +461,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void getTableWithFilter() throws Exception{
 		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(csvFile);
@@ -515,7 +516,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void getTableWithRefs() throws Exception{
 		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginUsingPremiumUser();
 		
 		// create a csv file database
 		File csvFile = new File(getClass().getResource("/databases/invoice.mdb").getFile());
@@ -526,12 +527,27 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
-		assertEquals(201, response.getStatus());
-		
-		String path = response.getLocation().getPath();
-		String id = path.substring(path.lastIndexOf('/')+1);
+		assertEquals(202, response.getStatus());
+
+		// check import progress
+		String id = response.readEntity(String.class);
 		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
 		AbstractResourceTest.databases.add(r);
+
+		ImportProgress prg;
+		client = getClient(true);
+		response = client.path("/"+id+"/import").get();
+		assertEquals(200,response.getStatus());
+		prg = response.readEntity(ImportProgress.class);
+		while ( "QUEUED".equals(prg.getStatus())|| "IN_PROGRESS".equals(prg.getStatus())) {
+			System.out.println("Import Status: " + prg.getStatus());
+			client = getClient(true);
+			response = client.path("/"+id+"/import").get();
+			prg = response.readEntity(ImportProgress.class);
+			assertEquals(200,response.getStatus());				
+		}
+		assertEquals(prg.getStatus(), "FINISHED");
+
 		
 		response = getClient(true).path("/"+id+"/tabledata/tblinvdetail").get();
 		assertEquals(200, response.getStatus());
@@ -550,7 +566,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void getTableWithPagination() throws Exception{
 		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(csvFile);
@@ -579,7 +595,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void addRowToTable() throws Exception{		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		assertEquals(200, getClient(true).path("/"+dbID+"/tabledata/"+tableName).get().getStatus());
 
@@ -618,7 +634,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void addRowToTableWithSomeNullValues() throws Exception{		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		assertEquals(200, getClient(true).path("/"+dbID+"/tabledata/"+tableName).get().getStatus());
 
@@ -657,7 +673,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void addRowToTableWithEmpties() throws Exception{		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		assertEquals(200, getClient(true).path("/"+dbID+"/tabledata/"+tableName).get().getStatus());
 
@@ -675,7 +691,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void deleteRowFromTable() throws Exception{		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		assertEquals(200, getClient(true).path("/"+dbID+"/tabledata/"+tableName).get().getStatus());
 
@@ -740,7 +756,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void updateRowInTable() throws Exception{		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		assertEquals(200, getClient(true).path("/"+dbID+"/tabledata/"+tableName).get().getStatus());
 		
@@ -791,7 +807,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void updateRowInTable2() throws Exception{		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		// create an access database
 		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());
@@ -858,7 +874,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void updateRowInTableWithPartialData() throws Exception{		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		// create an access database
 		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());
@@ -924,7 +940,7 @@ public class TableTest extends AbstractDatabaseTestRunner {
 	}
 	@Test
 	public void updateRowInTableWithInvalidData() throws Exception{		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		// create an access database
 		File csvFile = new File(getClass().getResource("/mondial.accdb").getFile());

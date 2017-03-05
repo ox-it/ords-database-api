@@ -38,9 +38,12 @@ import org.junit.BeforeClass;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 
 import uk.ac.ox.it.ords.api.database.model.User;
+import uk.ac.ox.it.ords.api.database.permissions.DatabasePermissionSets;
+import uk.ac.ox.it.ords.api.database.services.DatabaseAuditService;
 import uk.ac.ox.it.ords.api.database.services.DatabaseUploadService;
 import uk.ac.ox.it.ords.api.database.services.impl.hibernate.HibernateUtils;
 import uk.ac.ox.it.ords.security.AbstractShiroTest;
+import uk.ac.ox.it.ords.security.model.Permission;
 import uk.ac.ox.it.ords.security.model.UserRole;
 
 
@@ -71,7 +74,10 @@ public class AbstractResourceTest extends AbstractShiroTest {
 		
 		//
 		// Set up the database
-		//
+		// Before we setup our database we need to make sure that ords-security-common
+		// hibernate session is set up so internal calls to it won't stomp over our settings
+		
+		DatabaseAuditService.Factory.getInstance().createNotAuthRecord("dummy");
 		//
 		// Set up the test users and their permissions
 		//
@@ -90,101 +96,123 @@ public class AbstractResourceTest extends AbstractShiroTest {
 		//
 		
 		
-		DatabaseUploadService.Factory.getInstance().init();
+		//DatabaseUploadService.Factory.getInstance().init();
 
 		session = HibernateUtils.getSessionFactory().getCurrentSession();
 		transaction = session.beginTransaction();
-//		
-//		//
-//		// Anyone with the "User" role can contribute to projects
-//		//
-//		for (String permission : DatabaseStructurePermissionSets.getPermissionsForUser()){
-//			Permission permissionObject = new Permission();
-//			permissionObject.setRole("user");
-//			permissionObject.setPermission(permission);
-//			session.save(permissionObject);
-//		}
-//		
-//		//
-//		// Anyone with the "LocalUser" role can create new trial projects
-//		//
-//		for (String permission : DatabaseStructurePermissionSets.getPermissionsForLocalUser()){
-//			Permission permissionObject = new Permission();
-//			permissionObject.setRole("localuser");
-//			permissionObject.setPermission(permission);
-//			session.save(permissionObject);
-//		}
-//		
-//		//
-//		// Anyone with the "Administrator" role can create new full
-//		// projects and upgrade projects to full, and update any
-//		// user projects
-//		//
-//		for (String permission : DatabaseStructurePermissionSets.getPermissionsForSysadmin()){
-//			Permission permissionObject = new Permission();
-//			permissionObject.setRole("administrator");
-//			permissionObject.setPermission(permission);
-//			session.save(permissionObject);
-//		}
-//
-//		//
-//		// "Anonymous" can View public projects
-//		//
-//		for (String permission : DatabaseStructurePermissionSets.getPermissionsForAnonymous()){
-//			Permission permissionObject = new Permission();
-//			permissionObject.setRole("anonymous");
-//			permissionObject.setPermission(permission);
-//			session.save(permissionObject);
-//		}
-//	
+		
+		//
+		// Anyone with the "User" role can contribute to projects
+		//
+		for (String permission : DatabasePermissionSets.getPermissionsForUser()){
+			Permission permissionObject = new Permission();
+			permissionObject.setRole("user");
+			permissionObject.setPermission(permission);
+			session.save(permissionObject);
+		}
+		
+		//
+		// Anyone with the "LocalUser" role can create new trial projects
+		//
+		for (String permission : DatabasePermissionSets.getPermissionsForLocalUser()){
+			Permission permissionObject = new Permission();
+			permissionObject.setRole("localuser");
+			permissionObject.setPermission(permission);
+			session.save(permissionObject);
+		}
+		
+		//
+		// Anyone with the "Administrator" role can create new full
+		// projects and upgrade projects to full, and update any
+		// user projects
+		//
+		for (String permission : DatabasePermissionSets.getPermissionsForSysadmin()){
+			Permission permissionObject = new Permission();
+			permissionObject.setRole("administrator");
+			permissionObject.setPermission(permission);
+			session.save(permissionObject);
+		}
+
+		//
+		// "Anonymous" can View public projects
+		//
+		for (String permission : DatabasePermissionSets.getPermissionsForAnonymous()){
+			Permission permissionObject = new Permission();
+			permissionObject.setRole("anonymous");
+			permissionObject.setPermission(permission);
+			session.save(permissionObject);
+		}
+	
 		//
 		// Add test users to roles
 		//
 		UserRole admin = new UserRole();
-		admin.setPrincipalName("admin@nowhere.co");
+		admin.setPrincipalName("admin");
 		admin.setRole("administrator");
 		session.save(admin);
 		
 		UserRole pingu = new UserRole();
-		pingu.setPrincipalName("pingu@nowhere.co");
+		pingu.setPrincipalName("ivor");
 		pingu.setRole("localuser");
 		session.save(pingu);
 		
+		UserRole pingu2 = new UserRole();
+		pingu2.setPrincipalName("ivor");
+		pingu2.setRole("premiumuser");
+		session.save(pingu2);
+		
+		UserRole pingo = new UserRole();
+		pingo.setPrincipalName("jack@nowhere.co");
+		pingo.setRole("user");
+		session.save(pingo);
+		
 		UserRole anonymous = new UserRole();
-		anonymous.setPrincipalName("anonymous@nowhere.co");
+		anonymous.setPrincipalName("anonymous");
 		anonymous.setRole("anonymous");
 		session.save(anonymous);
 		
+//		//
+//		// Create equivalent ords users
+//		//
+//		User adminOrds = new User();
+//		adminOrds.setName("admin");
+//		adminOrds.setPrincipalName("admin@nowhere.co");
+//		adminOrds.setEmail("admin@nowhere.co");
+//		adminOrds.setOdbcUser(adminOrds.getEmail().replace("@", "").replace(".", ""));
+//		adminOrds.setStatus(User.AccountStatus.VERIFIED.toString());
+//		adminOrds.setVerificationUuid(UUID.randomUUID().toString());
+//		session.save(adminOrds);
+//
+//		User anonymousOrds = new User();
+//		anonymousOrds.setName("anonymous");
+//		anonymousOrds.setPrincipalName("anonymous@nowhere.co");
+//		anonymousOrds.setEmail("anonymous@nowhere.co");
+//		anonymousOrds.setOdbcUser(anonymousOrds.getEmail().replace("@", "").replace(".", ""));
+//		anonymousOrds.setStatus(User.AccountStatus.VERIFIED.toString());
+//		anonymousOrds.setVerificationUuid(UUID.randomUUID().toString());
+//		session.save(anonymousOrds);
+//
+//		
 		//
-		// Create equivalent ords users
+		// We only need one user now for the dataset tests
 		//
-		User adminOrds = new User();
-		adminOrds.setName("admin");
-		adminOrds.setPrincipalName("admin@nowhere.co");
-		adminOrds.setEmail("admin@nowhere.co");
-		adminOrds.setOdbcUser(adminOrds.getEmail().replace("@", "").replace(".", ""));
-		adminOrds.setStatus(User.AccountStatus.VERIFIED.toString());
-		adminOrds.setVerificationUuid(UUID.randomUUID().toString());
-		session.save(adminOrds);
-
-		User anonymousOrds = new User();
-		anonymousOrds.setName("anonymous");
-		anonymousOrds.setPrincipalName("anonymous@nowhere.co");
-		anonymousOrds.setEmail("anonymous@nowhere.co");
-		anonymousOrds.setOdbcUser(anonymousOrds.getEmail().replace("@", "").replace(".", ""));
-		anonymousOrds.setStatus(User.AccountStatus.VERIFIED.toString());
-		anonymousOrds.setVerificationUuid(UUID.randomUUID().toString());
-		session.save(anonymousOrds);
-
-		
-		User pinguOrds = new User();
-		pinguOrds.setName("pingu");
-		pinguOrds.setPrincipalName("pingu@nowhere.co");
-		pinguOrds.setEmail("pingu@nowhere.co");
-		pinguOrds.setOdbcUser(pinguOrds.getEmail().replace("@", "").replace(".", ""));
-		pinguOrds.setStatus(User.AccountStatus.VERIFIED.toString());
-		pinguOrds.setVerificationUuid(UUID.randomUUID().toString());
-		session.save(pinguOrds);
+		User jackOrds = new User();
+		jackOrds.setName("jack");
+		jackOrds.setPrincipalName("jack@nowhere.co");
+		jackOrds.setEmail("jack@nowhere.co");
+		jackOrds.setOdbcUser(jackOrds.getEmail().replace("@", "").replace(".", ""));
+		jackOrds.setStatus(User.AccountStatus.VERIFIED.toString());
+		jackOrds.setVerificationUuid(UUID.randomUUID().toString());
+		session.save(jackOrds);
+//
+//		User ivorOrds = new User();
+//		ivorOrds.setName("ivor");
+//		ivorOrds.setPrincipalName("ivor@nowhere.co");
+//		ivorOrds.setEmail("ivor@nowhere.co");
+//		ivorOrds.setOdbcUser(ivorOrds.getEmail().replace("@", "").replace(".", ""));
+//		ivorOrds.setStatus(User.AccountStatus.VERIFIED.toString());
+//		ivorOrds.setVerificationUuid(UUID.randomUUID().toString());
+//		session.save(ivorOrds);
 
 		//
 		// Commit our changes
@@ -192,6 +220,24 @@ public class AbstractResourceTest extends AbstractShiroTest {
 		transaction.commit();
 		HibernateUtils.closeSession();
 	}
+	
+	// convenience and sanity
+	public void loginBasicUser() {
+		loginUsingSSO("jack@nowhere.co", "jack@nowhere.co");
+	}
+	
+	public void loginAnonymous() {
+		loginUsingSSO("anon", "anon");
+	}
+	
+	public void loginUsingPremiumUser() {
+		loginUsingSSO("ivor", "ivor");
+	}
+	
+	public void loginUsingAdmin() {
+		loginUsingSSO("admin", "admin");
+	}
+	
 
 	/**
 	 * Configure Shiro and start the server

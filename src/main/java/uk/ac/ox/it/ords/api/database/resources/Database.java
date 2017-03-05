@@ -59,6 +59,7 @@ import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.data.TableViewInfo;
 import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
 import uk.ac.ox.it.ords.api.database.exceptions.ConstraintViolationException;
+import uk.ac.ox.it.ords.api.database.exceptions.UploadSizeException;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.TableView;
 import uk.ac.ox.it.ords.api.database.permissions.DatabasePermissions;
@@ -77,10 +78,10 @@ public class Database {
 	
 	static Logger log = Logger.getLogger(Database.class);
 
-	@PostConstruct
-	public void init() throws Exception {
-		DatabaseUploadService.Factory.getInstance().init();
-	}
+//	@PostConstruct
+//	public void init() throws Exception {
+//		DatabaseUploadService.Factory.getInstance().init();
+//	}
 	
 	@ApiOperation(
 		value="Gets the data for a specified dataset",
@@ -1116,36 +1117,37 @@ public class Database {
 		String fileName = getFileName(map);
 		String extension = FileUtilities.getFileExtension(fileName);
 		if ( extension == null || (!extension.equalsIgnoreCase("csv") &&
+				!extension.equalsIgnoreCase("sql") &&
 				!extension.equalsIgnoreCase("mdb") &&
 				!extension.equalsIgnoreCase("accdb"))) {
 			return Response.status(Response.Status.UNSUPPORTED_MEDIA_TYPE).build();
 		}
 		try {
 			File dbFile = this.saveFileAttachment(fileAttachment, context, fileName);
-//			if ( extension.equalsIgnoreCase("sql")) {
-//				newDbId = DatabaseUploadService.Factory.getInstance().importToExistingDatabase(dbId, dbFile, server);
-//				DatabaseAuditService.Factory.getInstance().createImportRecord(dbId);
-//			}
-//			else {
-//				newDbId = DatabaseUploadService.Factory.getInstance().createNewDatabaseFromFile(dbId, dbFile, extension, server);
-//				DatabaseAuditService.Factory.getInstance().createImportRecord(newDbId);
-//			}
 			newDbId = DatabaseUploadService.Factory.getInstance().createNewDatabaseFromFile(dbId, dbFile, extension, server);
-			DatabaseAuditService.Factory.getInstance().createImportRecord(newDbId);
+			//DatabaseAuditService.Factory.getInstance().createImportRecord(newDbId);
+			if ( dbFile.length() > 1000000) {
+				UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+				builder.path(Integer.toString(newDbId));
+				return Response.accepted(newDbId).build();
+			}
+			else {
+				UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+				builder.path(Integer.toString(newDbId));
+				return Response.created(builder.build()).build();
+			}
+		}
+		catch (BadParameterException e ) {
+			return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+		}
+		catch( UploadSizeException e ) {
+			return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
 		}
 		catch (Exception e ) {
 			
 			log.error(e);
 			
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
-		}
-		if ( newDbId > 0 ) {
-			UriBuilder builder = uriInfo.getAbsolutePathBuilder();
-			builder.path(Integer.toString(newDbId));
-			return Response.created(builder.build()).build();
-		}
-		else {
-			return Response.accepted().build();
 		}
 	}
 	
@@ -1205,9 +1207,14 @@ public class Database {
 			builder.path(nameUsed);
 			return Response.created(builder.build()).build();
 
-		} catch (BadParameterException ex) {
+		} 
+		catch (BadParameterException ex) {
 			return Response.status(Response.Status.NOT_FOUND).build();
-		} catch (Exception e) {
+		}
+		catch (UploadSizeException e ) {
+			return Response.status(Response.Status.NOT_ACCEPTABLE).entity(e.getMessage()).build();
+		}
+		catch (Exception e) {
 			
 			log.error(e);
 			

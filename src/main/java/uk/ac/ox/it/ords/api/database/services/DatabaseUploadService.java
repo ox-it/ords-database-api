@@ -36,7 +36,7 @@ public interface DatabaseUploadService {
 	public int importToExistingDatabase(int dbId, File sqlFile, String server)
 			throws Exception;
 
-	public void init() throws Exception;
+	//public void init() throws Exception;
 
 	public void testDeleteDatabase(int dbId, boolean staging) throws Exception;
 

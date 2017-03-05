@@ -39,7 +39,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void getDatasetNonExisting() throws Exception{
-		loginUsingSSO("pingu@nowhere.co", "");		
+		loginBasicUser();		
 		
 		//
 		// Import a database
@@ -73,7 +73,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void getDatasetUnauth() throws Exception{
-		loginUsingSSO("pingu@nowhere.co", "");		
+		loginBasicUser();		
 		
 		//
 		// Import a database
@@ -112,7 +112,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		assertEquals(403, getClient(true).path("/"+id+"/dataset/"+viewId).get().getStatus());
 		
 		// Cleanup
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
 		AbstractResourceTest.databases.add(r);
 		logout();
@@ -122,7 +122,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void createPrivateDataset() throws Exception{
 		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		//
 		// Import a database
@@ -188,7 +188,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		assertEquals(403, response.getStatus());		
 
 		// Cleanup
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 
 		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
 
@@ -201,7 +201,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void createDataset() throws Exception{
 		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		//
 		// Import a database
@@ -263,7 +263,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		
 
 		// Cleanup
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
 		
 		AbstractResourceTest.databases.add(r);
@@ -275,7 +275,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void getDatasetAsCSV() throws Exception {
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		//
 		// Import a database
@@ -314,7 +314,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		response = client.path("/"+id+"/dataset/"+viewId+"/csv").get();
 		assertEquals(200, response.getStatus());
 		// Cleanup
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
 		
 		logout();
@@ -325,7 +325,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void searchDatasets() throws Exception{
 		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		//
 		// Import a database
@@ -397,7 +397,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		assertEquals(1, results.size());
 		
 		// Cleanup
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId1).delete().getStatus());
 		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId2).delete().getStatus());
 		
@@ -408,7 +408,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void updateDataset() throws Exception{
 		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		//
 		// Import a database
@@ -463,7 +463,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		//
 		logout();
 		assertEquals(403, getClient(true).path("/"+id+"/dataset/"+viewId).put(dataset).getStatus());	
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		//
 		// Update
@@ -496,7 +496,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		//
 		// Import a database
 		//
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 
 		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(accessFile);
@@ -532,7 +532,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void createDatasetBadRequests() throws Exception{
 			
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		//
 		// Import a database
@@ -577,7 +577,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void deleteDataset() throws Exception{
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		//
 		// Import a database
@@ -639,7 +639,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void deleteDatasetUnauth() throws Exception{
 		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		//
 		// Import a database
@@ -688,7 +688,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		
 		
 		// cleanup
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		assertEquals(200, getClient(true).path("/"+id+"/dataset/"+viewId).delete().getStatus());
 		AbstractResourceTest.databases.add(r);
 		logout();
@@ -697,7 +697,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 	
 	@Test
 	public void deleteDatasetNonexisting() throws Exception{
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		//
 		// Import a database

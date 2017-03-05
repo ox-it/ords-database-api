@@ -11,7 +11,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.junit.Test;
@@ -21,15 +20,14 @@ import org.apache.cxf.jaxrs.ext.multipart.ContentDisposition;
 import org.apache.cxf.jaxrs.ext.multipart.MultipartBody;
 
 import uk.ac.ox.it.ords.api.database.data.ImportProgress;
-import uk.ac.ox.it.ords.api.database.data.TableData;
-import uk.ac.ox.it.ords.api.database.data.TableViewInfo;
+
 
 public class DatabaseTest extends AbstractDatabaseTestRunner{
 
 	
 	@Test ()
 	public void uploadUnsupportedFile() throws FileNotFoundException {
-		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		loginBasicUser();
 
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
@@ -43,6 +41,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
 		assertEquals(415, response.getStatus());
 	}
+	
 	
 	@Test ()
 	public void uploadCSVFileUnauth() throws FileNotFoundException {
@@ -78,8 +77,56 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 	}
 	
 	@Test ()
-	public void testImport() throws FileNotFoundException {
-		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+	public void uploadSmallAccessFile() throws FileNotFoundException {
+		loginBasicUser();
+
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		
+		FileInputStream inputStream;
+		
+		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=mondial.accdb");
+		Attachment att = new Attachment("dataFile", inputStream, cd);
+		client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());		
+
+		String id = getIdFromResponse(response);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+	}
+	
+	
+	@Test ()
+	public void uploadSmallSQLFile() throws Exception {
+		loginBasicUser();
+		
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		
+		FileInputStream inputStream;
+		
+		File accessFile = new File(getClass().getResource("/databases/main_2812_2811.sql").getFile());
+		inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=main_2812_2811.sql");
+		Attachment att = new Attachment("dataFile", inputStream, cd);
+		client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());	
+
+		String id = getIdFromResponse(response);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+
+	}
+	
+	@Test ()
+	public void appendCSVToDatabase() throws FileNotFoundException {
+		loginBasicUser();
 
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
@@ -116,168 +163,300 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 	
 	
 	@Test ()
-	public void uploadCSVFile() {
-		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+	public void uploadSmallCSVFile() throws Exception {
+		loginBasicUser();
 		
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
 		
 		File csvFile = new File(getClass().getResource("/small_test.csv").getFile());
-		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream;
-		try {
 			
-			// create a csv file database
-			inputStream = new FileInputStream(csvFile);
-			ContentDisposition cd = new ContentDisposition("attachment;filename=small_test.csv");
-			Attachment att = new Attachment("dataFile", inputStream, cd);
+		// create a csv file database
+		inputStream = new FileInputStream(csvFile);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=small_test.csv");
+		Attachment att = new Attachment("dataFile", inputStream, cd);
 
-			Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
-			assertEquals(201, response.getStatus());
-			
-			String id = getIdFromResponse(response);
-			DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
-			AbstractResourceTest.databases.add(r);
-			
-			// get the data from the table created as small_test
-			
-			client = getClient(false);
-			String tablePath = "/"+id+"/tabledata/small_test";
-			response = client.path(tablePath).get();
-			assertEquals(200, response.getStatus());
-			TableData tableData = response.readEntity(TableData.class);
-			//InputStream stream = (InputStream) response.getEntity();
-			assertEquals(tableData.columns.size(), 6 );
-			
-			//this.getResponseFromInputStream(stream);
-			
-			// create an access database import
-			inputStream = new FileInputStream(accessFile);
-			cd = new ContentDisposition("attachement;filename=mondial.accdb");
-			att = new Attachment("dataFile", inputStream, cd);
-			client = getClient(false);
-			client.type("multipart/form-data");
-			response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
-			assertEquals(201, response.getStatus());
-			
-			id = getIdFromResponse(response);
-			r = new DatabaseReference(Integer.parseInt(id), false);
-			AbstractResourceTest.databases.add(r);
-			
-			// test view
-			TableViewInfo viewInfo = new TableViewInfo();
-			viewInfo.setViewQuery("SELECT CityName, Population from City");
-			viewInfo.setViewName("Population City");
-			viewInfo.setViewDescription("A view on the city table showing population and city name");
-			viewInfo.setViewAuthorization("public");
-			viewInfo.setViewTable("City");
-			
-			client = getClient(true);
-			response = client.path("/"+id+"/dataset").post(viewInfo);
-			assertEquals(201, response.getStatus());
-			
-			String viewPath = response.getLocation().getPath();
-			String viewId = viewPath.substring(viewPath.lastIndexOf('/')+1);
-
-			
-			// view the view
-			client = getClient(true);
-			response = client.path("/"+id+"/dataset/"+viewId).get();
-			assertEquals(200, response.getStatus());
-			
-			
-			// update the view
-			viewInfo.setViewName("The population of Cities");
-			viewInfo.setViewAuthorization("authmembers");
-			client = getClient(true);
-			response = client.path("/"+id+"/dataset/"+viewId).put(viewInfo);
-			assertEquals(200, response.getStatus());
-
-			
-
-			
-			// delete the view
-			client = getClient(true);
-			response = client.path("/"+id+"/dataset/"+viewId).delete();
-			assertEquals(200, response.getStatus());
-			
-			// test export
-			
-			client = getClient(true);
-			client.accept("application/sql");
-			String exportPath = "/"+id+"/export/sql";
-			response = client.path(exportPath).get();
-			assertEquals(200, response.getStatus());
-			InputStream stream = (InputStream) response.getEntity();
-			this.getResponseFromInputStream(stream, "/tmp/mondial.sql");
-			
-			//quick test for csv and zip export
-			// TODO need to write a proper check for this
-			client = getClient(true);
-			client.accept("text/csv");
-			response = client.path("/"+id+"/export/csv").get();
-			assertEquals(200, response.getStatus());
-			
-			client = getClient(true);
-			client.accept("application/zip");
-			response = client.path("/"+id+"/export/zip").get();
-			assertEquals(200, response.getStatus());
-			
-			//quick test for csv table
-			
-			client = getClient(true);
-			client.accept("text/csv");
-			response = client.path("/"+id+"/export/table/city").get();
-			assertEquals(200, response.getStatus());
-			
-			//quick test for sql export csv
-			client = getClient(true);
-			client.accept("text/csv");
-			response = client.path("/"+id+"/export").query("q", "select \"Code\", \"CountryName\" from country").get();
-			assertEquals(200, response.getStatus());
-			stream = (InputStream) response.getEntity();
-			//this.getResponseFromInputStream(stream, "/tmp/country.csv");
-			
-			client = getClient(false);
-			response = client.path("/"+id+"/tabledata/country").get();
-			assertEquals(200, response.getStatus());
-			stream = (InputStream) response.getEntity();
-			//this.getResponseFromInputStream(stream, "mondial.json");
-			//tableData = response.readEntity(TableData.class);
-			/*
-			File sqlFile = new File ("/tmp/mondial.sql");
-			inputStream = new FileInputStream(sqlFile);
-			cd = new ContentDisposition("attachement;filename=mondial.sql");
-			att = new Attachment("dataFile", inputStream, cd);
-			client = getClient(false);
-			client.type("multipart/form-data");
-			response = client.path("/"+id+"/import/localhost").post(new MultipartBody(att));
-			assertEquals(201, response.getStatus());
-			id = getIdFromResponse(response);
-			// check import progress
-			
-			ImportProgress prg;
-			client = getClient(true);
-			response = client.path("/"+id+"/import").get();
-			assertEquals(200,response.getStatus());
-			prg = response.readEntity(ImportProgress.class);
-			while ( "QUEUED".equals(prg.getStatus())|| "IN_PROGRESS".equals(prg.getStatus())) {
-				System.out.println("Import Status: " + prg.getStatus());
-				client = getClient(true);
-				response = client.path("/"+id+"/import").get();
-				prg = response.readEntity(ImportProgress.class);
-				assertEquals(200,response.getStatus());				
-			}
-			assertEquals(prg.getStatus(), "FINISHED");
-*/
-			
-			//System.out.println("Number of Rows: "+tableData.getNumberOfRowsInEntireTable());
-			
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String id = getIdFromResponse(response);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		logout();
 	}
 	
+	@Test
+	public void uploadLargeFileWithBasicAccount() throws Exception {
+		loginBasicUser();
+
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		FileInputStream inputStream;
+		
+		File accessFile = new File(getClass().getResource("/databases/professions.accdb").getFile());
+		inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=professions.accdb");
+		Attachment att = new Attachment("dataFile", inputStream, cd);
+		client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(403, response.getStatus());
+		logout();
+	}
+	
+	@Test	
+	public void uploadLargeCSV() throws Exception {
+		this.loginUsingPremiumUser();
+
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		FileInputStream inputStream;
+		
+		File accessFile = new File(getClass().getResource("/databases/Postcode_LSOA_Part.csv").getFile());
+		inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=Postcode_LSOA_Part.csv");
+		Attachment att = new Attachment("dataFile", inputStream, cd);
+		client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(202, response.getStatus());
+		
+		String id = response.readEntity(String.class);
+
+		// check import progress
+		
+		ImportProgress prg;
+		client = getClient(true);
+		response = client.path("/"+id+"/import").get();
+		assertEquals(200,response.getStatus());
+		prg = response.readEntity(ImportProgress.class);
+		while ( "QUEUED".equals(prg.getStatus())|| "IN_PROGRESS".equals(prg.getStatus())) {
+			System.out.println("Import Status: " + prg.getStatus());
+			client = getClient(true);
+			response = client.path("/"+id+"/import").get();
+			prg = response.readEntity(ImportProgress.class);
+			assertEquals(200,response.getStatus());				
+		}
+		assertEquals(prg.getStatus(), "FINISHED");
+
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+
+		logout();
+	}
+	
+	@Test
+	public void uploadLargeSQL() throws Exception {
+		this.loginUsingPremiumUser();
+
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		FileInputStream inputStream;
+		
+		File accessFile = new File(getClass().getResource("/databases/postcodes.sql").getFile());
+		inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=postcodes.sql");
+		Attachment att = new Attachment("dataFile", inputStream, cd);
+		client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(202, response.getStatus());
+		
+		String id = response.readEntity(String.class);
+
+		// check import progress
+		
+		ImportProgress prg;
+		client = getClient(true);
+		response = client.path("/"+id+"/import").get();
+		assertEquals(200,response.getStatus());
+		prg = response.readEntity(ImportProgress.class);
+		while ( "QUEUED".equals(prg.getStatus())|| "IN_PROGRESS".equals(prg.getStatus())) {
+			System.out.println("Import Status: " + prg.getStatus());
+			client = getClient(true);
+			response = client.path("/"+id+"/import").get();
+			prg = response.readEntity(ImportProgress.class);
+			assertEquals(200,response.getStatus());				
+		}
+		assertEquals(prg.getStatus(), "FINISHED");
+
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+
+		logout();
+		
+	}
+	
+	
+	@Test
+	public void uploadLargeAccess() throws Exception {
+		this.loginUsingPremiumUser();
+
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		FileInputStream inputStream;
+		
+		File accessFile = new File(getClass().getResource("/databases/professions.accdb").getFile());
+		inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachement;filename=professions.accdb");
+		Attachment att = new Attachment("dataFile", inputStream, cd);
+		client = getClient(false);
+		client.type("multipart/form-data");
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(202, response.getStatus());
+		
+		String id = response.readEntity(String.class);
+
+		// check import progress
+		
+		ImportProgress prg;
+		client = getClient(true);
+		response = client.path("/"+id+"/import").get();
+		assertEquals(200,response.getStatus());
+		prg = response.readEntity(ImportProgress.class);
+		while ( "QUEUED".equals(prg.getStatus())|| "IN_PROGRESS".equals(prg.getStatus())) {
+			System.out.println("Import Status: " + prg.getStatus());
+			client = getClient(true);
+			response = client.path("/"+id+"/import").get();
+			prg = response.readEntity(ImportProgress.class);
+			assertEquals(200,response.getStatus());				
+		}
+		assertEquals(prg.getStatus(), "FINISHED");
+
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+
+		logout();
+		
+	}
+	
+	
+	
+	@Test
+	public void exportSQL ( ) throws Exception {
+		loginBasicUser();
+		
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		
+		File csvFile = new File(getClass().getResource("/small_test.csv").getFile());
+		FileInputStream inputStream;
+			
+		// create a csv file database
+		inputStream = new FileInputStream(csvFile);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=small_test.csv");
+		Attachment att = new Attachment("dataFile", inputStream, cd);
+
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String id = getIdFromResponse(response);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		
+		// test export
+		
+		client = getClient(true);
+		client.accept("application/sql");
+		String exportPath = "/"+id+"/export/sql";
+		response = client.path(exportPath).get();
+		assertEquals(200, response.getStatus());
+		InputStream stream = (InputStream) response.getEntity();
+		this.getResponseFromInputStream(stream, "/tmp/mondial.sql");
+
+		logout();
+	}
+	
+	
+	@Test
+	public void exportCSV ( ) throws Exception {
+		loginBasicUser();
+		
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		
+		File accessFile = new File(getClass().getResource("/mondial.accdb").getFile());
+		FileInputStream inputStream;
+			
+		// create a csv file database
+		inputStream = new FileInputStream(accessFile);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=/mondial.accdb");
+		Attachment att = new Attachment("dataFile", inputStream, cd);
+
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String id = getIdFromResponse(response);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);
+		
+		client = getClient(true);
+		client.accept("text/csv");
+		response = client.path("/"+id+"/export/csv").get();
+		assertEquals(200, response.getStatus());
+		
+		client = getClient(true);
+		client.accept("application/zip");
+		response = client.path("/"+id+"/export/zip").get();
+		assertEquals(200, response.getStatus());
+		
+		
+		client = getClient(true);
+		client.accept("text/csv");
+		response = client.path("/"+id+"/export/table/city").get();
+		assertEquals(200, response.getStatus());
+	
+		
+		client = getClient(true);
+		client.accept("text/csv");
+		response = client.path("/"+id+"/export").query("q", "select \"Code\", \"CountryName\" from country").get();
+		assertEquals(200, response.getStatus());
+		InputStream stream = (InputStream) response.getEntity();
+		//this.getResponseFromInputStream(stream, "/tmp/country.csv");
+		
+		client = getClient(false);
+		response = client.path("/"+id+"/tabledata/country").get();
+		assertEquals(200, response.getStatus());
+		stream = (InputStream) response.getEntity();
+		
+		logout();
+	}
+	
+	
+	@Test
+	public void exportUnauth ( ) throws Exception {
+		loginBasicUser();
+		
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		
+		File csvFile = new File(getClass().getResource("/small_test.csv").getFile());
+		FileInputStream inputStream;
+			
+		// create a csv file database
+		inputStream = new FileInputStream(csvFile);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=small_test.csv");
+		Attachment att = new Attachment("dataFile", inputStream, cd);
+
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(201, response.getStatus());
+		
+		String id = getIdFromResponse(response);
+		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+		AbstractResourceTest.databases.add(r);	
+		
+		logout();
+		
+		client = getClient(true);
+		client.accept("application/sql");
+		String exportPath = "/"+id+"/export/sql";
+		response = client.path(exportPath).get();
+		assertEquals(403, response.getStatus());
+
+	}
 	
 	
 	private String getIdFromResponse( Response response ) {

@@ -40,7 +40,7 @@ public class TableTestComplex extends AbstractDatabaseTestRunner{
 	
 	@Before
 	public void setupTable() throws FileNotFoundException{
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		File file = new File(getClass().getResource("/mondial.accdb").getFile());
 		FileInputStream inputStream = new FileInputStream(file);
@@ -66,7 +66,7 @@ public class TableTestComplex extends AbstractDatabaseTestRunner{
 	@Test
 	public void deleteRowWithConstraint() throws Exception{
 
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 
 		assertEquals(200, getClient(true).path("/"+dbID+"/tabledata/country").get().getStatus());
 
@@ -83,7 +83,7 @@ public class TableTestComplex extends AbstractDatabaseTestRunner{
 	@Test
 	public void insertRowWithPKandAutonumber() throws Exception{
 
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 
 		assertEquals(200, getClient(true).path("/"+dbID+"/tabledata/city").get().getStatus());
 		

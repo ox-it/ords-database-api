@@ -41,7 +41,7 @@ public class QueryTest extends AbstractDatabaseTestRunner{
 	
 	@Test
 	public void query() throws Exception{
-		loginUsingSSO("pingu@nowhere.co", "");		
+		loginBasicUser();		
 		
 		//
 		// Import a database
@@ -80,7 +80,7 @@ public class QueryTest extends AbstractDatabaseTestRunner{
 		logout();
 		response = getClient(true).path("/"+id+"/query/").query("q", "select \"Code\", \"CountryName\" from country where \"CountryName\" LIKE '%Al%'").get();
 		assertEquals(403, response.getStatus());		
-		loginUsingSSO("pingu@nowhere.co", "");	
+		loginBasicUser();	
 		
 		// Cleanup
 		AbstractResourceTest.databases.add(r);
@@ -91,14 +91,14 @@ public class QueryTest extends AbstractDatabaseTestRunner{
 	
 	@Test
 	public void queryNonExistingDb(){
-		loginUsingSSO("pingu@nowhere.co", "");	
+		loginBasicUser();	
 		Response response = getClient(true).path("/9999/query/").query("q", "select \"Code\", \"CountryName\" from country where \"CountryName\" LIKE '%Al%'").get();
 		assertEquals(404, response.getStatus());		
 	}
 	
 	@Test
 	public void queryWithBadSQL() throws Exception{
-		loginUsingSSO("pingu@nowhere.co", "");		
+		loginBasicUser();		
 		
 		//
 		// Import a database
@@ -128,7 +128,7 @@ public class QueryTest extends AbstractDatabaseTestRunner{
 	
 	@Test
 	public void queryWithInsert() throws Exception{
-		loginUsingSSO("pingu@nowhere.co", "");		
+		loginBasicUser();		
 		
 		//
 		// Import a database

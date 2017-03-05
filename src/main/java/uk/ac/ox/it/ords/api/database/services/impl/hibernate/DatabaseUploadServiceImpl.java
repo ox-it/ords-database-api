@@ -23,12 +23,14 @@ import org.hibernate.Transaction;
 
 import uk.ac.ox.it.ords.api.database.data.TableData;
 import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
+import uk.ac.ox.it.ords.api.database.exceptions.UploadSizeException;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase.EntityType;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase.ImportType;
 import uk.ac.ox.it.ords.api.database.permissions.DatabasePermissionSets;
 import uk.ac.ox.it.ords.api.database.services.AccessImportService;
 import uk.ac.ox.it.ords.api.database.services.CSVService;
+import uk.ac.ox.it.ords.api.database.services.DatabaseAuditService;
 import uk.ac.ox.it.ords.api.database.services.DatabaseRoleService;
 import uk.ac.ox.it.ords.api.database.services.DatabaseUploadService;
 import uk.ac.ox.it.ords.api.database.services.ImportEmailService;
@@ -36,29 +38,44 @@ import uk.ac.ox.it.ords.api.database.services.SQLService;
 import uk.ac.ox.it.ords.api.database.threads.ImportThread;
 import uk.ac.ox.it.ords.security.model.Permission;
 import uk.ac.ox.it.ords.security.services.PermissionsService;
+import uk.ac.ox.it.ords.security.services.RestrictionsService;
+
+
 
 public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		implements
 			DatabaseUploadService {
 
+
+	
 	@Override
 	public int createNewDatabaseFromFile(int logicalDatabaseId, File dbFile,
-			String type, String server) throws Exception {
+			String type, String server ) throws Exception {
+		
+		// get file size
+		
+		long dbFileSize = dbFile.length();
+		
+		// Check that user is allowed to create a database of that size
+		long sizeAllowed = ((long)RestrictionsService.Factory.getInstance().getMaximumUploadSize()) * 1000000L;
+		if ( dbFileSize > sizeAllowed ) {
+			throw new UploadSizeException("Maximum file upload size: "+sizeAllowed);
+		}
+		
+
 		OrdsPhysicalDatabase db = this.createPhysicalDatabase(
 				logicalDatabaseId, type, dbFile.getName(), dbFile.length(),
 				server);
 		String databaseName = db.getDbConsumedName();
+		DatabaseAuditService.Factory.getInstance().createImportRecord(db.getLogicalDatabaseId());
 		DatabaseRoleService.Factory.getInstance().createInitialPermissions(db);
 
 		if (type == null) {
 			throw new BadParameterException("No type for uploaded file");
 		}
 
-		// get file size
 		
-		long dbFileSize = dbFile.length();
-		
-		if ( dbFileSize < 2000000 ) {
+		if ( dbFileSize <= 1000000 ) {
 			// less than a 1 mb just import the database directly
 			if (type.equalsIgnoreCase("csv")) {
 				CSVService service = CSVService.Factory.getInstance();
@@ -84,20 +101,27 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		
 			emailService.sendStartImportMessage();
 			importThread.run();
-			return 0;
+			return db.getPhysicalDatabaseId();
 		}
-		
 	}
+	
 
-	@Override
-	public void init() throws Exception {
-		initializePermissions();
-
-	}
+//	@Override
+//	public void init() throws Exception {
+//		initializePermissions();
+//	}
+	
 
 	@Override
 	public String appendCSVToDatabase(int physicalDatabaseId, File csvFile,
 			String server) throws Exception {
+		long dbFileSize = csvFile.length();
+		
+		// Check that user is allowed to create a database of that size
+		long sizeAllowed = RestrictionsService.Factory.getInstance().getMaximumUploadSize() * 1000;
+		if ( dbFileSize > sizeAllowed ) {
+			throw new UploadSizeException("Maximum file upload size: "+sizeAllowed);
+		}
 
 		OrdsPhysicalDatabase physicalDatabase = this
 				.getPhysicalDatabaseFromID(physicalDatabaseId);
@@ -185,54 +209,58 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		}
 	}
 
-	private void initializePermissions() throws Exception {
-		PermissionsService service = PermissionsService.Factory.getInstance();
-		//
-		// Anyone with the "User" role can contribute to projects
-		//
-		for (String permission : DatabasePermissionSets.getPermissionsForUser()) {
-			Permission permissionObject = new Permission();
-			permissionObject.setRole("user");
-			permissionObject.setPermission(permission);
-			service.createPermission(permissionObject);
-		}
-
-		//
-		// Anyone with the "LocalUser" role can create new trial projects
-		//
-		for (String permission : DatabasePermissionSets
-				.getPermissionsForLocalUser()) {
-			Permission permissionObject = new Permission();
-			permissionObject.setRole("localuser");
-			permissionObject.setPermission(permission);
-			service.createPermission(permissionObject);
-		}
-
-		//
-		// Anyone with the "Administrator" role can create new full
-		// projects and upgrade projects to full, and update any
-		// user projects
-		//
-		for (String permission : DatabasePermissionSets
-				.getPermissionsForSysadmin()) {
-			Permission permissionObject = new Permission();
-			permissionObject.setRole("administrator");
-			permissionObject.setPermission(permission);
-			service.createPermission(permissionObject);
-		}
-
-		//
-		// "Anonymous" can View public projects
-		//
-		for (String permission : DatabasePermissionSets
-				.getPermissionsForAnonymous()) {
-			Permission permissionObject = new Permission();
-			permissionObject.setRole("anonymous");
-			permissionObject.setPermission(permission);
-			service.createPermission(permissionObject);
-		}
-
-	}
+//	private void initializePermissions() throws Exception {
+//		PermissionsService service = PermissionsService.Factory.getInstance();
+//		
+//		
+//		//
+//		// "Anonymous" can view public databases
+//		//
+//		for (String permission : DatabasePermissionSets.getPermissionsForAnonymous() ) {
+//			Permission permissionObject = new Permission();
+//			permissionObject.setRole("anonymous");
+//			permissionObject.setPermission(permission);
+//			service.createPermission(permissionObject);
+//		}
+//		
+//		
+//		
+//		//
+//		// Anyone with the "User" role can contribute to create databases
+//		//
+//		for (String permission : DatabasePermissionSets.getPermissionsForUser()) {
+//			Permission permissionObject = new Permission();
+//			permissionObject.setRole("user");
+//			permissionObject.setPermission(permission);
+//			service.createPermission(permissionObject);
+//		}
+//
+//
+//		//
+//		// Anyone with the "Administrator" role can create new full
+//		// projects and upgrade projects to full, and update any
+//		// user projects
+//		//
+//		for (String permission : DatabasePermissionSets
+//				.getPermissionsForSysadmin()) {
+//			Permission permissionObject = new Permission();
+//			permissionObject.setRole("administrator");
+//			permissionObject.setPermission(permission);
+//			service.createPermission(permissionObject);
+//		}
+//
+//		//
+//		// "Anonymous" can View public projects
+//		//
+//		for (String permission : DatabasePermissionSets
+//				.getPermissionsForAnonymous()) {
+//			Permission permissionObject = new Permission();
+//			permissionObject.setRole("anonymous");
+//			permissionObject.setPermission(permission);
+//			service.createPermission(permissionObject);
+//		}
+//
+//	}
 
 	@Override
 	public void testDeleteDatabase(int dbId, boolean staging) throws Exception {

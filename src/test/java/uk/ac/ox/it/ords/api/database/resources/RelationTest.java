@@ -36,7 +36,7 @@ public class RelationTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void testGetRelated() throws Exception{
 		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		//
 		// Import a database
@@ -89,7 +89,7 @@ public class RelationTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void testGetRelatedNonexisting() throws Exception{
 		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		//
 		// Import a database
@@ -128,7 +128,7 @@ public class RelationTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void testGetRelatedUnauth() throws Exception{
 		
-		loginUsingSSO("pingu@nowhere.co", "");
+		loginBasicUser();
 		
 		//
 		// Import a database

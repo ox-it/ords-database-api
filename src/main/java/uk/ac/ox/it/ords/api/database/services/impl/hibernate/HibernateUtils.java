@@ -30,6 +30,7 @@ import uk.ac.ox.it.ords.api.database.model.TableView;
 import uk.ac.ox.it.ords.api.database.model.User;
 import uk.ac.ox.it.ords.security.SimplePersistentSession;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
+import uk.ac.ox.it.ords.security.model.Audit;
 import uk.ac.ox.it.ords.security.model.DatabaseServer;
 import uk.ac.ox.it.ords.security.model.Permission;
 import uk.ac.ox.it.ords.security.model.UserRole;
@@ -50,7 +51,7 @@ public class HibernateUtils {
 		configuration.addAnnotatedClass(TableView.class);
 		configuration.addAnnotatedClass(User.class);
 		configuration.addAnnotatedClass(Permission.class);
-		//configuration.addAnnotatedClass(Audit.class);
+		configuration.addAnnotatedClass(Audit.class);
 		configuration.addAnnotatedClass(UserRole.class);
 		configuration.addAnnotatedClass(SimplePersistentSession.class);
 	}
