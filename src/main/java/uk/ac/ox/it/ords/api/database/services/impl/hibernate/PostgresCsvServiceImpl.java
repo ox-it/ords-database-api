@@ -12,6 +12,8 @@ import java.io.OutputStreamWriter;
 import java.sql.SQLException;
 import java.util.Arrays;
 
+import java.sql.Connection;
+
 import org.apache.commons.io.FileUtils;
 import org.postgresql.PGConnection;
 import org.postgresql.copy.CopyManager;
@@ -175,13 +177,14 @@ public class PostgresCsvServiceImpl implements CSVService {
 		// the Postgres DB connection we'll use for reading the input from
 		//
 		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(file), "UTF8"));
-		PGConnection conn = (PGConnection)qr.getConnection();
+		Connection conn = qr.getConnection();
 
 		try {
 			//
 			// Obtain CopyManager from the Postgres Connection
 			//
-			CopyManager copyManager = conn.getCopyAPI();
+			PGConnection pg_conn = (PGConnection)conn;
+			CopyManager copyManager = pg_conn.getCopyAPI();
 
 			//
 			// Copy out the data to the writer
@@ -199,7 +202,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 			//
 			// Close DB connection
 			//
-			qr.getConnection().close();
+			conn.close();
 		}
 		return file;
 	}
@@ -300,13 +303,14 @@ public class PostgresCsvServiceImpl implements CSVService {
 		//
 		BufferedReader reader = new BufferedReader( new InputStreamReader( new FileInputStream(file), "UTF8"));
 
-		PGConnection conn = (PGConnection)qr.getConnection();
+		Connection conn = qr.getConnection();
 
 		try {
 			//
 			// Obtain CopyManager from the Postgres Connection
 			//
-			CopyManager copyManager = conn.getCopyAPI();	
+			PGConnection pg_conn = (PGConnection)conn;
+			CopyManager copyManager = pg_conn.getCopyAPI();	
 			//
 			// Copy in the data
 			//
@@ -323,7 +327,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 			//
 			// Close DB connection
 			//
-			qr.getConnection().close();
+			conn.close();
 		}
 	}
 

@@ -206,46 +206,46 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		logout();
 	}
 	
-	@Test	
-	public void uploadLargeCSV() throws Exception {
-		this.loginUsingPremiumUser();
-
-		WebClient client = getClient(false);
-		client.type("multipart/form-data");
-		FileInputStream inputStream;
-		
-		File accessFile = new File(getClass().getResource("/databases/Postcode_LSOA_Part.csv").getFile());
-		inputStream = new FileInputStream(accessFile);
-		ContentDisposition cd = new ContentDisposition("attachement;filename=Postcode_LSOA_Part.csv");
-		Attachment att = new Attachment("dataFile", inputStream, cd);
-		client = getClient(false);
-		client.type("multipart/form-data");
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
-		assertEquals(202, response.getStatus());
-		
-		String id = response.readEntity(String.class);
-
-		// check import progress
-		
-		ImportProgress prg;
-		client = getClient(true);
-		response = client.path("/"+id+"/import").get();
-		assertEquals(200,response.getStatus());
-		prg = response.readEntity(ImportProgress.class);
-		while ( "QUEUED".equals(prg.getStatus())|| "IN_PROGRESS".equals(prg.getStatus())) {
-			System.out.println("Import Status: " + prg.getStatus());
-			client = getClient(true);
-			response = client.path("/"+id+"/import").get();
-			prg = response.readEntity(ImportProgress.class);
-			assertEquals(200,response.getStatus());				
-		}
-		assertEquals(prg.getStatus(), "FINISHED");
-
-		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
-		AbstractResourceTest.databases.add(r);
-
-		logout();
-	}
+//	@Test	
+//	public void uploadLargeCSV() throws Exception {
+//		this.loginUsingPremiumUser();
+//
+//		WebClient client = getClient(false);
+//		client.type("multipart/form-data");
+//		FileInputStream inputStream;
+//		
+//		File accessFile = new File(getClass().getResource("/databases/Postcode_LSOA_Part.csv").getFile());
+//		inputStream = new FileInputStream(accessFile);
+//		ContentDisposition cd = new ContentDisposition("attachement;filename=Postcode_LSOA_Part.csv");
+//		Attachment att = new Attachment("dataFile", inputStream, cd);
+//		client = getClient(false);
+//		client.type("multipart/form-data");
+//		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+//		assertEquals(202, response.getStatus());
+//		
+//		String id = response.readEntity(String.class);
+//
+//		// check import progress
+//		
+//		ImportProgress prg;
+//		client = getClient(true);
+//		response = client.path("/"+id+"/import").get();
+//		assertEquals(200,response.getStatus());
+//		prg = response.readEntity(ImportProgress.class);
+//		while ( "QUEUED".equals(prg.getStatus())|| "IN_PROGRESS".equals(prg.getStatus())) {
+//			System.out.println("Import Status: " + prg.getStatus());
+//			client = getClient(true);
+//			response = client.path("/"+id+"/import").get();
+//			prg = response.readEntity(ImportProgress.class);
+//			assertEquals(200,response.getStatus());				
+//		}
+//		assertEquals(prg.getStatus(), "FINISHED");
+//
+//		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+//		AbstractResourceTest.databases.add(r);
+//
+//		logout();
+//	}
 	
 	@Test
 	public void uploadLargeSQL() throws Exception {
@@ -290,47 +290,47 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 	}
 	
 	
-	@Test
-	public void uploadLargeAccess() throws Exception {
-		this.loginUsingPremiumUser();
-
-		WebClient client = getClient(false);
-		client.type("multipart/form-data");
-		FileInputStream inputStream;
-		
-		File accessFile = new File(getClass().getResource("/databases/professions.accdb").getFile());
-		inputStream = new FileInputStream(accessFile);
-		ContentDisposition cd = new ContentDisposition("attachement;filename=professions.accdb");
-		Attachment att = new Attachment("dataFile", inputStream, cd);
-		client = getClient(false);
-		client.type("multipart/form-data");
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
-		assertEquals(202, response.getStatus());
-		
-		String id = response.readEntity(String.class);
-
-		// check import progress
-		
-		ImportProgress prg;
-		client = getClient(true);
-		response = client.path("/"+id+"/import").get();
-		assertEquals(200,response.getStatus());
-		prg = response.readEntity(ImportProgress.class);
-		while ( "QUEUED".equals(prg.getStatus())|| "IN_PROGRESS".equals(prg.getStatus())) {
-			System.out.println("Import Status: " + prg.getStatus());
-			client = getClient(true);
-			response = client.path("/"+id+"/import").get();
-			prg = response.readEntity(ImportProgress.class);
-			assertEquals(200,response.getStatus());				
-		}
-		assertEquals(prg.getStatus(), "FINISHED");
-
-		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
-		AbstractResourceTest.databases.add(r);
-
-		logout();
-		
-	}
+//	@Test
+//	public void uploadLargeAccess() throws Exception {
+//		this.loginUsingPremiumUser();
+//
+//		WebClient client = getClient(false);
+//		client.type("multipart/form-data");
+//		FileInputStream inputStream;
+//		
+//		File accessFile = new File(getClass().getResource("/databases/professions.accdb").getFile());
+//		inputStream = new FileInputStream(accessFile);
+//		ContentDisposition cd = new ContentDisposition("attachement;filename=professions.accdb");
+//		Attachment att = new Attachment("dataFile", inputStream, cd);
+//		client = getClient(false);
+//		client.type("multipart/form-data");
+//		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+//		assertEquals(202, response.getStatus());
+//		
+//		String id = response.readEntity(String.class);
+//
+//		// check import progress
+//		
+//		ImportProgress prg;
+//		client = getClient(true);
+//		response = client.path("/"+id+"/import").get();
+//		assertEquals(200,response.getStatus());
+//		prg = response.readEntity(ImportProgress.class);
+//		while ( "QUEUED".equals(prg.getStatus())|| "IN_PROGRESS".equals(prg.getStatus())) {
+//			System.out.println("Import Status: " + prg.getStatus());
+//			client = getClient(true);
+//			response = client.path("/"+id+"/import").get();
+//			prg = response.readEntity(ImportProgress.class);
+//			assertEquals(200,response.getStatus());				
+//		}
+//		assertEquals(prg.getStatus(), "FINISHED");
+//
+//		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
+//		AbstractResourceTest.databases.add(r);
+//
+//		logout();
+//		
+//	}
 	
 	
 	

@@ -1126,7 +1126,8 @@ public class Database {
 			File dbFile = this.saveFileAttachment(fileAttachment, context, fileName);
 			newDbId = DatabaseUploadService.Factory.getInstance().createNewDatabaseFromFile(dbId, dbFile, extension, server);
 			//DatabaseAuditService.Factory.getInstance().createImportRecord(newDbId);
-			if ( dbFile.length() > 1000000) {
+			if ( ( extension.equalsIgnoreCase("sql") && dbFile.length() > 1000000 ) 
+					|| dbFile.length() > 100000000) {
 				UriBuilder builder = uriInfo.getAbsolutePathBuilder();
 				builder.path(Integer.toString(newDbId));
 				return Response.accepted(newDbId).build();

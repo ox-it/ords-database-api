@@ -527,26 +527,27 @@ public class TableTest extends AbstractDatabaseTestRunner {
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
 		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
-		assertEquals(202, response.getStatus());
+		assertEquals(201, response.getStatus());
 
 		// check import progress
-		String id = response.readEntity(String.class);
+		String path = response.getLocation().getPath();
+		String id = path.substring(path.lastIndexOf('/')+1);
 		DatabaseReference r = new DatabaseReference(Integer.parseInt(id), false);
 		AbstractResourceTest.databases.add(r);
 
-		ImportProgress prg;
-		client = getClient(true);
-		response = client.path("/"+id+"/import").get();
-		assertEquals(200,response.getStatus());
-		prg = response.readEntity(ImportProgress.class);
-		while ( "QUEUED".equals(prg.getStatus())|| "IN_PROGRESS".equals(prg.getStatus())) {
-			System.out.println("Import Status: " + prg.getStatus());
-			client = getClient(true);
-			response = client.path("/"+id+"/import").get();
-			prg = response.readEntity(ImportProgress.class);
-			assertEquals(200,response.getStatus());				
-		}
-		assertEquals(prg.getStatus(), "FINISHED");
+//		ImportProgress prg;
+//		client = getClient(true);
+//		response = client.path("/"+id+"/import").get();
+//		assertEquals(200,response.getStatus());
+//		prg = response.readEntity(ImportProgress.class);
+//		while ( "QUEUED".equals(prg.getStatus())|| "IN_PROGRESS".equals(prg.getStatus())) {
+//			System.out.println("Import Status: " + prg.getStatus());
+//			client = getClient(true);
+//			response = client.path("/"+id+"/import").get();
+//			prg = response.readEntity(ImportProgress.class);
+//			assertEquals(200,response.getStatus());				
+//		}
+//		assertEquals(prg.getStatus(), "FINISHED");
 
 		
 		response = getClient(true).path("/"+id+"/tabledata/tblinvdetail").get();

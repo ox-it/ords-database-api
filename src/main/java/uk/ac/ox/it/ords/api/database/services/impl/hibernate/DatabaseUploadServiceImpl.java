@@ -18,6 +18,7 @@ package uk.ac.ox.it.ords.api.database.services.impl.hibernate;
 
 import java.io.File;
 
+import org.apache.shiro.SecurityUtils;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 
@@ -27,6 +28,7 @@ import uk.ac.ox.it.ords.api.database.exceptions.UploadSizeException;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase.EntityType;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase.ImportType;
+import uk.ac.ox.it.ords.api.database.model.User;
 import uk.ac.ox.it.ords.api.database.permissions.DatabasePermissionSets;
 import uk.ac.ox.it.ords.api.database.services.AccessImportService;
 import uk.ac.ox.it.ords.api.database.services.CSVService;
@@ -73,36 +75,50 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		if (type == null) {
 			throw new BadParameterException("No type for uploaded file");
 		}
-
 		
-		if ( dbFileSize <= 1000000 ) {
-			// less than a 1 mb just import the database directly
-			if (type.equalsIgnoreCase("csv")) {
+		boolean runImportThread = false;
+		
+		if ( dbFileSize <= 100000000 ) {
+			// less than a 100 MB just import the database directly
+			// unless it's a sql file where a thread is used above 1 MB
+			if ( type.equalsIgnoreCase("sql")) {
+				if ( dbFileSize <= 1000000 ) {
+					 SQLService service = SQLService.Factory.getInstance();
+					 service.importSQLFileToDatabase(server, databaseName, dbFile, db.getPhysicalDatabaseId());
+				}
+				else {
+					runImportThread = true;
+				}
+			}
+			else if (type.equalsIgnoreCase("csv")) {
 				CSVService service = CSVService.Factory.getInstance();
 				service.newTableDataFromFile(server, databaseName, dbFile, true);
 			}
-			else if ( type.equalsIgnoreCase("sql")) {
-				SQLService service = SQLService.Factory.getInstance();
-				service.importSQLFileToDatabase(server, databaseName, dbFile, db.getPhysicalDatabaseId());
-			} else {
+			else {
 				AccessImportService service = AccessImportService.Factory
 						.getInstance();
 				service.preflightImport(dbFile);
 				service.createSchema(server, databaseName, dbFile);
 				service.importData(server, databaseName, dbFile);
 			}
-			return db.getPhysicalDatabaseId();
 		}
 		else {
+			runImportThread = true;
+		}
+		if (runImportThread ) {
 			// over 1 mb run through the exportThread
 			ImportEmailService emailService = ImportEmailService.Factory.getInstance();
+			emailService.setDatabaseName(dbFile.getName());
+			String principle = (String) SecurityUtils.getSubject().getPrincipal();
+			User u = this.getUserByPrincipal(principle);
+			emailService.setEmail(u.getEmail());
 
 			ImportThread importThread = new ImportThread(server,databaseName, dbFile, emailService, db.getPhysicalDatabaseId(), type);
 		
 			emailService.sendStartImportMessage();
-			importThread.run();
-			return db.getPhysicalDatabaseId();
+			importThread.start();
 		}
+		return db.getPhysicalDatabaseId();
 	}
 	
 

@@ -25,7 +25,7 @@ public class ImportEmailServiceImpl extends SendMailTLS implements ImportEmailSe
 			log.error ( "The database.properties file is not configured with the restore messages. Please contact an administrator");
 			return;
 		}
-		String msg = String.format(props.getProperty("ords.restore.start.message"), this.databaseName);
+		String msg = String.format(props.getProperty("ords.import.start.message"), this.databaseName);
 		String subject = "Database import started";
 		this.sendMail(subject, msg);
 	}
@@ -36,7 +36,7 @@ public class ImportEmailServiceImpl extends SendMailTLS implements ImportEmailSe
 			log.error ( "The database.properites file is not configured correctly, please contact an administrator");
 			return;
 		}
-		String msg = String.format(props.getProperty("ords.restore.finish.message"), this.databaseName);
+		String msg = String.format(props.getProperty("ords.import.finish.message"), this.databaseName);
 		String subject = "Database import complete";
 		this.sendMail(subject, msg);
 		
@@ -48,7 +48,7 @@ public class ImportEmailServiceImpl extends SendMailTLS implements ImportEmailSe
 			log.error ( "The database.properites file is not configured correctly, please contact an administrator");			
 			return;
 		}
-		String msg = String.format(props.getProperty("ords.restore.error.message"), this.databaseName, error);
+		String msg = String.format(props.getProperty("ords.import.error.message"), this.databaseName, error);
 		String subject = "Database import error";
 		this.sendMail(subject, msg);
 	}

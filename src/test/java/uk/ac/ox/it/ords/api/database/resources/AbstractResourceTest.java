@@ -152,12 +152,12 @@ public class AbstractResourceTest extends AbstractShiroTest {
 		session.save(admin);
 		
 		UserRole pingu = new UserRole();
-		pingu.setPrincipalName("ivor");
+		pingu.setPrincipalName("ivor@nowhere.co");
 		pingu.setRole("localuser");
 		session.save(pingu);
 		
 		UserRole pingu2 = new UserRole();
-		pingu2.setPrincipalName("ivor");
+		pingu2.setPrincipalName("ivor@nowhere.co");
 		pingu2.setRole("premiumuser");
 		session.save(pingu2);
 		
@@ -205,14 +205,14 @@ public class AbstractResourceTest extends AbstractShiroTest {
 		jackOrds.setVerificationUuid(UUID.randomUUID().toString());
 		session.save(jackOrds);
 //
-//		User ivorOrds = new User();
-//		ivorOrds.setName("ivor");
-//		ivorOrds.setPrincipalName("ivor@nowhere.co");
-//		ivorOrds.setEmail("ivor@nowhere.co");
-//		ivorOrds.setOdbcUser(ivorOrds.getEmail().replace("@", "").replace(".", ""));
-//		ivorOrds.setStatus(User.AccountStatus.VERIFIED.toString());
-//		ivorOrds.setVerificationUuid(UUID.randomUUID().toString());
-//		session.save(ivorOrds);
+		User ivorOrds = new User();
+		ivorOrds.setName("ivor");
+		ivorOrds.setPrincipalName("ivor@nowhere.co");
+		ivorOrds.setEmail("ivor@nowhere.co");
+		ivorOrds.setOdbcUser(ivorOrds.getEmail().replace("@", "").replace(".", ""));
+		ivorOrds.setStatus(User.AccountStatus.VERIFIED.toString());
+		ivorOrds.setVerificationUuid(UUID.randomUUID().toString());
+		session.save(ivorOrds);
 
 		//
 		// Commit our changes
@@ -231,7 +231,7 @@ public class AbstractResourceTest extends AbstractShiroTest {
 	}
 	
 	public void loginUsingPremiumUser() {
-		loginUsingSSO("ivor", "ivor");
+		loginUsingSSO("ivor@nowhere.co", "ivor@nowhere.co");
 	}
 	
 	public void loginUsingAdmin() {
