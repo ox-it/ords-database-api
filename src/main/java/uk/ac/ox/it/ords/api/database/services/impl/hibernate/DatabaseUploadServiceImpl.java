@@ -17,6 +17,7 @@
 package uk.ac.ox.it.ords.api.database.services.impl.hibernate;
 
 import java.io.File;
+import java.sql.SQLException;
 
 import org.apache.shiro.SecurityUtils;
 import org.hibernate.Session;
@@ -79,27 +80,37 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		boolean runImportThread = false;
 		
 		if ( dbFileSize <= 100000000 ) {
-			// less than a 100 MB just import the database directly
-			// unless it's a sql file where a thread is used above 1 MB
-			if ( type.equalsIgnoreCase("sql")) {
-				if ( dbFileSize <= 1000000 ) {
-					 SQLService service = SQLService.Factory.getInstance();
-					 service.importSQLFileToDatabase(server, databaseName, dbFile, db.getPhysicalDatabaseId());
+			try {
+				// less than a 100 MB just import the database directly
+				// unless it's a sql file where a thread is used above 1 MB
+				if ( type.equalsIgnoreCase("sql")) {
+					if ( dbFileSize <= 1000000 ) {
+						 SQLService service = SQLService.Factory.getInstance();
+						 service.importSQLFileToDatabase(server, databaseName, dbFile, db.getPhysicalDatabaseId());
+					}
+					else {
+						runImportThread = true;
+					}
+				}
+				else if (type.equalsIgnoreCase("csv")) {
+					CSVService service = CSVService.Factory.getInstance();
+					service.newTableDataFromFile(server, databaseName, dbFile, true);
+					this.setImportProgress(db.getPhysicalDatabaseId(), OrdsPhysicalDatabase.ImportType.FINISHED);
 				}
 				else {
-					runImportThread = true;
+					AccessImportService service = AccessImportService.Factory
+							.getInstance();
+					service.preflightImport(dbFile);
+					service.createSchema(server, databaseName, dbFile);
+					service.importData(server, databaseName, dbFile);
+					this.setImportProgress(db.getPhysicalDatabaseId(), OrdsPhysicalDatabase.ImportType.FINISHED);
 				}
 			}
-			else if (type.equalsIgnoreCase("csv")) {
-				CSVService service = CSVService.Factory.getInstance();
-				service.newTableDataFromFile(server, databaseName, dbFile, true);
-			}
-			else {
-				AccessImportService service = AccessImportService.Factory
-						.getInstance();
-				service.preflightImport(dbFile);
-				service.createSchema(server, databaseName, dbFile);
-				service.importData(server, databaseName, dbFile);
+			catch(Exception e) {
+				// remove the physical database and re-throw
+				this.testDeleteDatabase(db.getPhysicalDatabaseId(), false);
+				throw e;
+				
 			}
 		}
 		else {
