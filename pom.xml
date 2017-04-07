@@ -3,7 +3,7 @@
   <groupId>uk.ac.ox.it.ords</groupId>
   <artifactId>ords-database-api</artifactId>
   <packaging>war</packaging>
-  <version>0.0.21-SNAPSHOT</version>
+  <version>0.0.21</version>
 
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Database microservice for ORDS</description>
@@ -65,7 +65,7 @@
 		<url>https://github.com/ox-it/ords-database-api</url>
 		<connection>scm:git:git://github.com/ox-it/ords-database-api.git</connection>
 		<developerConnection>scm:git:git@github.com:ox-it/ords-database-api.git</developerConnection>
-	  <tag>HEAD</tag>
+	  <tag>ords-database-api-0.0.21</tag>
   </scm>
 
 	<reporting>
