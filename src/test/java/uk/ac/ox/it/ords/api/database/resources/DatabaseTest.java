@@ -187,6 +187,27 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		logout();
 	}
 	
+	@Test ()
+	public void uploadSmallMalformedCSVFile() throws Exception {
+		loginBasicUser();
+		
+		WebClient client = getClient(false);
+		client.type("multipart/form-data");
+		
+		File csvFile = new File(getClass().getResource("/malformed_test.csv").getFile());
+		FileInputStream inputStream;
+			
+		// create a csv file database
+		inputStream = new FileInputStream(csvFile);
+		ContentDisposition cd = new ContentDisposition("attachment;filename=malformed_test.csv");
+		Attachment att = new Attachment("dataFile", inputStream, cd);
+
+		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		assertEquals(500, response.getStatus());
+		
+		logout();
+	}
+	
 	@Test
 	public void uploadLargeFileWithBasicAccount() throws Exception {
 		loginBasicUser();
