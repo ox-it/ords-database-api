@@ -170,7 +170,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 		//
 		// Get QueryRunner instance for the specified database
 		//
-		QueryRunner qr = new QueryRunner(null, dbName);
+		QueryRunner qr = new QueryRunner(server, dbName);
 
 		//
 		// Create a writer for outputting the CSV to the file, and get

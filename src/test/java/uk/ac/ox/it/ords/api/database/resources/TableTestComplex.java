@@ -49,7 +49,7 @@ public class TableTestComplex extends AbstractDatabaseTestRunner{
 
 		WebClient client = getClient(false);
 		client.type("multipart/form-data");
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 		assertEquals(201, response.getStatus());
 		
 		String path = response.getLocation().getPath();

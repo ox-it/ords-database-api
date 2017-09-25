@@ -38,7 +38,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		inputStream = new FileInputStream(csvFile);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=config.xml");
 		Attachment att = new Attachment("dataFile", inputStream, cd);
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 		assertEquals(415, response.getStatus());
 	}
 	
@@ -55,7 +55,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		inputStream = new FileInputStream(csvFile);
 		ContentDisposition cd = new ContentDisposition("attachment;filename=small_test.csv");
 		Attachment att = new Attachment("dataFile", inputStream, cd);
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 		assertEquals(403, response.getStatus());
 	}
 	
@@ -72,7 +72,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		Attachment att = new Attachment("dataFile", inputStream, cd);
 		client = getClient(false);
 		client.type("multipart/form-data");
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 		assertEquals(403, response.getStatus());
 	}
 	
@@ -91,7 +91,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		Attachment att = new Attachment("dataFile", inputStream, cd);
 		client = getClient(false);
 		client.type("multipart/form-data");
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 		assertEquals(201, response.getStatus());		
 
 		String id = getIdFromResponse(response);
@@ -115,7 +115,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		Attachment att = new Attachment("dataFile", inputStream, cd);
 		client = getClient(false);
 		client.type("multipart/form-data");
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 		assertEquals(201, response.getStatus());	
 
 		String id = getIdFromResponse(response);
@@ -139,7 +139,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		Attachment att = new Attachment("dataFile", inputStream, cd);
 		client = getClient(false);
 		client.type("multipart/form-data");
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 		assertEquals(201, response.getStatus());
 
 		String id = getIdFromResponse(response);
@@ -154,7 +154,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		inputStream= new FileInputStream(csvFile);
 		cd = new ContentDisposition("attachement;filename=small_test.csv");
 		att = new Attachment("dataFile", inputStream, cd );
-		response = client.path("/"+id+"/import/testTable/localhost").post(new MultipartBody(att));
+		response = client.path("/"+id+"/import/testTable/test").post(new MultipartBody(att));
 		assertEquals(201, response.getStatus());
 		
 		String actualTableName = getIdFromResponse(response);
@@ -177,7 +177,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		ContentDisposition cd = new ContentDisposition("attachment;filename=small_test.csv");
 		Attachment att = new Attachment("dataFile", inputStream, cd);
 
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 		assertEquals(201, response.getStatus());
 		
 		String id = getIdFromResponse(response);
@@ -202,7 +202,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		ContentDisposition cd = new ContentDisposition("attachment;filename=malformed_test.csv");
 		Attachment att = new Attachment("dataFile", inputStream, cd);
 
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 		assertEquals(500, response.getStatus());
 		
 		logout();
@@ -222,7 +222,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		Attachment att = new Attachment("dataFile", inputStream, cd);
 		client = getClient(false);
 		client.type("multipart/form-data");
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 		assertEquals(403, response.getStatus());
 		logout();
 	}
@@ -241,7 +241,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 //		Attachment att = new Attachment("dataFile", inputStream, cd);
 //		client = getClient(false);
 //		client.type("multipart/form-data");
-//		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+//		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 //		assertEquals(202, response.getStatus());
 //		
 //		String id = response.readEntity(String.class);
@@ -282,7 +282,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		Attachment att = new Attachment("dataFile", inputStream, cd);
 		client = getClient(false);
 		client.type("multipart/form-data");
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 		assertEquals(202, response.getStatus());
 		
 		String id = response.readEntity(String.class);
@@ -325,7 +325,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 //		Attachment att = new Attachment("dataFile", inputStream, cd);
 //		client = getClient(false);
 //		client.type("multipart/form-data");
-//		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+//		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 //		assertEquals(202, response.getStatus());
 //		
 //		String id = response.readEntity(String.class);
@@ -370,7 +370,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		ContentDisposition cd = new ContentDisposition("attachment;filename=small_test.csv");
 		Attachment att = new Attachment("dataFile", inputStream, cd);
 
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 		assertEquals(201, response.getStatus());
 		
 		String id = getIdFromResponse(response);
@@ -407,7 +407,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		ContentDisposition cd = new ContentDisposition("attachment;filename=/mondial.accdb");
 		Attachment att = new Attachment("dataFile", inputStream, cd);
 
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 		assertEquals(201, response.getStatus());
 		
 		String id = getIdFromResponse(response);
@@ -462,7 +462,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner{
 		ContentDisposition cd = new ContentDisposition("attachment;filename=small_test.csv");
 		Attachment att = new Attachment("dataFile", inputStream, cd);
 
-		Response response = client.path("/"+logicalDatabaseId+"/data/localhost").post(new MultipartBody(att));
+		Response response = client.path("/"+logicalDatabaseId+"/data/test").post(new MultipartBody(att));
 		assertEquals(201, response.getStatus());
 		
 		String id = getIdFromResponse(response);

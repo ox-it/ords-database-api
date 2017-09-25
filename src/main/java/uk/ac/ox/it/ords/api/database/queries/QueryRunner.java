@@ -58,6 +58,10 @@ public class QueryRunner {
     	setCredentials(dbServer, dbName);
     }
     
+    public QueryRunner(DatabaseServer server, String dbName){
+    	setCredentials(server.getHost(), dbName);
+    }
+    
     /**
      * This class is required to allow classes that extend this class to omit defining
      * their constructors.

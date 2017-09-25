@@ -39,9 +39,11 @@ import uk.ac.ox.it.ords.api.database.services.DatabaseUploadService;
 import uk.ac.ox.it.ords.api.database.services.ImportEmailService;
 import uk.ac.ox.it.ords.api.database.services.SQLService;
 import uk.ac.ox.it.ords.api.database.threads.ImportThread;
+import uk.ac.ox.it.ords.security.model.DatabaseServer;
 import uk.ac.ox.it.ords.security.model.Permission;
 import uk.ac.ox.it.ords.security.services.PermissionsService;
 import uk.ac.ox.it.ords.security.services.RestrictionsService;
+import uk.ac.ox.it.ords.security.services.ServerConfigurationService;
 
 
 
@@ -65,10 +67,18 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 			throw new UploadSizeException("Maximum file upload size: "+sizeAllowed);
 		}
 		
+		//
+		// Lookup the server
+		//
+		DatabaseServer databaseServer = ServerConfigurationService.Factory.getInstance().getDatabaseServer(server);
+		if (databaseServer == null){
+			throw new BadParameterException("Server not found");
+		}
+		
 
 		OrdsPhysicalDatabase db = this.createPhysicalDatabase(
 				logicalDatabaseId, type, dbFile.getName(), dbFile.length(),
-				server);
+				databaseServer);
 		String databaseName = db.getDbConsumedName();
 		DatabaseAuditService.Factory.getInstance().createImportRecord(db.getLogicalDatabaseId());
 		DatabaseRoleService.Factory.getInstance().createInitialPermissions(db);
@@ -205,12 +215,12 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 
 	private OrdsPhysicalDatabase createPhysicalDatabase(int logicalDatabaseId,
 			String databaseFileType, String fileName, long fileSize,
-			String server) throws Exception {
+			DatabaseServer server) throws Exception {
 		OrdsPhysicalDatabase db = new OrdsPhysicalDatabase();
 		db.setLogicalDatabaseId(logicalDatabaseId);
 		db.setEntityType(EntityType.MAIN);
 		db.setImportProgress(ImportType.QUEUED);
-		db.setDatabaseServer(server);
+		db.setDatabaseServer(server.getAlias());
 		db.setFileName(fileName);
 		db.setFileSize(fileSize);
 		db.setFullPathToDirectory(System.getProperty("java.io.tmpdir")
@@ -291,7 +301,6 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 
 	@Override
 	public void testDeleteDatabase(int dbId, boolean staging) throws Exception {
-		// TODO Auto-generated method stub
 		OrdsPhysicalDatabase database = getPhysicalDatabaseFromID(dbId);
 		String databaseName;
 		if (!staging) {
@@ -304,7 +313,14 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		String statement = this.getTerminateStatement(databaseName);
 		this.singleResultQuery(statement);
 		statement = "rollback transaction; drop database " + databaseName + ";";
-		this.runJDBCQuery(statement, null, database.getDatabaseServer(), null);
+		
+		
+		DatabaseServer databaseServer = ServerConfigurationService.Factory.getInstance().getDatabaseServer(database.getDatabaseServer());
+		if (databaseServer == null){
+			throw new Exception("Error locating server");
+		}
+		
+		this.runJDBCQuery(statement, null, databaseServer, null);
 
 	}
 

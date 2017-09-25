@@ -50,6 +50,8 @@ import uk.ac.ox.it.ords.api.database.queries.ORDSPostgresDB;
 import uk.ac.ox.it.ords.api.database.queries.ParameterList;
 import uk.ac.ox.it.ords.api.database.queries.QueryRunner;
 import uk.ac.ox.it.ords.api.database.services.TableViewService;
+import uk.ac.ox.it.ords.security.model.DatabaseServer;
+import uk.ac.ox.it.ords.security.services.ServerConfigurationService;
 
 public class TableViewServiceImpl extends DatabaseServiceImpl
 		implements
@@ -62,10 +64,10 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		OrdsPhysicalDatabase db = this.getPhysicalDatabaseFromID(dbId);
 		String query = tableView.getQuery();
 		String databaseName = tableView.getAssociatedDatabase();
-		String server = db.getDatabaseServer();
+		DatabaseServer server = ServerConfigurationService.Factory.getInstance().getDatabaseServer(db.getDatabaseServer());
 		// run as ords superuser because this might be accessed by an unauthenticated user.
 		
-		QueryRunner qr = new QueryRunner(server,databaseName);
+		QueryRunner qr = new QueryRunner(server, databaseName);
         ParameterList params = new ParameterList();
 		TableData tableData = qr.runDBQuery(query, params, startIndex, rowsPerPage, true);
 		return tableData;
@@ -653,6 +655,8 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		}
 		OrdsPhysicalDatabase physicalDatabase = this.getPhysicalDatabaseFromID(dbId);
 		OrdsDB logicalDatabase = this.getLogicalDatabaseFromID(physicalDatabase.getLogicalDatabaseId());
+		DatabaseServer server = ServerConfigurationService.Factory.getInstance().getDatabaseServer(physicalDatabase.getDatabaseServer());
+		
 		Subject s = SecurityUtils.getSubject();
 		String principalName = s.getPrincipal().toString();
 		User u = this.getUserByPrincipal(principalName);
@@ -661,7 +665,7 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 			// remove old static copy
 			this.dropDatasetDatabase(datasetId);
 		}
-		String staticDBName = this.generateStaticDBName(physicalDatabase.getDatabaseServer(), physicalDatabase.getDbConsumedName());
+		String staticDBName = this.generateStaticDBName(server.getHost(), physicalDatabase.getDbConsumedName());
 
 		TableView viewRecord = this.getTableView(datasetId);
 		
@@ -675,10 +679,10 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		viewRecord.setStaticDataset(true);
 		viewRecord.setOriginalDatabase(physicalDatabase.getDbConsumedName());
 		viewRecord.setAssociatedTable(viewInfo.getViewTable());
-
 		viewRecord.setTvAuthorization(viewInfo.getViewAuthorization());
+		
 		// create a copy of the database
-		this.copyStatic(physicalDatabase.getDbConsumedName(), staticDBName, physicalDatabase.getDatabaseServer());
+		this.copyStatic(physicalDatabase.getDbConsumedName(), staticDBName, server);
 		viewRecord.setOriginalDatabase(physicalDatabase.getDbConsumedName());
 		if ( datasetId == 0 ) {
 			this.saveModelObject(viewRecord);
@@ -688,10 +692,6 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 		}
 		return viewRecord.getId();
 	}
-
-	
-	
-	
 	
     private boolean isQueryAllowed(String query) {
         log.debug("isQueryAllowed");
@@ -754,14 +754,14 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
     }
     
     
-	private void copyStatic (String from, String to, String server ) throws Exception {
+	private void copyStatic (String from, String to, DatabaseServer server ) throws Exception {
 //		String userName = this.getODBCUser();
 //		String password = this.getODBCPassword();
 //		this.createOBDCUserRole(userName, password);
 		
-		QueryRunner qr = new QueryRunner(server, from);
+		QueryRunner qr = new QueryRunner(server.getHost(), from);
 
-		if (this.checkDatabaseExists(server, to)) {
+		if (this.checkDatabaseExists(server.getHost(), to)) {
 			String statement = this.getTerminateStatement(to);
 			qr.createAndExecuteStatement(statement, null);
 			statement = "rollback transaction; drop database " + to + ";";
@@ -783,7 +783,9 @@ public class TableViewServiceImpl extends DatabaseServiceImpl
 
 	private void dropDatasetDatabase(TableView  tableView) throws Exception{
 		String databaseName = tableView.getAssociatedDatabase();
-		String server = this.getPhysicalDatabaseFromID(tableView.getPhysicalDatabaseId()).getDatabaseServer();
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromID(tableView.getPhysicalDatabaseId());
+		DatabaseServer databaseServer = ServerConfigurationService.Factory.getInstance().getDatabaseServer(database.getDatabaseServer());
+		String server = databaseServer.getHost();
 		String statement = this.getTerminateStatement(databaseName);
 		QueryRunner qr = new QueryRunner(server, this.getORDSDatabaseName());
 		qr.runDBQuery(statement);

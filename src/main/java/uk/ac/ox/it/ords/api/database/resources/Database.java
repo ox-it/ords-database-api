@@ -71,6 +71,8 @@ import uk.ac.ox.it.ords.api.database.services.QueryService;
 import uk.ac.ox.it.ords.api.database.services.SQLService;
 import uk.ac.ox.it.ords.api.database.services.TableViewService;
 import uk.ac.ox.it.ords.api.database.utils.FileUtilities;
+import uk.ac.ox.it.ords.security.model.DatabaseServer;
+import uk.ac.ox.it.ords.security.services.ServerConfigurationService;
 
 @Api(value="Database")
 @Path("/")
@@ -1110,6 +1112,21 @@ public class Database {
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 		
+		//
+		// Look up server from alias
+		//
+		try {
+			DatabaseServer databaseServer = ServerConfigurationService.Factory.getInstance().getDatabaseServer(server);
+			if (databaseServer == null){
+				return Response.status(Response.Status.BAD_REQUEST).build();				
+			} else {
+				server = databaseServer.getHost();
+			}
+		} catch (Exception e1) {
+			return Response.status(Response.Status.BAD_REQUEST).build();
+		}
+		
+		
 		//MediaType contentType = fileAttachment.getContentType();
 		//contentType.
 		int newDbId = 0;
@@ -1184,6 +1201,21 @@ public class Database {
 						.createNotAuthRecord("POST " + dbId + "/import/", dbId);
 				return Response.status(Response.Status.FORBIDDEN).build();
 			}
+				
+			//
+			// Look up server from alias
+			//
+			try {
+				DatabaseServer databaseServer = ServerConfigurationService.Factory.getInstance().getDatabaseServer(server);
+				if (databaseServer == null){
+					return Response.status(Response.Status.BAD_REQUEST).build();				
+				} else {
+					server = databaseServer.getHost();
+				}
+			} catch (Exception e1) {
+				return Response.status(Response.Status.BAD_REQUEST).build();
+			}
+			
 			MultivaluedMap<String, String> map = fileAttachment.getHeaders();
 			String fileName = getFileName(map);
 			String extension = FileUtilities.getFileExtension(fileName);

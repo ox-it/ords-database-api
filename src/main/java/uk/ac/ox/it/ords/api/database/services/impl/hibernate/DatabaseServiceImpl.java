@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 import uk.ac.ox.it.ords.api.database.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.model.User;
+import uk.ac.ox.it.ords.security.model.DatabaseServer;
 import uk.ac.ox.it.ords.security.services.ServerConfigurationService;
 
 public class DatabaseServiceImpl {
@@ -514,6 +515,12 @@ public class DatabaseServiceImpl {
 //
 //	}
 
+	protected CachedRowSet runJDBCQuery(String query, List<Object> parameters,
+			DatabaseServer server, String databaseName) throws Exception {
+		String host = server.getHost();
+		return runJDBCQuery(query, parameters, host, databaseName);
+	}
+	
 	protected CachedRowSet runJDBCQuery(String query, List<Object> parameters,
 			String server, String databaseName) throws Exception {
 		Connection connection = null;
