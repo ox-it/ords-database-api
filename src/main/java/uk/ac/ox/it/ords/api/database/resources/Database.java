@@ -125,6 +125,9 @@ public class Database {
 			TableData data = tableViewService().getStaticDataSetData(id,
 					datasetID, startIndex, rowsPerPage, sort, direction);
 			
+			data.tableName = tableView.getViewName();
+			data.comment = tableView.getViewDescription();
+			
 			return Response.ok(data).build();
 		} 
 		catch  (Exception e) {

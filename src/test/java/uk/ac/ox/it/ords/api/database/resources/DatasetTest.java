@@ -226,7 +226,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		dataset.setViewName("test");
 		dataset.setViewTable("City");
 		dataset.setViewQuery("SELECT 'CityName', 'Longitude' from City");
-		dataset.setViewDescription("test");
+		dataset.setViewDescription("test description");
 		dataset.setViewAuthorization("public");
 		response = getClient(true).path("/"+id+"/dataset/").post(dataset);	
 		assertEquals(201, response.getStatus());
@@ -241,6 +241,7 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		assertEquals(200, response.getStatus());
 		dataset = response.readEntity(TableViewInfo.class);
 		assertEquals("test", dataset.getViewName());
+		assertEquals("test description", dataset.getViewDescription());
 		
 		//
 		// Get the data
@@ -250,6 +251,8 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		TableData data = response.readEntity(TableData.class);
 		assertNotNull(data);
 		assertEquals(3113,data.getNumberOfRowsInEntireTable());
+		assertEquals("test", data.tableName);
+		assertEquals("test description", data.comment);
 		
 		//
 		// Get the data not logged in - will still work as its public
@@ -260,7 +263,8 @@ public class DatasetTest extends AbstractDatabaseTestRunner {
 		data = response.readEntity(TableData.class);
 		assertNotNull(data);
 		assertEquals(3113,data.getNumberOfRowsInEntireTable());
-		
+		assertEquals("test", data.tableName);
+		assertEquals("test description", data.comment);
 
 		// Cleanup
 		loginBasicUser();
