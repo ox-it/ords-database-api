@@ -251,7 +251,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 		// Load the data using COPY
 		//
 		try {
-			appendDataFromFile(server, dbName, tableName, file, headerRow);
+			appendDataFromFile(server, dbName, tableName, file, headerRow, false);
 		} catch (Exception e) {
 			//
 			// If we can't load the data, drop the table
@@ -279,11 +279,11 @@ public class PostgresCsvServiceImpl implements CSVService {
 
 	@Override
 	public void appendDataFromFile(String server, String dbName, String tableName, File file) throws Exception{
-		appendDataFromFile(server, dbName, tableName, file, true);
+		appendDataFromFile(server, dbName, tableName, file, true, false);
 	}
 	
 	@Override
-	public void appendDataFromFile(String server, String dbName, String tableName, File file, boolean headerRow) throws Exception{
+	public void appendDataFromFile(String server, String dbName, String tableName, File file, boolean headerRow, boolean useColumnNames) throws Exception{
 
 		//
 		// Get DBUtils instance for the specified database
@@ -301,17 +301,22 @@ public class PostgresCsvServiceImpl implements CSVService {
 		//
 
 		String sql = "COPY "+tableName;
-		if ( headerRow ) {
-			String names[] = getColumnNames(server, dbName, tableName, file, true);
-			String columns = GeneralUtils.implode(",", names);
-			sql += " ("+columns+")" + " FROM STDIN WITH CSV ENCODING 'UTF8' HEADER";
-		}
-		else {
-			String names[] = this.getColumnNamesFromDatabase(server, dbName, tableName);
+		if (useColumnNames) {
+			String names[];
 			
-			String columns = GeneralUtils.implode(",", names);
-			sql += " ("+columns+")" + " FROM STDIN WITH CSV ENCODING 'UTF8'";
+			if (headerRow) {
+				names = getColumnNames(server, dbName, tableName, file, true);
+			}
+			else {
+				names = this.getColumnNamesFromDatabase(server, dbName, tableName);
+			}
+			sql += " ("+GeneralUtils.implode(",", names) + ")";
 		}
+		sql +=  " FROM STDIN WITH CSV ENCODING 'UTF8'";
+		if ( headerRow ) {
+			sql +=  " HEADER";
+		}
+		
 		//
 		// Create a reader for getting the data from the file and get
 		// the Postgres DB connection we'll use for writing the output

@@ -173,7 +173,7 @@ public interface CSVService {
 	 *            row
 	 */
 	public abstract void appendDataFromFile(String server, String database,
-			String tableName, File file, boolean headerRow) throws Exception;
+			String tableName, File file, boolean headerRow, boolean useColumnNames) throws Exception;
 
 	public static class Factory {
 		private static CSVService provider;

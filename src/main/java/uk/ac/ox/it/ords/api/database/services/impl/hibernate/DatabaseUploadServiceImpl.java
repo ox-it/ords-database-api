@@ -188,7 +188,7 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		OrdsPhysicalDatabase physicalDatabase = this.getPhysicalDatabaseFromID(physicalDatabaseId);
 		String databaseName = physicalDatabase.getDbConsumedName();
 		CSVService service = CSVService.Factory.getInstance();
-		service.appendDataFromFile(server, databaseName, tableName, csvFile, header);
+		service.appendDataFromFile(server, databaseName, tableName, csvFile, header, true);
 	}
 
 	
