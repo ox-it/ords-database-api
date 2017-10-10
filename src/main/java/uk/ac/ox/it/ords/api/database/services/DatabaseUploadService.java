@@ -33,6 +33,9 @@ public interface DatabaseUploadService {
 	public String appendCSVToDatabase(int physicalDatabaseId, File csvFile,
 			String newTableName, String server) throws Exception;
 
+	public void appendCSVToTable(int physicalDatabaseId, File csvFile,
+			String tableName, String server, boolean header) throws Exception;
+
 	public int importToExistingDatabase(int dbId, File sqlFile, String server)
 			throws Exception;
 

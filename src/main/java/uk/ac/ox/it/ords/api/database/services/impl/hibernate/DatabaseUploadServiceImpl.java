@@ -180,6 +180,19 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		TableData tableData = service.newTableDataFromFile(server, databaseName, newTableName, csvFile, true);
 		return tableData.tableName;
 	}
+	
+	
+	@Override
+	public void appendCSVToTable(int physicalDatabaseId, File csvFile,
+			String tableName, String server, boolean header) throws Exception {
+		OrdsPhysicalDatabase physicalDatabase = this.getPhysicalDatabaseFromID(physicalDatabaseId);
+		String databaseName = physicalDatabase.getDbConsumedName();
+		CSVService service = CSVService.Factory.getInstance();
+		service.appendDataFromFile(server, databaseName, tableName, csvFile, header);
+	}
+
+	
+	
 
 	@Override
 	public int importToExistingDatabase(int dbId, File sqlFile, String server)
@@ -191,7 +204,7 @@ public class DatabaseUploadServiceImpl extends DatabaseServiceImpl
 		return physicalDatabase.getPhysicalDatabaseId();
 	}
 	
-		@Override
+	@Override
 	public void setImportProgress(int id, ImportType progress) throws Exception {
 
 		OrdsPhysicalDatabase physicalDatabase = this.getPhysicalDatabaseFromID(id);

@@ -24,6 +24,7 @@ import io.swagger.annotations.ApiResponses;
 
 import java.io.File;
 import java.io.InputStream;
+import java.sql.SQLException;
 import java.util.List;
 
 import javax.activation.DataHandler;
@@ -1102,7 +1103,7 @@ public class Database {
 	@POST
 	@Path("{id}/data/{server}")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
-	public Response handleFileUpload(
+	public Response createDatabaseFromFile(
 			@PathParam("id") int dbId,
 			@PathParam("server") String server,
 			@Multipart("dataFile") Attachment fileAttachment,
@@ -1188,7 +1189,7 @@ public class Database {
 	@POST
 	@Path("{id}/import/{newTableName}/{server}")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
-	public Response importFile(@PathParam("id") int dbId,
+	public Response importFileToExistingDatabase(@PathParam("id") int dbId,
 			@PathParam("newTableName") String newTableName,
 			@PathParam("server") String server,
 			@Multipart("dataFile") Attachment fileAttachment,
@@ -1258,6 +1259,75 @@ public class Database {
 					.build();
 		}
 	}
+	
+	
+	
+	// ------------------------------------------------------------------------------
+	// CSV file append to existing table
+	// ------------------------------------------------------------------------------
+	@ApiOperation(
+			value="Handles file import to an existing database",
+			notes="CSV files are currently supported"
+		)
+		@ApiResponses(value = { 
+			@ApiResponse(code = 201, message = "CSV successfully appended to table."),
+			@ApiResponse(code = 415, message = "Data type not supported."),
+			@ApiResponse(code = 403, message = "Not authorized to modify databases.")
+		})
+	@POST
+	@Path("{id}/append/table/{tableName}/{header}/{server}")
+	@Consumes(MediaType.MULTIPART_FORM_DATA)
+	public Response appendFileToTable(@PathParam("id") int dbId,
+			@PathParam("tableName") String tableName,
+			@PathParam("header") BooleanCheck header,
+			@PathParam("server") String server,
+			@Multipart("dataFile") Attachment fileAttachment,
+			@Context ServletContext context, @Context UriInfo uriInfo) {
+		try {
+			OrdsPhysicalDatabase physicalDatabase = databaseRecordService()
+					.getRecordFromId(dbId);
+
+			if (!SecurityUtils.getSubject()
+					.isPermitted(DatabasePermissions.DATABASE_MODIFY(
+							physicalDatabase.getLogicalDatabaseId()))) {
+				DatabaseAuditService.Factory.getInstance()
+						.createNotAuthRecord("POST " + dbId + "/import/", dbId);
+				return Response.status(Response.Status.FORBIDDEN).build();
+			}
+			MultivaluedMap<String, String> map = fileAttachment.getHeaders();
+			String fileName = getFileName(map);
+			String extension = FileUtilities.getFileExtension(fileName);
+			if (!extension.contentEquals("csv")) {
+				return Response.status(Response.Status.UNSUPPORTED_MEDIA_TYPE)
+						.build();
+			}
+			File importFile = this.saveFileAttachment(fileAttachment, context,
+					fileName);
+			DatabaseUploadService.Factory.getInstance().appendCSVToTable(dbId, importFile, tableName, server, header.value);
+			DatabaseAuditService.Factory.getInstance()
+					.createImportRecord(dbId);
+			UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+			return Response.created(builder.build()).build();
+
+		} 
+		catch (BadParameterException ex) {
+			return Response.status(Response.Status.NOT_FOUND).build();
+		}
+		catch (UploadSizeException e ) {
+			return Response.status(Response.Status.NOT_ACCEPTABLE).entity(e.getMessage()).build();
+		}
+		catch (SQLException sqlex ) {
+			return Response.status(Response.Status.CONFLICT).entity(sqlex.getMessage()).build();
+		}
+		catch (Exception e) {
+			
+			log.error(e);
+			
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e)
+					.build();
+		}
+	}
+
 
 	
 	@ApiOperation(

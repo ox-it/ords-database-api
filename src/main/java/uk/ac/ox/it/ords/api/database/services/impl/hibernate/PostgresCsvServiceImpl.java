@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import java.sql.Connection;
@@ -21,12 +22,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.ox.it.ords.api.database.conf.CommonVars;
+import uk.ac.ox.it.ords.api.database.data.DataCell;
 import uk.ac.ox.it.ords.api.database.data.DataRow;
 import uk.ac.ox.it.ords.api.database.data.TableData;
+import uk.ac.ox.it.ords.api.database.exceptions.BadParameterException;
 import uk.ac.ox.it.ords.api.database.queries.ORDSPostgresDB;
 import uk.ac.ox.it.ords.api.database.queries.QueryRunner;
 import uk.ac.ox.it.ords.api.database.services.CSVService;
 import uk.ac.ox.it.ords.api.database.utils.FileUtilities;
+import uk.ac.ox.it.ords.api.database.utils.GeneralUtils;
 
 
 public class PostgresCsvServiceImpl implements CSVService {
@@ -291,12 +295,23 @@ public class PostgresCsvServiceImpl implements CSVService {
 		//
 		QueryRunner qr = new QueryRunner(server, dbName);
 
+
 		//
 		// Define the copy operation
 		//
-		String sql = "COPY "+tableName+" FROM STDIN WITH CSV ENCODING 'UTF8'";
-		if (headerRow) sql += " HEADER";
 
+		String sql = "COPY "+tableName;
+		if ( headerRow ) {
+			String names[] = getColumnNames(server, dbName, tableName, file, true);
+			String columns = GeneralUtils.implode(",", names);
+			sql += " ("+columns+")" + " FROM STDIN WITH CSV ENCODING 'UTF8' HEADER";
+		}
+		else {
+			String names[] = this.getColumnNamesFromDatabase(server, dbName, tableName);
+			
+			String columns = GeneralUtils.implode(",", names);
+			sql += " ("+columns+")" + " FROM STDIN WITH CSV ENCODING 'UTF8'";
+		}
 		//
 		// Create a reader for getting the data from the file and get
 		// the Postgres DB connection we'll use for writing the output
@@ -316,9 +331,7 @@ public class PostgresCsvServiceImpl implements CSVService {
 			//
 			copyManager.copyIn(sql, reader);
 			
-		} catch (Exception e) {
-			throw new Exception("Error importing table", e);
-		} finally {
+		}finally {
 			//
 			// Close writer
 			//
@@ -400,6 +413,29 @@ public class PostgresCsvServiceImpl implements CSVService {
 			throw new Exception("Unable to create a table within the database");
 		}
 		return columnNames;
+	}
+	
+	
+	private String[] getColumnNamesFromDatabase(String dbServer, String dbName,
+			String tableName) throws ClassNotFoundException, SQLException, BadParameterException {
+		String command = String.format(
+				"select column_name from information_schema.columns where table_name='%s'",
+				tableName);
+		QueryRunner queryRunner = new QueryRunner(dbServer, dbName);
+		TableData table = queryRunner.runDBQuery(command, null, 0, 0, true);
+		if ( table == null || table.getNumberOfRowsReturnedByQuery() == 0 ) {
+			throw new BadParameterException("Table not found");
+		}
+		ArrayList<String> columnNames = new ArrayList<String>();
+		String tableResultsColumn = table.getColumnsByIndex().get(0).columnName;
+		String indexName = tableName+"_index";
+		for( DataRow row: table.rows) {
+			DataCell name = row.cell.get(tableResultsColumn);
+			if ( !indexName.equalsIgnoreCase(name.getValue())) {
+				columnNames.add(name.getValue());
+			}
+		}
+		return columnNames.toArray(new String[0]);
 	}
 
 	private static final String DUMMY_COLUMN_NAME = "willRemoveThisSoon_dummy";
